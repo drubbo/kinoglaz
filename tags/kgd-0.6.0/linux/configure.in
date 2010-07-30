@@ -1,0 +1,16 @@
+AC_INIT(configure.in)
+
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(kgd, 0.6.0)
+AC_CONFIG_MACRO_DIR([m4])
+
+AC_LANG_CPLUSPLUS
+AC_PROG_CXX
+AM_PROG_LIBTOOL
+
+AC_DEFINE([LOG_VERBOSITY], [4], [Verbosity level 0-5])
+AC_DEFINE([MP3_ADU], [0], [Mpeg2 audio layer III ADU packetization])
+
+AC_C_BIGENDIAN([BIGENDIAN="Big Endian"] AC_DEFINE([WORDS_BIGENDIAN], 1, [Define if manchine is big-endian]),[BIGENDIAN="Little Endian"] )
+
+AC_OUTPUT( lib/Makefile sdp/Makefile rtcp/Makefile rtp/Makefile rtsp/Makefile formats/Makefile Makefile )
