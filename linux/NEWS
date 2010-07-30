@@ -1,0 +1,73 @@
+                                 K G D
+
+                        Kinoglaz Streaming Server
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+29/07/2010      Broken up build process in a set of libraries
+                Format support is isolated in a separate library too
+
+                MP3 ADU support (experimental)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+13/07/2010      Added container iterator shells and map facilities
+
+                Refactored the Array class to have a nicer interface
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+27/04/2010      USSD change its name to Kinoglaz
+
+                Removed a bug in RTP port release
+
+                Completed doxygen comments source-wide
+
+                Improved delivery frame rate computation
+
+                Added support for per-track (non-aggregate) control
+
+                Many lists mutated to maps for easier management
+
+                Absolute track url announcement during DESCRIBE to avoid
+                ambiguities for different user agents
+
+                Tested support for QuickTime player on Mac OS X
+
+                Better base64 encoding / decoding
+
+                Playlist support: .kls files in the form
+                  loop n
+                  file1
+                  file2
+                  ...
+                  filen
+                if loop number is 0, or unspecified, or no loop hint was
+                present, then the list will play forever.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+27/03/2010      USSD now supports insertion of a media into another during
+                runtime streaming (support for advertising et similia)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+10/03/2010      SDP and RTP frames have been refactored to support different
+                media kinds
+
+                HUP signal is now supported, causing the daemon to reload
+                parameters
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+10/02/2010      Media descriptors are now shared between RTSP connections
+                through threaded iterators
+
+                On PAUSE issue, RTP sessions are now awaited to effectively
+                go to sleep
+
+                RTCP sender / RTP threads were affected by a synchronization
+                bug that caused the RTP thread to hang on infinitely, when
+                TEARDOWN was issued very quickly before the first RTCP packet
+                could be sent.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+07/02/2010      TCP interleaving implemented
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+03/02/2010      personalized timelines wrt user agent
+                totem supported ( does just play / pause )
