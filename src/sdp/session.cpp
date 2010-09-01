@@ -225,20 +225,20 @@ namespace KGD
 
 		}
 
-		string Container::getFilePath() const
+		string Container::getFilePath() const throw()
 		{
 			return BASE_DIR + _fileName;
 		}
 
-		const string & Container::getFileName() const
+		const string & Container::getFileName() const throw()
 		{
 			return _fileName;
 		}
-		const string & Container::getDescription() const
+		const string & Container::getDescription() const throw()
 		{
 			return _description;
 		}
-		void Container::setDescription( const string & d )
+		void Container::setDescription( const string & d ) throw()
 		{
 			_description = d;
 		}
@@ -362,7 +362,7 @@ namespace KGD
 			return (double(t) + 2208988800u);
 		}
 
-		string Container::getReply ( const Url & u, const string & description ) const
+		string Container::getReply ( const Url & u, const string & description ) const throw()
 		{
 			ostringstream s;
 			time_t now = time(NULL);
@@ -389,7 +389,7 @@ namespace KGD
 			return s.str();
 		}
 
-		string Container::getReply( const Url & u, const RTSP::TSessionID & sessionID ) const
+		string Container::getReply( const Url & u, const RTSP::TSessionID & sessionID ) const throw()
 		{
 			return this->getReply( u, "Session #" + toString( sessionID ) );
 		}

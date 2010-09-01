@@ -245,7 +245,7 @@ namespace KGD
 
 		Sender& Sender::sr()
 		{
-			HeaderSR h;
+			SenderReport::Header h;
 
 			// times
 			{
@@ -272,7 +272,7 @@ namespace KGD
 			}
 			h.ssrc = htonl( _rtp->getSsrc() );
 
-			Header hh( SR, sizeof(h) );
+			Header hh( PacketType::SenderReport, sizeof(h) );
 			_buffer.enqueue( &hh, sizeof(hh) );
 			_buffer.enqueue( &h, sizeof(h) );
 
@@ -281,16 +281,16 @@ namespace KGD
 
 		Sender& Sender::sdes()
 		{
-			HeaderSDES h;
+			SenderDescription::Header h;
 
 			h.ssrc = htonl( _rtp->getSsrc() );
-			h.attr_name = HeaderSDES::CNAME;
+			h.attributeName = SenderDescription::Header::Field::CNAME;
 			h.length = _rtp->getUrl().host.size();
 
 			size_t sdes = sizeof(h);
 			if (sdes % 4 == 0)
 				sdes ++;
-			Header hh( SDES, sdes );
+			Header hh( PacketType::SenderDescription, sdes );
 			hh.count = 1;
 
 			_buffer.enqueue( &hh, sizeof(hh) );
@@ -304,13 +304,13 @@ namespace KGD
 
 		Sender& Sender::bye()
 		{
-			HeaderBYE h;
+			Bye::Header h;
 			string reason = "Stream terminated";
 
 			h.ssrc = htonl( _rtp->getSsrc() );
 			h.length = htonl( reason.size() );
 
-			Header hh( BYE, sizeof(h) );
+			Header hh( PacketType::Bye, sizeof(h) );
 			hh.count = 1;
 
 			_buffer.enqueue( &hh, sizeof(hh) );

@@ -68,7 +68,7 @@ namespace KGD
 		void Session::play() throw()
 		{
 			// video, o audio a meno di 1x, faccio partire
-			if (_medium->getType() == SDP::VIDEO || fabs( _time->getSpeed() ) <= 1.0)
+			if (_medium->getType() == SDP::MediaType::Video || fabs( _time->getSpeed() ) <= 1.0)
 			{
 				_RTCPsender->restart();
 				_fRate.start();
@@ -123,7 +123,7 @@ namespace KGD
 				ret.from = _time->getPresentationTime();
 
 			// un audio a velocita' superiore a 1.0x non lo invio, lascio il medium in pausa
-			if ( _medium->getType() == SDP::VIDEO || fabs( ret.speed ) <= 1.0 )
+			if ( _medium->getType() == SDP::MediaType::Video || fabs( ret.speed ) <= 1.0 )
 			{
 				// pause
 				if ( _paused )
@@ -197,7 +197,7 @@ namespace KGD
 
 			if ( _paused )
 			{
-				if ( _medium->getType() == SDP::VIDEO || fabs( _time->getSpeed() ) <= 1.0 )
+				if ( _medium->getType() == SDP::MediaType::Video || fabs( _time->getSpeed() ) <= 1.0 )
 				{
 					_RTCPsender->restart();
 					_fRate.start();

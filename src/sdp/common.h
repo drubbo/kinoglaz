@@ -66,21 +66,27 @@ namespace KGD
 		//! SDP VERSION
 		const string VER = "0";
 
-		//! known payload types
-		enum PayloadType
+		//! supported payload types
+		namespace Payload
 		{
-			A_MPA = 14,
-			A_MP3 = 97,
-			V_MPEG4 = 96
-		};
+			enum type
+			{
+				AudioMPA = 14,
+				AudioMP3 = 97,
+				VideoMPEG4 = 96
+			};
+		}
 
-		//! known media types
-		enum MediaType
+		//! supported media types
+		namespace MediaType
 		{
-			AUDIO = 'A',
-			VIDEO = 'V',
-			APPLICATION = 'a'
-		};
+			enum kind
+			{
+				Audio = 'A',
+				Video = 'V',
+				Application = 'a'
+			};
+		}
 	}
 }
 

@@ -230,7 +230,7 @@ namespace KGD
 					// then go pause
 					else if ( _eof
 								|| ( this->isBufferFull() )
-								|| ( _medium->getType() == SDP::AUDIO && _scale > SCALE_LIMIT ) )
+								|| ( _medium->getType() == SDP::MediaType::Audio && _scale > SCALE_LIMIT ) )
 						_condEmpty.wait ( *lk );
 
 					// fetch
@@ -293,9 +293,9 @@ namespace KGD
 					_bufferOut.pop_front();
 					// se ci sono pochi frame, facciamo ripartire il 3d di fetch
 					// ma solo se sono flusso video, oppure audio con scale buono (altrimenti dell'audio non carico niente)
-					SDP::MediaType mType = _medium->getType();
+					SDP::MediaType::kind mType = _medium->getType();
 					if ( ! _eof
-							&& ( ( mType == SDP::VIDEO ) || ( ( mType == SDP::AUDIO ) && ( _scale <= SCALE_LIMIT ) ) )
+							&& ( ( mType == SDP::MediaType::Video ) || ( ( mType == SDP::MediaType::Audio ) && ( _scale <= SCALE_LIMIT ) ) )
 							&& this->isBufferLow() )
 					{
 						lk.destroy();

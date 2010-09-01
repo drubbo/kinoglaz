@@ -58,7 +58,7 @@ namespace KGD
 				}
 
 				MP3::MP3( )
-				: Base( AUDIO, A_MP3 )
+				: Base( MediaType::Audio, Payload::AudioMP3 )
 				{
 				}
 
@@ -136,7 +136,7 @@ namespace KGD
 					}
 				}
 
-				string MP3::getReply( const Url & u ) const
+				string MP3::getReply( const Url & u ) const throw()
 				{
 					int iFmt = int(_pt);
 					int iIdx = int(_index);

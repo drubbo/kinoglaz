@@ -76,13 +76,19 @@ namespace KGD
 		};
 
 		//! known user agents
-		enum UserAgent
+		namespace UserAgent
 		{
-			//! VLC GoldenEye
-			UA_VLC_1_0_2,
-			//! generic
-			UA_UNDEFINED
-		};
+			enum type
+			{
+				//! generic
+				Generic,
+				//! VLC GoldenEye
+				VLC_1_0_2,
+				VLC_1_0_6
+			};
+
+			extern string name[];
+		}
 
 		//! end of RTSP message lines
 		const string EOL = "\r\n";

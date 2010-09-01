@@ -69,7 +69,7 @@ namespace KGD
 				//! time displace
 				mutable double _displace;
 				//! RTP payload type for this frame
-				PayloadType _pt;
+				Payload::type _pt;
 			public:
 				//! build from a ffmpeg packet and timebase to guess time
 				Base( const AVPacket &, double timebase );
@@ -84,9 +84,9 @@ namespace KGD
 				//! get frame time
 				double getTime() const;
 				//! get RTP payload type
-				PayloadType getPayloadType() const;
+				Payload::type getPayloadType() const;
 				//! force different RTP payload type
-				void setPayloadType( PayloadType );
+				void setPayloadType( Payload::type );
 				//! get fresh copy
 				virtual Base* getClone() const;
 			};

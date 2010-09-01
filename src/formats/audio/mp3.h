@@ -76,7 +76,7 @@ namespace KGD
 					//! add frame and build ADUs
 					virtual void addFrame( Frame::MediaFile * ) throw();
 					//! returns specific protocol reply
-					virtual string getReply( const Url & ) const;
+					virtual string getReply( const Url & ) const throw();
 				};
 			}
 		}
@@ -90,7 +90,7 @@ namespace KGD
 			{
 				class MP3
 				: public AVFrame
-				, public Factory::Multiton< Base, MP3, SDP::A_MP3 >
+				, public Factory::Multiton< Base, MP3, SDP::Payload::AudioMP3 >
 				{
 				protected:
 					//! factory ctor
@@ -107,7 +107,7 @@ namespace KGD
 				//! mpeg2 layer III audio packetization - ADU conversion
 				class MP3
 				: public AVMedia
-				, public Factory::Multiton< Base, MP3, SDP::A_MP3 >
+				, public Factory::Multiton< Base, MP3, SDP::Payload::AudioMP3 >
 				{
 				protected:
 					MP3();

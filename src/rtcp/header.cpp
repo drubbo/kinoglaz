@@ -41,7 +41,7 @@ namespace KGD
 	namespace RTCP
 	{
 
-		Header::Header( PacketType t, uint16_t len )
+		Header::Header( PacketType::code c, uint16_t len )
 #if (BYTE_ORDER == LITTLE_ENDIAN)
 		: count(0)
 		, padding(0)
@@ -51,7 +51,7 @@ namespace KGD
 		, padding(0)
 		, count(0)
 #endif
-		, pt(t)
+		, pt(c)
 		, length(htons(( (sizeof(Header) + len) >> 2) - 1))
 		{
 		}

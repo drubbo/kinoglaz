@@ -121,32 +121,23 @@ namespace KGD
 			: Parser( data, sz )
 			{
 				// first row must contain method, url and rtsp version
-				// DESCRIBE <url> RTSP/1.0
+				// <method> <url> RTSP/1.0
 				vector< string > requestData = this->extractData( "^\\s*(\\w+) (.+) RTSP/(\\d+\\.\\d+)" + EOL );
 				this->checkVersion( requestData[2] );
 				// check method
-				{
-					string method = requestData[0];
-					bool methodFound = false;
-					for(size_t i = 0; i < Method::count; ++i)
-					{
-						if ( Method::name[i] == method )
-						{
-							_method = Method::ID( i );
-							methodFound = true;
-							break;
-						}
-					}
-					if ( !methodFound )
-					{
-						Log::error("RTSP: unknown method %s", method.c_str());
-						throw RTSP::Exception::ManagedError( Error::BadRequest );
-					}
-				}
-
 				try
 				{
-					// scan other rows to get CSeq
+					_method = Method::getIDfromName( requestData[0] );
+				}
+				catch( const KGD::Exception::NotFound & e )
+				{
+					Log::error("RTSP: unknown method %s", e.what() );
+					throw RTSP::Exception::ManagedError( Error::BadRequest );
+				}
+
+				// scan other rows to get CSeq
+				try
+				{
 					string cseqData = this->extractHeaderData( Header::Cseq, "(\\d+)" ).at(0);
 					_cseq = fromString< TCseq >( cseqData );
 
@@ -283,19 +274,21 @@ namespace KGD
 				}
 			}
 
-			UserAgent Request::getUserAgent() const throw( )
+			UserAgent::type Request::getUserAgent() const throw( )
 			{
 				try
 				{
 					string ua = this->extractHeaderData( Header::UserAgent ).at(0);
 					if ( ua == "VLC media player (LIVE555 Streaming Media v2008.07.24)" )
-						return UA_VLC_1_0_2;
+						return UserAgent::VLC_1_0_2;
+					else if ( ua == "VLC media player (LIVE555 Streaming Media v2010.02.10)" )
+						return UserAgent::VLC_1_0_6;
 					else
-						return UA_UNDEFINED;
+						return UserAgent::Generic;
 				}
 				catch( KGD::Exception::NotFound )
 				{
-					return UA_UNDEFINED;
+					return UserAgent::Generic;
 				}
 			}
 
