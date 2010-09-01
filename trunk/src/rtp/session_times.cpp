@@ -36,6 +36,7 @@
 
 #include "rtp/session.h"
 #include "rtcp/receiver.h"
+#include "rtsp/method.h"
 #include "lib/log.h"
 #include "lib/clock.h"
 #include <cmath>
@@ -86,6 +87,11 @@ namespace KGD
 
 				ret.from = _frameBuf->drySeek( ret.from, ret.speed );
 			}
+
+			ret.hasRange = true;
+
+			if ( RTSP::Method::SUPPORT_SEEK )
+				ret.to = _medium->getDuration();
 
 			return ret;
 		}

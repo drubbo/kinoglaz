@@ -251,7 +251,7 @@ namespace KGD
 
 			//! PAUSE method handler
 			class Pause
-			: public Time
+			: public Session
 			, public Factory::Multiton< Method::Base, Pause, PAUSE >
 			{
 			protected:
