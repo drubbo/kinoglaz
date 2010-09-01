@@ -80,9 +80,9 @@ namespace KGD
 				//! track name (file name with track index)
 				string _trackName;
 				//! A(udio), V(ideo), ...
-				MediaType _type;
+				MediaType::kind _type;
 				//! 96, 14, ....
-				PayloadType _pt;
+				Payload::type _pt;
 				//! 90000, ...
 				int _rate;
 				//! track index
@@ -123,7 +123,7 @@ namespace KGD
 				
 			protected:
 				//! ctor
-				Base( MediaType, PayloadType );
+				Base( MediaType::kind, Payload::type );
 				//! copy informations (not frames)
 				Base( const Base & );
 				//! set frame count to determined, actual, effective value
@@ -138,10 +138,10 @@ namespace KGD
 
 				//!@{
 				//! set medium information - just the container can
-				void setPayloadType(PayloadType);
+				void setPayloadType(Payload::type);
 				void setRate(int);
 				void setIndex(uint8_t);
-				void setType(MediaType);
+				void setType(MediaType::kind);
 				void setTimeBase(double);
 				void setDuration(double);
 				void setFileName(const string &);
@@ -163,10 +163,10 @@ namespace KGD
 
 				//!@{
 				//! retrieve medium information
-				PayloadType getPayloadType() const;
+				Payload::type getPayloadType() const;
 				int getRate() const;
 				uint8_t getIndex() const;
-				MediaType getType() const;
+				MediaType::kind getType() const;
 				double getTimeBase() const;
 				double getDuration() const;
 				const ByteArray & getExtraData() const;

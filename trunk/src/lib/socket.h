@@ -54,7 +54,7 @@ namespace KGD
 	namespace Channel
 	{
 		//! channel type
-		enum Type
+		enum type
 		{
 			//! property of owner (i.e.: UDP channel)
 			Owned,
@@ -66,7 +66,7 @@ namespace KGD
 		struct Description
 		{
 			//! channel type
-			Type type;
+			Channel::type type;
 			//! local / remote ports
 			TPortPair ports;
 		};

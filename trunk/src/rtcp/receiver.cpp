@@ -47,6 +47,12 @@ namespace KGD
 	{
 		double Receiver::POLL_INTERVAL = 5.0;
 
+		static const size_t hSize = sizeof( Header );
+		static const size_t hSizeSR = sizeof( SenderReport::Header );
+		static const size_t hSizeRR = sizeof( ReceiverReport::Header );
+		static const size_t pSizeSR = sizeof( ReceiverReport::Payload );
+		static const size_t pSizeRR = sizeof( ReceiverReport::Payload );
+
 		Receiver::Receiver( RTP::Session & s, const Ptr::Shared< Channel::Bi > & chan )
 		: _sock( chan )
 		, _running( false )
@@ -73,7 +79,7 @@ namespace KGD
 			return _logName.c_str();
 		}
 
-		void Receiver::updateStats( const PacketRR & pRR )
+		void Receiver::updateStats( const ReceiverReport::Payload & pRR )
 		{
 			RLock lk( _muxStats );
 			_stats.fractLost = pRR.fractLost;
@@ -86,74 +92,88 @@ namespace KGD
 // 			_stats.log( "Receiver" );
 		}
 
-		bool Receiver::sr( char const * data, size_t size )
+		bool Receiver::handleSenderReport( char const * data, size_t size )
 		{
 			Log::verbose( "%s: SR", getLogName() );
 
 			size_t pos = 0;
 
-			if ( size - pos < sizeof(Header) ) return false;
+			// get common header data
+			if ( size - pos < hSize ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
-			data += sizeof(Header); pos += sizeof(Header);
+			data += hSize; pos += hSize;
 
-			if ( size - pos < sizeof(HeaderSR) ) return false;
-			const HeaderSR & hSR = reinterpret_cast< const HeaderSR & >( *data );
-			data += sizeof(HeaderSR); pos += sizeof(HeaderSR);
+			// get sender report data
+			if ( size - pos < hSizeSR ) return false;
+			const SenderReport::Header & hSR = reinterpret_cast< const SenderReport::Header & >( *data );
+			data += hSizeSR; pos += hSizeSR;
 
+			// get payload(s)
+			list< Ptr::Ref< const ReceiverReport::Payload > > reports;
+			for (size_t i = 0; i < h.count; ++i)
+			{
+				if ( size - pos < pSizeSR ) return false;
+				reports.push_back( reinterpret_cast< const ReceiverReport::Payload & >( *data ) );
+				data += pSizeSR; pos += pSizeSR;
+			}
+			// packet complete, update stats
 			_stats.SRcount ++;
 			_stats.pktCount   = ntohl(hSR.pktCount);
 			_stats.octetCount = ntohl(hSR.octetCount);
-
-			for (size_t i = 0; i < h.count; ++i)
-			{
-				if ( size - pos < sizeof(PacketRR) ) return false;
-				const PacketRR & pRR = reinterpret_cast< const PacketRR & >( *data );
-				data += sizeof(PacketRR); pos += sizeof(PacketRR);
-
-				this->updateStats( pRR );
-			}
+			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
+				this->updateStats( *it );
+			
 			return true;
 		}
 
-		bool Receiver::rr( char const * data, size_t size )
+		bool Receiver::handleReceiverReport( char const * data, size_t size )
 		{
 			Log::verbose( "%s: RR", getLogName() );
 			size_t pos = 0;
 
-			if ( size - pos < sizeof(Header) ) return false;
+			// get common header data
+			if ( size - pos < hSize ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
-			data += sizeof(Header); pos += sizeof(Header);
+			data += hSize; pos += hSize;
 
-			if ( size - pos < sizeof(HeaderRR) ) return false;
-			data += sizeof(HeaderRR); pos += sizeof(HeaderRR);
+			// get receiver report data
+			if ( size - pos < hSizeRR ) return false;
+			data += hSizeRR; pos += hSizeRR;
 
-			_stats.RRcount ++;
+			// get payload(s)
+			list< Ptr::Ref< const ReceiverReport::Payload > > reports;
 			for (size_t i = 0; i < h.count; ++i)
 			{
-				if ( size - pos < sizeof(PacketRR) ) return false;
-				const PacketRR & pRR = reinterpret_cast< const PacketRR & >( *data );
-				data += sizeof(PacketRR); pos += sizeof(PacketRR);
-
-				this->updateStats( pRR );
+				if ( size - pos < pSizeRR ) return false;
+				reports.push_back( reinterpret_cast< const ReceiverReport::Payload & >( *data ) );
+				data += pSizeRR; pos += pSizeRR;
 			}
+			// packet complete, update stats
+			_stats.RRcount ++;
+			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
+				this->updateStats( *it );
+			
 			return true;
 		}
 
-		bool Receiver::sdes( char const * data, size_t size )
+		bool Receiver::handleSenderDescription( char const * data, size_t size )
 		{
 			Log::verbose( "%s: SDES", getLogName() );
 
-			if ( size < sizeof(HeaderSDES) )
+			if ( size < sizeof( SenderDescription::Header ) )
 				return false;
 
-			const HeaderSDES & hSD = reinterpret_cast< const HeaderSDES & >( *data );
+			const SenderDescription::Header & hSD = reinterpret_cast< const SenderDescription::Header & >( *data );
 
-			switch ( hSD.attr_name )
+			switch ( hSD.attributeName )
 			{
-			case HeaderSDES::CNAME:
+			case SenderDescription::Header::Field::CNAME:
 				_stats.destSsrc = ntohs( hSD.ssrc );
 				break;
+			default:
+				Log::warning( "%s: unhandled sender description field %u", getLogName(), hSD.attributeName );
 			}
+
 			return true;
 		}
 
@@ -168,28 +188,28 @@ namespace KGD
 			)
 			{
 				bool (Receiver::* fPtr) ( char const * const, size_t )  = 0;
-				PacketType type = PacketType(uint8_t(data[i + 1 ]));
+				PacketType::code type = PacketType::code(uint8_t(data[i + 1 ]));
 				size_t size = (ntohs(*((short *) &(data[i + 2]))) + 1) * 4;
 
 				if ( i + size <= _buffer.getDataLength() )
 				{
 					switch (type)
 					{
-					case SR:
-						fPtr = &Receiver::sr;
+					case PacketType::SenderReport:
+						fPtr = &Receiver::handleSenderReport;
 						break;
-					case RR:
-						fPtr = &Receiver::rr;
+					case PacketType::ReceiverReport:
+						fPtr = &Receiver::handleReceiverReport;
 						break;
-					case RTCP::SDES:
-						fPtr = &Receiver::sdes;
+					case PacketType::SenderDescription:
+						fPtr = &Receiver::handleSenderDescription;
 						break;
-					case RTCP::BYE:
+					case PacketType::Bye:
 						Log::message( "%s: BYE", getLogName() );
 						i += size;
 						this->stop();
 						break;
-					case RTCP::APP:
+					case PacketType::Application:
 						Log::warning( "%s: APP received and ignored", getLogName(), type );
 						i += size;
 						break;

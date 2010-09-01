@@ -53,7 +53,7 @@ namespace KGD
 
 		Connection::Connection( KGD::Socket::Tcp * socket )
 		: _id( random() )
-		, _agent( UA_UNDEFINED )
+		, _agent( UserAgent::Generic )
 		, _logName( "CONN " + socket->getRemoteHost() + "#" + toString( _id ) )
 		, _socket( new RTSP::Socket( socket, _logName ) )
 		{
@@ -89,14 +89,15 @@ namespace KGD
 			return _logName.c_str();
 		}
 
-		UserAgent Connection::getUserAgent(  ) const throw()
+		UserAgent::type Connection::getUserAgent(  ) const throw()
 		{
 			return _agent;
 		}
 
-		void Connection::setUserAgent( UserAgent ua ) throw()
+		void Connection::setUserAgent( UserAgent::type ua ) throw()
 		{
 			_agent = ua;
+			Log::message( "%s: setting user agent '%s'", getLogName(), UserAgent::name[ ua ].c_str() );
 		}
 
 		uint32_t Connection::getID() const

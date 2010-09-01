@@ -70,7 +70,7 @@ namespace KGD
 			//! unique random id
 			uint32_t _id;
 			//! user agent
-			UserAgent _agent;
+			UserAgent::type _agent;
 			//! log name
 			const string _logName;
 			//! control socket
@@ -96,9 +96,9 @@ namespace KGD
 			const char * getLogName() const throw();
 			
 			//! sets user agent, to build specialized timelines in rtp sessions
-			void setUserAgent( UserAgent ) throw();
+			void setUserAgent( UserAgent::type ) throw();
 			//! get user agent operating on this connection
-			UserAgent getUserAgent(  ) const throw();
+			UserAgent::type getUserAgent(  ) const throw();
 			
 			//! socket-event-driven main request loop
 			void listen() throw( KGD::Exception::Generic );

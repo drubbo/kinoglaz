@@ -40,7 +40,7 @@ namespace KGD
 			namespace Audio
 			{
 				MP2::MP2( )
-				: Base( AUDIO, A_MPA )
+				: Base( MediaType::Audio, Payload::AudioMPA )
 				{
 				}
 
@@ -55,7 +55,7 @@ namespace KGD
 					return new MP2( *this );
 				}
 
-				string MP2::getReply( const Url & u ) const
+				string MP2::getReply( const Url & u ) const throw()
 				{
 					int iFmt = int(_pt);
 					int iIdx = int(_index);

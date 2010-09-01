@@ -56,7 +56,7 @@ namespace KGD
 		  Channel::Out * rtp,
 		  Channel::Bi * rtcp,
 		  const string & parentLogName,
-		  RTSP::UserAgent agent
+		  RTSP::UserAgent::type agent
 		)
 		: _time( Factory::ClassRegistry< Timeline::Medium >::newInstance( agent ) )
 		, _paused( false )

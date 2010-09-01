@@ -153,7 +153,7 @@ namespace KGD
 			//! the combined medium timeline: RTP(t) = (LIFE(t) - PAUSED(t)) * rate
 			class Medium
 			: virtual public Factory::Base
-			, public Factory::Multiton< Medium, Medium, RTSP::UA_UNDEFINED >
+			, public Factory::Multiton< Medium, Medium, RTSP::UserAgent::Generic >
 			{
 			protected:
 				mutable RMutex _mux;
@@ -225,7 +225,8 @@ namespace KGD
 			//! vlc medium: RTP(t) = PT(t) * rate
 			class VLCMedium
 			: public Medium
-			, public Factory::Multiton< Medium, VLCMedium, RTSP::UA_VLC_1_0_2 >
+			, public Factory::Multiton< Medium, VLCMedium, RTSP::UserAgent::VLC_1_0_2 >
+			, public Factory::Multiton< Medium, VLCMedium, RTSP::UserAgent::VLC_1_0_6 >
 			{
 			protected:
 				//! factory ctor

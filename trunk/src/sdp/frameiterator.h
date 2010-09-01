@@ -128,13 +128,13 @@ namespace KGD
 					//! time extension of frame vector
 					double _duration;
 					//! type of frames
-					MediaType _type;
+					MediaType::kind _type;
 
 					//! copy another iterator
 					Slice( const Slice & ) throw();
 				public:
 					//! construct from a frame sequence
-					Slice( vector< Frame::Base * > &, MediaType ) throw();
+					Slice( vector< Frame::Base * > &, MediaType::kind ) throw();
 					//! get clone of this iterator
 					virtual Slice* getClone() const throw();
 					//! dtor

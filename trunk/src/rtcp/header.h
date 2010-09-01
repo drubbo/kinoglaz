@@ -54,15 +54,18 @@ namespace KGD
 	//! RTCP classes
 	namespace RTCP
 	{
-		//! packet types
-		enum PacketType
+		//! RTCP packet type codes
+		namespace PacketType
 		{
-			SR = 200,
-			RR = 201,
-			SDES = 202,
-			BYE = 203,
-			APP = 204
-		};
+			enum code
+			{
+				SenderReport = 200,
+				ReceiverReport = 201,
+				SenderDescription = 202,
+				Bye = 203,
+				Application = 204
+			};
+		}
 
 		//! RTCP packet header
 		struct Header
@@ -80,71 +83,89 @@ namespace KGD
 			uint16_t length;
 
 			//! build for a packet type with a len
-			Header( PacketType, uint16_t );
+			Header( PacketType::code, uint16_t );
 			//! reset len
 			void setLength( uint16_t );
 			//! add len
 			void incLength( uint16_t );
 		};
 
-		//! Sender Report
-		struct HeaderSR
+		//! Sender Report declarations
+		namespace SenderReport
 		{
-			TSSrc ssrc;
-			uint32_t NTPtimestampH;
-			uint32_t NTPtimestampL;
-			uint32_t RTPtimestamp;
-			uint32_t pktCount;
-			uint32_t octetCount;
-		};
-
-		//! Receiver Report
-		struct HeaderRR
-		{
-			TSSrc ssrc;
-		};
-
-		//! a packet following RR header
-		struct PacketRR
-		{
-			TSSrc ssrc;
-			uint8_t fractLost;
-			uint32_t pktLost:16;
-			uint32_t highestSeqNo;
-			uint32_t jitter;
-			uint32_t lastSR;
-			uint32_t delaySinceLastSR;
-		};
-
-		//! Sender Description packet
-		struct HeaderSDES
-		{
-			//! fields in SDES
-			enum Field
+			//! Sender Report header
+			struct Header
 			{
-				CNAME = 1,
-				NAME = 2,
-				EMAIL = 3,
-				PHONE = 4,
-				LOC = 5,
-				TOOL = 6,
-				NOTE = 7,
-				PRIV = 8
+				TSSrc ssrc;
+				uint32_t NTPtimestampH;
+				uint32_t NTPtimestampL;
+				uint32_t RTPtimestamp;
+				uint32_t pktCount;
+				uint32_t octetCount;
 			};
+		}
 
-			TSSrc ssrc;
-			uint8_t attr_name;
-			uint8_t length;
-
-		} __attribute__((__packed__));
-
-		//! BYE packet
-		struct HeaderBYE
+		//! Receiver Report declarations
+		namespace ReceiverReport
 		{
-			TSSrc ssrc;
-			uint8_t length;
+			//! Receiver Report header
+			struct Header
+			{
+				TSSrc ssrc;
+			};
+			//! Receiver Report payload
+			struct Payload
+			{
+				TSSrc ssrc;
+				uint8_t fractLost;
+				uint32_t pktLost:16;
+				uint32_t highestSeqNo;
+				uint32_t jitter;
+				uint32_t lastSR;
+				uint32_t delaySinceLastSR;
+			};
+		}
 
-		} __attribute__((__packed__));
+		//! Sender Description declarations
+		namespace SenderDescription
+		{
+			//! Sender Description header
+			struct Header
+			{
+				//! valid fields in a Sender Description header
+				struct Field
+				{
+					enum type
+					{
+						CNAME = 1,
+						NAME = 2,
+						EMAIL = 3,
+						PHONE = 4,
+						LOC = 5,
+						TOOL = 6,
+						NOTE = 7,
+						PRIV = 8
+					};
+				};
+
+				TSSrc ssrc;
+				uint8_t attributeName;
+				uint8_t length;
+
+			} __attribute__((__packed__));
+		}
+
+
+		namespace Bye
+		{
+			//! Bye header
+			struct Header
+			{
+				TSSrc ssrc;
+				uint8_t length;
+
+			} __attribute__((__packed__));
+		}
 	}
 }
 

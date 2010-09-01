@@ -145,7 +145,7 @@ namespace KGD
 					 Channel::Out * rtp,
 					 Channel::Bi * rtcp,
 					 const string & parentLogName,
-					 RTSP::UserAgent = RTSP::UA_UNDEFINED );
+					 RTSP::UserAgent::type = RTSP::UserAgent::Generic );
 			//! dtor
 			~Session();
 

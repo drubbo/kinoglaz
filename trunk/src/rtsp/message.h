@@ -96,7 +96,7 @@ namespace KGD
 				//! returns message sequence number
 				TCseq getCseq() const throw();
 				//! returns identified user agent
-				UserAgent getUserAgent() const throw( );
+				UserAgent::type getUserAgent() const throw( );
 
 				//! returns decoded url of last request
 				const Url & getUrl() const throw( RTSP::Exception::ManagedError );

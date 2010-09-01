@@ -120,9 +120,9 @@ namespace KGD
 			//! returns duration
 			double getDuration() const;
 			//! returns protocol reply using session ID as description
-			string getReply( const Url &, const RTSP::TSessionID & ) const;
+			string getReply( const Url &, const RTSP::TSessionID & ) const throw();
 			//! returns protocol reply with a given description for the session; internal description is used if none given
-			string getReply( const Url &, const string & description = "") const;
+			string getReply( const Url &, const string & description = "") const throw();
 			//!@{
 			//! returns medium by index / track name
 			const Medium::Base & getMedium( size_t ) const throw( RTSP::Exception::ManagedError );
@@ -135,13 +135,13 @@ namespace KGD
 			//!@}
 
 			//! get full path of source media container
-			string getFilePath() const;
+			string getFilePath() const throw();
 			//! get base name of source media container
-			const string & getFileName() const;
+			const string & getFileName() const throw();
 			//! get default description (default media container base name)
-			const string & getDescription() const;
+			const string & getDescription() const throw();
 			//! set different description
-			void setDescription( const string & );
+			void setDescription( const string & ) throw();
 
 			//! insert another descriptor at specified time
 			void insert( SDP::Container & other, double insertTime ) throw( KGD::Exception::OutOfBounds );

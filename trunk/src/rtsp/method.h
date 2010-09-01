@@ -81,13 +81,14 @@ namespace KGD
 				SET_PARAMETER
 			};
 
-			//! tells if random-access play is supported
-			extern bool SUPPORT_SEEK;
-
-			//! RTSP method count
-			extern const uint8_t count;
 			//! RTSP method strings
 			extern const string name[];
+
+			//! returns method ID given the method name
+			ID getIDfromName( const string & ) throw( KGD::Exception::NotFound );
+
+			//! tells if random-access play is supported
+			extern bool SUPPORT_SEEK;
 
 			//! abstract RTSP method
 			class Base

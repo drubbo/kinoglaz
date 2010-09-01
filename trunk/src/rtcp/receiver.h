@@ -88,14 +88,14 @@ namespace KGD
 			//! main loop
 			void recvLoop();
 			//! update stats from received packets
-			void updateStats( const PacketRR & );
+			void updateStats( const ReceiverReport::Payload & );
 
 			//! tells if a SR has been received
-			bool sr( char const * const data, size_t size );
+			bool handleSenderReport( char const * const data, size_t size );
 			//! tells if a RR has been received
-			bool rr( char const * const data, size_t size );
+			bool handleReceiverReport( char const * const data, size_t size );
 			//! tells if a SDES has been received
-			bool sdes( char const * const data, size_t size );
+			bool handleSenderDescription( char const * const data, size_t size );
 			//! adds received data to local buffer
 			void push( char const * const buffer, ssize_t len );
 

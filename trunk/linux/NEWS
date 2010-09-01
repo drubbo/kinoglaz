@@ -3,6 +3,11 @@
                         Kinoglaz Streaming Server
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+01/09/2010      Some cosmetics about enums and RTCP library
+
+                Fixed a bug about Range header with PAUSE toggles
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 29/07/2010      Broken up build process in a set of libraries
                 Format support is isolated in a separate library too
 

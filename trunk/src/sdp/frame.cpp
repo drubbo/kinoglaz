@@ -83,12 +83,12 @@ namespace KGD
 				return _time + _displace;
 			}
 
-			PayloadType Base::getPayloadType() const
+			Payload::type Base::getPayloadType() const
 			{
 				return _pt;
 			}
 
-			void Base::setPayloadType( PayloadType p )
+			void Base::setPayloadType( Payload::type p )
 			{
 				_pt = p;
 			}

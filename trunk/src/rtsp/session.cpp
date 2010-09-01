@@ -213,7 +213,7 @@ namespace KGD
 			Log::debug( "%s: media insert: search video track", getLogName() );
 			for( sessIt.first(); sessIt.isValid(); sessIt.next() )
 			{
-				if ( sessIt.val().getDescription().getType() == SDP::VIDEO )
+				if ( sessIt.val().getDescription().getType() == SDP::MediaType::Video )
 				{
 					insertTime = sessIt.val().evalMediumInsertion( curMediaTime );
 					break;

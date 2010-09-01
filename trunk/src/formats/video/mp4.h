@@ -54,7 +54,7 @@ namespace KGD
 					//! clone informations
 					virtual MP4* getInfoClone() const throw();
 					//! returns specific protocol reply
-					virtual string getReply( const Url & ) const;
+					virtual string getReply( const Url & ) const throw();
 				};
 			}
 		}
@@ -69,7 +69,7 @@ namespace KGD
 			{
 				class MP4
 				: public AVFrame
-				, public Factory::Multiton< Base, MP4, SDP::V_MPEG4 >
+				, public Factory::Multiton< Base, MP4, SDP::Payload::VideoMPEG4 >
 				{
 				protected:
 					//! factory ctor
@@ -87,7 +87,7 @@ namespace KGD
 				//! mpeg4 video
 				class MP4
 				: public AVMedia
-				, public Factory::Multiton< Base, MP4, SDP::V_MPEG4 >
+				, public Factory::Multiton< Base, MP4, SDP::Payload::VideoMPEG4 >
 				{
 				protected:
 					//! factory ctor

@@ -62,7 +62,7 @@ namespace KGD
 		{
 			// ****************************************************************************************************************
 
-			Base::Base( MediaType mt, PayloadType pt )
+			Base::Base( MediaType::kind mt, Payload::type pt )
 			: _type( mt )
 			, _pt( pt )
 			, _rate( 90000 )
@@ -150,7 +150,7 @@ namespace KGD
 			{
 				return _extraData;
 			}
-			PayloadType Base::getPayloadType() const
+			Payload::type Base::getPayloadType() const
 			{
 				return _pt;
 			}
@@ -162,7 +162,7 @@ namespace KGD
 			{
 				return _index;
 			}
-			MediaType Base::getType() const
+			MediaType::kind Base::getType() const
 			{
 				return _type;
 			}
@@ -181,7 +181,7 @@ namespace KGD
 				_trackName = x + "[" + toString< int >(_index) + "]";
 				_logName = "SDP " + _trackName;
 			}
-			void Base::setPayloadType( PayloadType x )
+			void Base::setPayloadType( Payload::type x )
 			{
 				_pt = x;
 			}
@@ -195,7 +195,7 @@ namespace KGD
 				_trackName = _fileName + "[" + toString< int >(x) + "]";
 				_logName = "SDP " + _trackName;
 			}
-			void Base::setType( MediaType x )
+			void Base::setType( MediaType::kind x )
 			{
 				_type = x;
 			}
@@ -261,7 +261,7 @@ namespace KGD
 					{
 						toPos = this->getFramePos( to );
 						// stop before the last key frame if video
-						if ( _type == SDP::VIDEO && toPos > 0 )
+						if ( _type == SDP::MediaType::Video && toPos > 0 )
 							-- toPos;
 					}
 					catch( const KGD::Exception::OutOfBounds & e )
@@ -316,8 +316,8 @@ namespace KGD
 					// if video frame, must be key
 					else if (
 						_frames[pos]->getTime() >= t
-						&& ( (_type == SDP::VIDEO && _frames[pos]->asPtr< Frame::MediaFile >()->isKey() )
-							|| _type != SDP::VIDEO ) )
+						&& ( (_type == SDP::MediaType::Video && _frames[pos]->asPtr< Frame::MediaFile >()->isKey() )
+							|| _type != SDP::MediaType::Video ) )
 						return pos;
 					else
 						++ pos;

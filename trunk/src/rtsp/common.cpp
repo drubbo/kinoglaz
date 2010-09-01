@@ -76,5 +76,14 @@ namespace KGD
 			rt << "[" << from << "-" << to << "] x " << speed << "(" << hasRange << "|" << hasScale << ")";
 			return rt.str();
 		}
+
+		namespace UserAgent
+		{
+			string name[3] = {
+				"Generic",
+				"VLC 1.0.2",
+				"VLC 1.0.6"
+			};
+		}
 	}
 }

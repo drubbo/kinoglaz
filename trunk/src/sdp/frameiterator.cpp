@@ -129,7 +129,7 @@ namespace KGD
 
 				// ***************************************************************************************************
 
-				Slice::Slice( vector< Frame::Base * > & fs, MediaType t ) throw()
+				Slice::Slice( vector< Frame::Base * > & fs, MediaType::kind t ) throw()
 				: _frames( fs )
 				, _pos( 0 )
 				, _duration( fs.back()->getTime() - fs.front()->getTime() )
@@ -184,8 +184,8 @@ namespace KGD
 					while( i < _frames.size() )
 					{
 						if ( _frames[i]->getTime() >= t
-							&& ( ( _type == SDP::VIDEO && _frames[i]->asPtr< SDP::Frame::MediaFile >()->isKey() )
-								|| _type != SDP::VIDEO ) )
+							&& ( ( _type == SDP::MediaType::Video && _frames[i]->asPtr< SDP::Frame::MediaFile >()->isKey() )
+								|| _type != SDP::MediaType::Video ) )
 							break;
 						else
 							++i;

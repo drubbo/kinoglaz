@@ -59,9 +59,9 @@ namespace KGD
 			bool SUPPORT_SEEK = false;
 
 			//! RTSP method count
-			const uint8_t count = 11;
-			//! RTSP method strings
-			const string name[count] =
+			static const uint8_t _count = 11;
+
+			const string name[ _count ] =
 			{
 				"OPTIONS",
 				"DESCRIBE",
@@ -77,6 +77,18 @@ namespace KGD
 				"SET_PARAMETER"
 			};
 
+			ID getIDfromName( const string& n ) throw( KGD::Exception::NotFound )
+			{
+				for( size_t i = 0; i < _count; ++i )
+				{
+					if ( name[i] == n )
+						return ID(i);
+				}
+
+				throw KGD::Exception::NotFound( n );
+			}
+
+			
 			// ****************************************************************************************************************
 
 			Base::Base( )

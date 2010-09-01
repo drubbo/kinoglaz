@@ -42,7 +42,7 @@ namespace KGD
 			namespace Video
 			{
 				MP4::MP4( )
-				: Base( VIDEO, V_MPEG4 )
+				: Base( MediaType::Video, Payload::VideoMPEG4 )
 				{
 				}
 
@@ -57,7 +57,7 @@ namespace KGD
 					return new MP4( *this );
 				}
 
-				string MP4::getReply( const Url & u ) const
+				string MP4::getReply( const Url & u ) const throw()
 				{
 					int iFmt = int(_pt);
 					int iIdx = int(_index);

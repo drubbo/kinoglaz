@@ -57,7 +57,7 @@ namespace KGD
 					//! clone informations
 					virtual MP2* getInfoClone() const throw();
 					//! returns specific protocol reply
-					virtual string getReply( const Url & ) const;
+					virtual string getReply( const Url & ) const throw();
 				};
 			}
 		}
@@ -71,7 +71,7 @@ namespace KGD
 			{
 				class MP2
 				: public AVFrame
-				, public Factory::Multiton< Base, MP2, SDP::A_MPA >
+				, public Factory::Multiton< Base, MP2, SDP::Payload::AudioMPA >
 				{
 				protected:
 					//! factory ctor
@@ -88,7 +88,7 @@ namespace KGD
 				//! mpeg2 audio packetization
 				class MP2
 				: public AVMedia
-				, public Factory::Multiton< Base, MP2, SDP::A_MPA >
+				, public Factory::Multiton< Base, MP2, SDP::Payload::AudioMPA >
 				{
 				protected:
 					MP2();
