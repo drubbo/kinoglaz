@@ -408,13 +408,15 @@ namespace KGD
 			{
 				ostringstream reply;
 
-				reply
-					<< this->getTimestamp( _rplRange.time ) << EOL
-					<< "Range: npt=" << setprecision(3) << fixed << _rplRange.from << "-";
-				if ( SUPPORT_SEEK && _rplRange.to < HUGE_VAL )
-					reply << setprecision(3) << fixed << _rplRange.to << EOL;
-				else
-					reply << EOL;
+				reply << this->getTimestamp( _rplRange.time ) << EOL;
+				if ( _rplRange.hasRange )
+				{
+					reply << "Range: npt=" << setprecision(3) << fixed << _rplRange.from << "-";
+					if ( SUPPORT_SEEK && _rplRange.to < HUGE_VAL )
+						reply << setprecision(3) << fixed << _rplRange.to << EOL;
+					else
+						reply << EOL;
+				}
 				reply
 					<< "Scale: " << setprecision(3) << fixed << _rplRange.speed << EOL
 					<< "Session: " << _sessionID << EOL
@@ -479,7 +481,8 @@ namespace KGD
 			{
 				Session::prepare();
 
-				PlayRequest rq = this->getTimeRange();
+				// dummy request to set up current time
+				PlayRequest rq;// = this->getTimeRange();
 
 				if ( _url->track.empty() )
 					_rtsp->pause( rq );
