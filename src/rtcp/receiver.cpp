@@ -50,8 +50,10 @@ namespace KGD
 		static const size_t hSize = sizeof( Header );
 		static const size_t hSizeSR = sizeof( SenderReport::Header );
 		static const size_t hSizeRR = sizeof( ReceiverReport::Header );
+		static const size_t hSizeSDES = sizeof( SourceDescription::Header );
 		static const size_t pSizeSR = sizeof( ReceiverReport::Payload );
 		static const size_t pSizeRR = sizeof( ReceiverReport::Payload );
+		static const size_t pSizeSDES = sizeof( SourceDescription::Payload );
 
 		Receiver::Receiver( RTP::Session & s, const Ptr::Shared< Channel::Bi > & chan )
 		: _sock( chan )
@@ -99,7 +101,7 @@ namespace KGD
 			size_t pos = 0;
 
 			// get common header data
-			if ( size - pos < hSize ) return false;
+			if ( size < hSize ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
 			data += hSize; pos += hSize;
 
@@ -132,7 +134,7 @@ namespace KGD
 			size_t pos = 0;
 
 			// get common header data
-			if ( size - pos < hSize ) return false;
+			if ( size < hSize ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
 			data += hSize; pos += hSize;
 
@@ -156,26 +158,77 @@ namespace KGD
 			return true;
 		}
 
-		bool Receiver::handleSenderDescription( char const * data, size_t size )
+		bool Receiver::handleSourceDescription( char const * data, size_t size )
 		{
 			Log::verbose( "%s: SDES", getLogName() );
+			size_t pos = 0;
 
-			if ( size < sizeof( SenderDescription::Header ) )
-				return false;
-
-			const SenderDescription::Header & hSD = reinterpret_cast< const SenderDescription::Header & >( *data );
-
-			switch ( hSD.attributeName )
+			// get common header data
+			if ( size < hSize ) return false;
+			const Header & h = reinterpret_cast< const Header & >( *data );
+			data += hSize; pos += hSize;
+			// for each source
+			for( size_t n = 0; n < h.count; ++n )
 			{
-			case SenderDescription::Header::Field::CNAME:
-				_stats.destSsrc = ntohs( hSD.ssrc );
-				break;
-			default:
-				Log::warning( "%s: unhandled sender description field %u", getLogName(), hSD.attributeName );
-			}
+				// get source description header data
+				if ( size - pos < hSizeSDES ) return false;
+				const SourceDescription::Header & hSD = reinterpret_cast< const SourceDescription::Header & >( *data );
+				data += hSizeSDES; pos += hSizeSDES;
 
+				Log::verbose( "%s: parsing SDES, ssrc %X", getLogName(), ntohs( hSD.ssrc ) );
+
+				while( pos < size )
+				{
+					if ( size - pos < pSizeSDES ) return false;
+					const SourceDescription::Payload & pSD = reinterpret_cast< const SourceDescription::Payload & >( *data );
+					data += pSizeSDES; pos += pSizeSDES;
+
+					Log::verbose( "%s: parsing SDES item, size %u, attribute %u", getLogName(), pSD.length, pSD.attributeName );
+
+					CharArray tmp( pSD.length + 1 );
+					tmp.set( data, pSD.length, 0 );
+					data += pSD.length; pos += pSD.length;
+
+					switch ( pSD.attributeName )
+					{
+					case SourceDescription::Payload::Attribute::END:
+						Log::verbose( "%s: END of SDES packet", getLogName() );
+						break;
+					case SourceDescription::Payload::Attribute::CNAME:
+						Log::message( "%s: CNAME is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::NAME:
+						Log::message( "%s: NAME is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::EMAIL:
+						Log::message( "%s: EMAIL is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::PHONE:
+						Log::message( "%s: PHONE is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::LOC:
+						Log::message( "%s: GEO LOCATION is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::TOOL:
+						Log::message( "%s: TOOL is %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::NOTE:
+						Log::message( "%s: NOTEs are %s", getLogName(), tmp.get() );
+						break;
+					case SourceDescription::Payload::Attribute::PRIV:
+						Log::message( "%s: PRIVATE EXTENSION is %s", getLogName(), tmp.get() );
+						break;
+					default:
+						Log::warning( "%s: unhandled sender description field %u with content %s", getLogName(), pSD.attributeName, tmp.get() );
+					}
+				}
+
+				// update stats
+				_stats.destSsrc = ntohs( hSD.ssrc );
+			}
 			return true;
 		}
+
 
 		void Receiver::push( char const * const buffer, ssize_t len )
 		{
@@ -201,8 +254,8 @@ namespace KGD
 					case PacketType::ReceiverReport:
 						fPtr = &Receiver::handleReceiverReport;
 						break;
-					case PacketType::SenderDescription:
-						fPtr = &Receiver::handleSenderDescription;
+					case PacketType::SourceDescription:
+						fPtr = &Receiver::handleSourceDescription;
 						break;
 					case PacketType::Bye:
 						Log::message( "%s: BYE", getLogName() );

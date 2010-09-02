@@ -95,7 +95,7 @@ namespace KGD
 			//! tells if a RR has been received
 			bool handleReceiverReport( char const * const data, size_t size );
 			//! tells if a SDES has been received
-			bool handleSenderDescription( char const * const data, size_t size );
+			bool handleSourceDescription( char const * const data, size_t size );
 			//! adds received data to local buffer
 			void push( char const * const buffer, ssize_t len );
 

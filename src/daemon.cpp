@@ -84,12 +84,14 @@ namespace KGD
 
 		RTP::Buffer::Base::SIZE_LOW = fromString< double >( (*_ini)( "RTP", "buf-empty" ) );
 		RTP::Buffer::Base::SIZE_FULL = fromString< double >( (*_ini)( "RTP", "buf-full" ) );
-		SDP::Container::BASE_DIR = (*_ini)( "SDP", "base-dir");
 		RTP::Packet::MTU = fromString< size_t >( (*_ini)("RTP", "net-mtu") );
 
 		RTSP::Port::Udp::FIRST = fromString< TPort >( (*_ini)("RTP", "udp-first", "30000") );
 		RTSP::Port::Udp::LAST = fromString< TPort >( (*_ini)("RTP", "udp-last", "40000") );
 		RTSP::Port::Udp::getInstance().reset( RTSP::Port::Udp::FIRST, RTSP::Port::Udp::LAST );
+
+		SDP::Container::BASE_DIR = (*_ini)( "SDP", "base-dir");
+		SDP::Container::AGGREGATE_CONTROL = ( "1" == (*_ini)( "SDP", "aggregate", "1") );
 
 		RTSP::Connection::SHARE_DESCRIPTORS = ( "1" == (*_ini)( "SDP", "share-descriptors", "0" ) );
 

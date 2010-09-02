@@ -5,6 +5,10 @@
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 02/09/2010      Added AAC support, thanks to Edorado Radica
 
+                Aggregate / per track control is now configurable
+
+                Fixed RTCP SDES send / receive
+
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 01/09/2010      Some cosmetics about enums and RTCP library
 

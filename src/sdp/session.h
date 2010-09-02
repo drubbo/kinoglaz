@@ -154,6 +154,8 @@ namespace KGD
 
 			//! global parameter: directory where media containers lie
 			static string BASE_DIR;
+			//! global parameter: when true, aggregate track control is announced
+			static bool AGGREGATE_CONTROL;
 		};
 	}
 }

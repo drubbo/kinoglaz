@@ -67,6 +67,7 @@ namespace KGD
 		// ****************************************************************************************************************
 
 		string Container::BASE_DIR = "./";
+		bool Container::AGGREGATE_CONTROL = true;
 
 		Container::Container( const string & fileName ) throw( SDP::Exception::Generic )
 		: _fileName( fileName )
@@ -377,17 +378,22 @@ namespace KGD
 			ostringstream s;
 			time_t now = time(NULL);
 
-			s << setprecision(0) << fixed << "v=" << VER << EOL
+			s
+				<< setprecision(0) << fixed << "v=" << VER << EOL
 				<< "o=- " << this->getNtpTime(now) << " " << this->getNtpTime(now + (time_t)round(_duration))
 				<< " IN IP4 " << u.host << EOL
 				<< "s=" << ( description.empty() ? this->getDescription() : description ) << EOL
 				<< "c=IN IP4 " << u.host << EOL
 				<< "t=0 0" << EOL
 				<< "a=type:broadcast" << EOL
-				<< "a=tool:" << KGD::Daemon::getName() << EOL
-				<< "a=control:*" << EOL
-				<< "a=range:npt=0-" ;
+				<< "a=tool:" << KGD::Daemon::getName() << EOL;
 
+			// aggregate or per-track control
+			if ( AGGREGATE_CONTROL )
+				s << "a=control:*" << EOL;
+
+			// range
+			s << "a=range:npt=0-" ;
 			if ( RTSP::Method::SUPPORT_SEEK )
 				s << setprecision(3) << _duration << EOL;
 			else

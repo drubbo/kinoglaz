@@ -61,7 +61,7 @@ namespace KGD
 			{
 				SenderReport = 200,
 				ReceiverReport = 201,
-				SenderDescription = 202,
+				SourceDescription = 202,
 				Bye = 203,
 				Application = 204
 			};
@@ -126,33 +126,38 @@ namespace KGD
 			};
 		}
 
-		//! Sender Description declarations
-		namespace SenderDescription
+		//! Source Description declarations
+		namespace SourceDescription
 		{
-			//! Sender Description header
+			//! Source Description header
 			struct Header
 			{
-				//! valid fields in a Sender Description header
-				struct Field
+				TSSrc ssrc;
+			} __attribute__((__packed__));
+
+			//! Source Description item
+			struct Payload
+			{
+				//! valid Source Description items
+				struct Attribute
 				{
 					enum type
 					{
+						END   = 0,
 						CNAME = 1,
-						NAME = 2,
+						NAME  = 2,
 						EMAIL = 3,
 						PHONE = 4,
-						LOC = 5,
-						TOOL = 6,
-						NOTE = 7,
-						PRIV = 8
+						LOC   = 5,
+						TOOL  = 6,
+						NOTE  = 7,
+						PRIV  = 8
 					};
 				};
-
-				TSSrc ssrc;
 				uint8_t attributeName;
 				uint8_t length;
-
 			} __attribute__((__packed__));
+
 		}
 
 

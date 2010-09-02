@@ -52,7 +52,7 @@ namespace KGD
 		, count(0)
 #endif
 		, pt(c)
-		, length(htons(( (sizeof(Header) + len) >> 2) - 1))
+		, length(htons(( (sizeof(Header) + len) / 4 ) - 1))
 		{
 		}
 
@@ -62,7 +62,7 @@ namespace KGD
 		}
 		void Header::incLength( uint16_t len )
 		{
-			length = htons(( (length + len ) >> 2) - 1);
+			setLength( (( length + 1 ) * 4) + len );
 		}
 	}
 }

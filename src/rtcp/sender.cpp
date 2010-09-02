@@ -41,6 +41,7 @@
 #include "rtp/session.h"
 #include "lib/log.h"
 #include <iostream>
+#include "daemon.h"
 
 namespace KGD
 {
@@ -137,7 +138,7 @@ namespace KGD
 				{
 // 					Log::debug("RTCP Sender %d about to ...", _sock->getDescription().ports.first );
 					// send SR and SDES
-					*_sock << sr().sdes();
+					*_sock << enqueueReport().enqueueDescription();
 					// give RTP way if needed
 					this->releaseRTP();
 
@@ -164,7 +165,7 @@ namespace KGD
 					}
 				}
 
-				*_sock << sr().bye();
+				*_sock << enqueueReport().enqueueBye();
 				Log::debug( "%s: sent BYE", getLogName() );
 			}
 			catch( const KGD::Socket::Exception & e )
@@ -243,7 +244,7 @@ namespace KGD
 				this->start();
 		}
 
-		Sender& Sender::sr()
+		Sender& Sender::enqueueReport()
 		{
 			SenderReport::Header h;
 
@@ -279,30 +280,47 @@ namespace KGD
 			return *this;
 		}
 
-		Sender& Sender::sdes()
+		Sender& Sender::enqueueDescription()
 		{
-			SenderDescription::Header h;
+			SourceDescription::Header h;
+			SourceDescription::Payload pName, pTool;
 
 			h.ssrc = htonl( _rtp->getSsrc() );
-			h.attributeName = SenderDescription::Header::Field::CNAME;
-			h.length = _rtp->getUrl().host.size();
 
-			size_t sdes = sizeof(h);
-			if (sdes % 4 == 0)
-				sdes ++;
-			Header hh( PacketType::SenderDescription, sdes );
+			pName.attributeName = SourceDescription::Payload::Attribute::CNAME;
+			pName.length = _rtp->getUrl().host.size();
+
+			pTool.attributeName = SourceDescription::Payload::Attribute::TOOL;
+			pTool.length = KGD::Daemon::getName().size();
+
+			size_t pktSize =
+				sizeof(h) +
+				sizeof(pName) + pName.length +
+				sizeof(pTool) + pTool.length;
+
+			Log::debug( "%s sending %u bytes", getLogName(), pktSize );
+			if ( pktSize % 4 != 0 )
+				pktSize += 4 - (pktSize % 4);
+			Log::debug( "%s adjusted to %u bytes", getLogName(), pktSize );
+
+			Header hh( PacketType::SourceDescription, pktSize );
 			hh.count = 1;
 
 			_buffer.enqueue( &hh, sizeof(hh) );
 			_buffer.enqueue( &h, sizeof(h) );
+			_buffer.enqueue( &pName, sizeof(pName) );
 			_buffer.enqueue( _rtp->getUrl().host );
-			if ( sdes % 2 != 0)
-				_buffer.enqueue(" ");
+			_buffer.enqueue( &pTool, sizeof(pTool) );
+			_buffer.enqueue( KGD::Daemon::getName() );
+
+			char zero( 0 );
+			while( _buffer.getDataLength() < pktSize )
+				_buffer.enqueue( &zero, 1 );
 
 			return *this;
 		}
 
-		Sender& Sender::bye()
+		Sender& Sender::enqueueBye()
 		{
 			Bye::Header h;
 			string reason = "Stream terminated";
@@ -319,6 +337,7 @@ namespace KGD
 
 			return *this;
 		}
+
 		Stat Sender::getStats() const throw()
 		{
 			RLock lk( _muxStats );
