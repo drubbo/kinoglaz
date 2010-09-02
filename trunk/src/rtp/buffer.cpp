@@ -289,7 +289,7 @@ namespace KGD
 					throw RTP::Eof();
 				else
 				{
-					RTP::Frame::AVMedia * result = _bufferOut.front()->asPtr< RTP::Frame::AVMedia >();
+					RTP::Frame::AVMedia * result = _bufferOut.front()->asPtrUnsafe< RTP::Frame::AVMedia >();
 					_bufferOut.pop_front();
 					// se ci sono pochi frame, facciamo ripartire il 3d di fetch
 					// ma solo se sono flusso video, oppure audio con scale buono (altrimenti dell'audio non carico niente)

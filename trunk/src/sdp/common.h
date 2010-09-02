@@ -73,7 +73,8 @@ namespace KGD
 			{
 				AudioMPA = 14,
 				AudioMP3 = 97,
-				VideoMPEG4 = 96
+				VideoMPEG4 = 96,
+				AudioAAC = 98
 			};
 		}
 

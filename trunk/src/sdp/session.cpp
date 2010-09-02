@@ -46,6 +46,8 @@
 #include "lib/utils/virtual.hpp"
 #include "lib/pls.h"
 
+#include "formats/audio/aac.h"
+
 #include <sstream>
 #include <iomanip>
 #include <iostream>
@@ -170,6 +172,14 @@ namespace KGD
 					m->setFileName( this->getFileName() );
 					m->setDuration( _duration );
 					m->setTimeBase( double(ratBase.num) / ratBase.den );
+
+					// set specific data
+					Medium::Audio::AAC * ma = m->asPtrUnsafe< Medium::Audio::AAC >();
+					if ( ma )
+					{
+						ma->setSampleRate( cdc->sample_rate );
+						ma->setChannels( cdc->channels );
+					}
 
 					_media( i ) = m;
 				}

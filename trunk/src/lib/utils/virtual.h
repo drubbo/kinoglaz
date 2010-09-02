@@ -56,8 +56,16 @@ namespace KGD
 		template< class T > const T & as() const throw ( bad_cast );
 		//! Tries a dynamic cast to a reference to T
 		template< class T > T & as() throw ( bad_cast );
+
+		//! Tries a dynamic cast to a pointer to T, raising exception on failure
+		template< class T > const T * asPtr() const throw ( bad_cast );
 		//! Tries a dynamic cast to a pointer to T, raising exception on failure
 		template< class T > T * asPtr() throw ( bad_cast );
+
+		//! Tries a dynamic cast to a pointer to T, returning 0 on failure
+		template< class T > const T * asPtrUnsafe() const throw ( );
+		//! Tries a dynamic cast to a pointer to T, returning 0 on failure
+		template< class T > T * asPtrUnsafe() throw ( );
 	};
 }
 
