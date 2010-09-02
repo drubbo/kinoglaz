@@ -105,11 +105,11 @@ namespace KGD
 			void sendLoop();
 
 			//! enque SR packet in local buffer
-			Sender& sr();
+			Sender& enqueueReport();
 			//! enque SDES packet in local buffer
-			Sender& sdes();
+			Sender& enqueueDescription();
 			//! enque BYE packet in local buffer
-			Sender& bye();
+			Sender& enqueueBye();
 
 			//! pause the loop
 			void pause();
