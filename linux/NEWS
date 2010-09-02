@@ -3,6 +3,9 @@
                         Kinoglaz Streaming Server
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+02/09/2010      Added AAC support, thanks to Edorado Radica
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 01/09/2010      Some cosmetics about enums and RTCP library
 
                 Fixed a bug about Range header with PAUSE toggles

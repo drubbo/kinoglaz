@@ -184,7 +184,7 @@ namespace KGD
 					while( i < _frames.size() )
 					{
 						if ( _frames[i]->getTime() >= t
-							&& ( ( _type == SDP::MediaType::Video && _frames[i]->asPtr< SDP::Frame::MediaFile >()->isKey() )
+							&& ( ( _type == SDP::MediaType::Video && _frames[i]->asPtrUnsafe< SDP::Frame::MediaFile >()->isKey() )
 								|| _type != SDP::MediaType::Video ) )
 							break;
 						else

@@ -316,7 +316,7 @@ namespace KGD
 					// if video frame, must be key
 					else if (
 						_frames[pos]->getTime() >= t
-						&& ( (_type == SDP::MediaType::Video && _frames[pos]->asPtr< Frame::MediaFile >()->isKey() )
+						&& ( (_type == SDP::MediaType::Video && _frames[pos]->asPtrUnsafe< Frame::MediaFile >()->isKey() )
 							|| _type != SDP::MediaType::Video ) )
 						return pos;
 					else

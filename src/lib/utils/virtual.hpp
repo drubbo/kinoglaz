@@ -61,6 +61,16 @@ namespace KGD
 	}
 
 	template< class T >
+	const T * Virtual::asPtr() const throw ( bad_cast )
+	{
+		const T * ref = dynamic_cast< const T * > ( this );
+		if ( ref != 0 )
+			return ref;
+		else
+			throw bad_cast();
+	}
+
+	template< class T >
 	T * Virtual::asPtr() throw ( bad_cast )
 	{
 		T * ref = dynamic_cast< T * > ( this );
@@ -68,6 +78,19 @@ namespace KGD
 			return ref;
 		else
 			throw bad_cast();
+	}
+
+
+	template< class T >
+	const T * Virtual::asPtrUnsafe() const throw ( )
+	{
+		return dynamic_cast< const T * > ( this );
+	}
+
+	template< class T >
+	T * Virtual::asPtrUnsafe() throw ( )
+	{
+		return dynamic_cast< T * > ( this );
 	}
 }
 
