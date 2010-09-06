@@ -81,6 +81,8 @@ namespace KGD
 			bool _stopped;
 			//! playing indicator (not stopped and not paused)
 			Safe::Flag _playing;
+			//! seek request indicator
+			bool _seeked;
 
 			//! url, with track, to play
 			Url _url;

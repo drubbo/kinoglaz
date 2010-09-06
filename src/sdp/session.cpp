@@ -178,7 +178,7 @@ namespace KGD
 					Medium::Audio::AAC * ma = m->asPtrUnsafe< Medium::Audio::AAC >();
 					if ( ma )
 					{
-						ma->setSampleRate( cdc->sample_rate );
+						ma->setRate( cdc->sample_rate );
 						ma->setChannels( cdc->channels );
 					}
 
