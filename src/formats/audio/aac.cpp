@@ -41,14 +41,12 @@ namespace KGD
 			{
 				AAC::AAC( )
 				: Base( MediaType::Audio, Payload::AudioAAC )
-				, _sampleRate( 0 )
 				, _nChannels( 0 )
 				{
 				}
 
 				AAC::AAC( const AAC & m )
 				: Base( m )
-				, _sampleRate( m._sampleRate )
 				, _nChannels( m._nChannels )
 				{
 
@@ -57,11 +55,6 @@ namespace KGD
 				AAC* AAC::getInfoClone() const throw()
 				{
 					return new AAC( *this );
-				}
-
-				void AAC::setSampleRate( int r ) throw()
-				{
-					_sampleRate = r;
 				}
 
 				void AAC::setChannels( int n ) throw()
@@ -80,7 +73,7 @@ namespace KGD
 					s
 						<< "m=audio " << 0 << " RTP/AVP " << iFmt << EOL
 						<< "a=control:" << myUrl.toString() << EOL
-						<< "a=rtpmap:" << iFmt << " mpeg4-generic/" << _sampleRate << "/" << _nChannels << EOL
+						<< "a=rtpmap:" << iFmt << " mpeg4-generic/" << _rate << "/" << _nChannels  << EOL
 						<< "a=fmtp:" << iFmt << " profile-level-id=1;mode=AAC-hbr;sizeLength=13;indexLength=3;indexDeltaLength=3;config=";
 					for( size_t i = 0; i < _extraData.size(); ++i )
 						s << toNibble(_extraData[i] >> 4) << toNibble(_extraData[i] & 0x0F);
@@ -127,41 +120,25 @@ namespace KGD
 					size_t packetized = 0, tot = myData.size();
 					const unsigned char* payload = myData.get();
 
-// 					Log::debug(" --- (getPackets AAC) | tot = %d", tot );
-// 					Log::debug(" --- (getPackets AAC) | payloadSize = %d", payloadSize );
+					// The maximum size of an AAC frame in this mode (AAC-hbr) is 8191 octets.
+					if ( tot > 8191 )
+						throw Exception::OutOfBounds( tot, 0, 8191 );
 
 					while( packetized < tot )
 					{
 						// next payload size
 						size_t copySize = min( payloadSize, tot - packetized );
-// 						Log::debug(" --- (getPackets AAC) | copySize + header = %d + %d ", copySize, sizeof(Header) );
 						// alloc packet
 						Ptr::Scoped< Packet > pkt = new Packet( copySize + Header::SIZE + 4 );
 
 						// make packet
 						h.seqNo = htons(++ seq);
-						h.marker = ( copySize >= tot ? 1 : 0 );
-
-						if ( packetized >= 8192 )
-							throw Exception::OutOfBounds(packetized, 0, 8192);
-
-// 						Log::debug(" --- (getPackets AAC) | marker bit =  %c", h.marker == 1 ? '1' : '0' );
+						// mark if: last fragment
+						h.marker = ( copySize >= ( tot - packetized ) ? 1 : 0 );
 
 						uint16_t AU_HS_L = htons( 16 );
-// 						Log::debug(" --- (getPackets AAC) | AU_HS_L htons = %2x", AU_HS_L );
 						// 13 bit size + 3 bit index (000)
-// 						Log::debug(" --- (getPackets AAC) | AU_size_index = %2x", (uint16_t) copySize << 3 );
-						uint16_t AU_size_index = htons( uint16_t(copySize) << 3 );
-
-// 						Log::debug(" --- (getPackets AAC) | AU_size_index htons = %2x", AU_size_index );
-
-// 						unsigned char* payloadNOT = (unsigned char*) malloc(copySize * sizeof(unsigned char));
-
-// 						for(int i = 0; i < copySize; i++){
-// 							payloadNOT[i] = ~payload[i];
-// 						}
-// 						Log::debug(" --- (getPackets AAC) | prima = %2x %2x %2x %2x %2x", payload[0], payload[1], payload[2], payload[3],payload[4] );
-// 						Log::debug(" --- (getPackets AAC) | dopo  = %2x %2x %2x %2x %2x", payloadNOT[0], payloadNOT[1], payloadNOT[2], payloadNOT[3],payloadNOT[4] );
+						uint16_t AU_size_index = htons( (uint16_t) copySize << 3 );
 
 						pkt->data
 							.set< Header >( h, 0 )
@@ -171,7 +148,7 @@ namespace KGD
 
 						// advance
 						packetized += copySize;
-// 						Log::debug(" --- (getPackets AAC) | packetized = %d", packetized );
+
 						rt.push_back( pkt.release() );
 					}
 

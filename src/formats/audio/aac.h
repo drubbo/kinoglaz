@@ -47,7 +47,6 @@ namespace KGD
 				, public Factory::Multiton< Base, AAC, CODEC_ID_AAC >
 				{
 				protected:
-					int _sampleRate;
 					int _nChannels;
 
 					AAC( );
@@ -58,8 +57,6 @@ namespace KGD
 					virtual AAC* getInfoClone() const throw();
 					//! returns specific protocol reply
 					virtual string getReply( const Url & ) const throw();
-					//! set sample rate
-					void setSampleRate( int ) throw();
 					//! set number of channels
 					void setChannels( int ) throw();
 				};
