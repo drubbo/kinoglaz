@@ -125,6 +125,8 @@ namespace KGD
 			// un audio a velocita' superiore a 1.0x non lo invio, lascio il medium in pausa
 			if ( _medium->getType() == SDP::MediaType::Video || fabs( ret.speed ) <= 1.0 )
 			{
+				_seeked = ret.hasRange;
+
 				// pause
 				if ( _paused )
 				{
