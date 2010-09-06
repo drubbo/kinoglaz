@@ -62,6 +62,7 @@ namespace KGD
 		, _paused( false )
 		, _stopped( true )
 		, _playing( false )
+		, _seeked( false )
 		, _url( url )
 		, _medium( sdp )
 		, _RTPsock( rtp )
@@ -130,38 +131,52 @@ namespace KGD
 			try
 			{
 				Ptr::Scoped< RTP::Frame::Base > tmp;
-				double
-					now = _time->getPresentationTime(),
-					spd = _time->getSpeed(),
-					fTime = HUGE_VAL,
-					sendWorse = HUGE_VAL;
 
-				lk.destroy();
-
-				for(;;)
+				if ( _seeked )
 				{
-					tmp = _frameBuf->getNextFrame();
-					fTime = tmp->getTime();
-					double sendIn = (fTime - now) / spd;
-					if ( sendIn > 1 )
+					Log::debug( "%s: seeked, skip unordered frames", getLogName() );
+
+					double
+						now = _time->getPresentationTime(),
+						spd = _time->getSpeed(),
+						fTime = HUGE_VAL,
+						sendWorse = HUGE_VAL;
+
+					lk.destroy();
+
+					for(;;)
 					{
-						if ( sendIn > sendWorse )
-							break;
-						else
+						tmp = _frameBuf->getNextFrame();
+						fTime = tmp->getTime();
+						double sendIn = (fTime - now) / spd;
+
+						if ( sendIn > 1 )
 						{
-							Log::debug( "%s: skip strange frame at %lf to send in %lf", getLogName(), fTime, sendIn );
-							now = _time->getPresentationTime();
-							sendWorse = sendIn;
+							if ( sendIn > sendWorse )
+								break;
+							else
+							{
+								Log::debug( "%s: skip strange frame at %lf to send in %lf", getLogName(), fTime, sendIn );
+								now = _time->getPresentationTime();
+								sendWorse = sendIn;
+							}
 						}
+						else
+							break;
 					}
-					else
-						break;
+					lk = new Lock( _mux );
+					_seeked = false;
+				}
+				else
+				{
+					lk.destroy();
+					tmp = _frameBuf->getNextFrame();
+					lk = new Lock( _mux );
 				}
 
-				lk = new Lock( _mux );
 				_frameNext = tmp.release();
 
-				return fTime;
+				return _frameNext->getTime();
 			}
 			catch( ... )
 			{
