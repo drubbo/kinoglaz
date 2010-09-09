@@ -93,11 +93,15 @@ namespace KGD
 
 			void Base::clear()
 			{
+				Log::debug("%s: flushing whole buffer", getLogName() );
+
 				Ctr::clear( _bufferOut );
 			}
 
 			void Base::clear( double from )
 			{
+				Log::debug("%s: flushing buffer from %lf", getLogName(), from );
+
 				while( ! _bufferOut.empty() && _bufferOut.back()->getTime() >= from )
 				{
 					RTP::Frame::Base * f = _bufferOut.back();
@@ -135,7 +139,7 @@ namespace KGD
 				_frameIndex->insert( duration, t );
 			}
 
-			double Base::drySeek(double t, double ) throw( KGD::Exception::OutOfBounds )
+			double Base::drySeek( double t, double ) throw( KGD::Exception::OutOfBounds )
 			{
 				Lock lk ( _mux );
 

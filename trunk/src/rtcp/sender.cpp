@@ -298,10 +298,10 @@ namespace KGD
 				sizeof(pName) + pName.length +
 				sizeof(pTool) + pTool.length;
 
-			Log::debug( "%s sending %u bytes", getLogName(), pktSize );
+			Log::verbose( "%s sending %u bytes", getLogName(), pktSize );
 			if ( pktSize % 4 != 0 )
 				pktSize += 4 - (pktSize % 4);
-			Log::debug( "%s adjusted to %u bytes", getLogName(), pktSize );
+			Log::verbose( "%s adjusted to %u bytes", getLogName(), pktSize );
 
 			Header hh( PacketType::SourceDescription, pktSize );
 			hh.count = 1;
