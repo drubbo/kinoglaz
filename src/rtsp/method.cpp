@@ -409,11 +409,15 @@ namespace KGD
 					throw RTSP::Exception::ManagedError( Error::BadRequest );
 				}
 
-				// pre-play
-				if ( _url->track.empty() )
-					_rplRange = _rtsp->play( _rqRange );
-				else
-					_rplRange = _rtsp->getSession( _url->track ).play( _rqRange );
+				// some useful info were given, set up the new scenario
+				if ( _rqRange.hasRange || _rqRange.hasScale )
+				{
+					// pre-play
+					if ( _url->track.empty() )
+						_rplRange = _rtsp->play( _rqRange );
+					else
+						_rplRange = _rtsp->getSession( _url->track ).play( _rqRange );
+				}
 			}
 
 			string Play::getReply() throw( RTSP::Exception::ManagedError )
@@ -467,20 +471,22 @@ namespace KGD
 
 			void Play::execute() throw( RTSP::Exception::ManagedError )
 			{
-/*				try
+				// play effective
+				if ( _rqRange.hasRange || _rqRange.hasScale )
 				{
-					SDP::Container drake( "mp2.avi" );
-					_rtsp->insertMedia( drake, 30 );
+					if ( _url->track.empty() )
+						_rtsp->play( );
+					else
+						_rtsp->getSession( _url->track ).play( );
 				}
-				catch( const KGD::Exception::Generic & e )
-				{
-					Log::error( "%s: %s", _conn->getLogName(), e.what() );
-				}*/
-				
-				if ( _url->track.empty() )
-					_rtsp->play( );
+				// just toggle pause
 				else
-					_rtsp->getSession( _url->track ).play( );
+				{
+					if ( _url->track.empty() )
+						_rtsp->unpause( _rqRange );
+					else
+						_rtsp->getSession( _url->track ).unpause( _rqRange );
+				}
 			}
 
 			// ****************************************************************************************************************

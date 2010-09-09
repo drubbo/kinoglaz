@@ -195,28 +195,28 @@ namespace KGD
 						Log::verbose( "%s: END of SDES packet", getLogName() );
 						break;
 					case SourceDescription::Payload::Attribute::CNAME:
-						Log::message( "%s: CNAME is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: CNAME is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::NAME:
-						Log::message( "%s: NAME is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: NAME is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::EMAIL:
-						Log::message( "%s: EMAIL is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: EMAIL is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::PHONE:
-						Log::message( "%s: PHONE is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: PHONE is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::LOC:
-						Log::message( "%s: GEO LOCATION is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: GEO LOCATION is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::TOOL:
-						Log::message( "%s: TOOL is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: TOOL is %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::NOTE:
-						Log::message( "%s: NOTEs are %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: NOTEs are %s", getLogName(), tmp.get() );
 						break;
 					case SourceDescription::Payload::Attribute::PRIV:
-						Log::message( "%s: PRIVATE EXTENSION is %s", getLogName(), tmp.get() );
+						Log::verbose( "%s: PRIVATE EXTENSION is %s", getLogName(), tmp.get() );
 						break;
 					default:
 						Log::warning( "%s: unhandled sender description field %u with content %s", getLogName(), pSD.attributeName, tmp.get() );
