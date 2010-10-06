@@ -14,4 +14,5 @@ noinst_HEADERS = \
 kgd_LDFLAGS = -Llib -Lsdp -Lrtp -Lrtcp -Lrtsp -Lformats
 
 kgd_LDADD = \
-	-lkgd_sdp -lkgd_rtcp -lkgd_rtp -lkgd_rtsp -lkgd_formats
+	-lkgd_sdp -lkgd_rtcp -lkgd_rtp -lkgd_rtsp -lkgd_formats \
+	-lboost_thread -lboost_regex
