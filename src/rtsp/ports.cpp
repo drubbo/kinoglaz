@@ -129,7 +129,7 @@ namespace KGD
 			}
 
 			// ***************************************************************************************************************
-	
+
 			TPort Udp::FIRST = 30000;
 			TPort Udp::LAST = 40000;
 
@@ -140,22 +140,22 @@ namespace KGD
 
 			TPort Udp::getOne() throw( KGD::Exception::NotFound )
 			{
-				Lock lk( _mux );
+				RLock lk( _mux );
 				return Pool::getOne();
 			}
 			TPortPair Udp::getPair() throw( KGD::Exception::NotFound )
 			{
-				Lock lk( _mux );
+				RLock lk( _mux );
 				return Pool::getPair();
 			}
 			void Udp::release( TPort p )
 			{
-				Lock lk( _mux );
+				RLock lk( _mux );
 				Pool::release( p );
 			}
 			void Udp::release( const TPortPair p )
 			{
-				Lock lk( _mux );
+				RLock lk( _mux );
 				Pool::release( p );
 			}
 

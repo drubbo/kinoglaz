@@ -54,7 +54,7 @@ namespace KGD
 			double Base::SIZE_FULL = HUGE_VAL;
 			double Base::SCALE_LIMIT = 1.0;
 			double Base::SCALE_STEP = 0;
-			
+
 			Base::Base ( SDP::Medium::Base & sdp )
 			: _medium( sdp )
 // 			, _trackName( sdp.getTrackName() )
@@ -149,7 +149,7 @@ namespace KGD
 
 				return rt;
 			}
-			
+
 			double Base::isBufferLow() const
 			{
 				return this->getOutBufferTimeSize() < SIZE_LOW;
@@ -191,7 +191,7 @@ namespace KGD
 					_mux.unlock();
 					_th = new Thread( boost::bind ( &AVFrame::fetch, this ) );
 				}
-					
+
 			}
 
 			void AVFrame::stop()

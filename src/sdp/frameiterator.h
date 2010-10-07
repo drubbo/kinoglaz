@@ -51,15 +51,15 @@ namespace KGD
 					//! obtain clone of iterator
 					virtual Base* getClone() const throw() = 0;
 					//! returns frame at position. does not change current position
-					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds ) = 0;
+					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns frame at current position
-					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds ) = 0;
+					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns frame at current position then advances position by 1
-					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds ) = 0;
+					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! seeks first frame at specified time. changes current position
-					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds ) = 0;
+					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! seeks to a position
-					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds ) = 0;
+					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns current position
 					virtual size_t pos() const throw() = 0;
 					//! returns number of frames this iterator referers to
@@ -95,15 +95,15 @@ namespace KGD
 					//! dtor
 					virtual ~Default();
 					//! returns frame at position. does not change current position
-					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position
-					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position then advances position by 1
-					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks first frame at specified time. changes current position
-					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks to a position
-					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns current position
 					virtual size_t pos() const throw();
 					//! returns number of effective frames in this medium
@@ -196,15 +196,15 @@ namespace KGD
 					//! dtor
 					virtual ~Loop();
 					//! returns frame at position. does not change current position
-					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position
-					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position then advances position by 1
-					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks first frame at specified time. changes current position
-					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks to a position
-					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds );
+					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns current position
 					virtual size_t pos() const throw();
 					//! returns number of effective frames in this medium

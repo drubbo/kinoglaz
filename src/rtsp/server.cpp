@@ -48,7 +48,7 @@ namespace KGD
 	{
 		Server& Server::getInstance( const Ini::Entries & params ) throw( KGD::Exception::Generic )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 
 			if ( !_instance )
 			{
@@ -62,7 +62,7 @@ namespace KGD
 
 		Server& Server::getInstance() throw( KGD::Exception::InvalidState )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			if ( !_instance )
 				throw KGD::Exception::InvalidState( "KGD instance not yet initialized" );
 
@@ -98,14 +98,14 @@ namespace KGD
 				_socket = new KGD::Socket::TcpServer( _port );
 				Log::message( "KGD: binding to port %d", newPort );
 			}
-			
+
 		}
 
 
 		Server::~Server()
 		{
-			Lock lk(_mux);
-			
+			RLock lk(_mux);
+
 			Log::message("KGD: tearing down %d connections", _conns.size());
 			Ctr::clear( _conns );
 
@@ -127,15 +127,16 @@ namespace KGD
 			}
 			catch( const KGD::Exception::Generic & e )
 			{
-				Log::debug( "KGD: %s", e.what() );
+				Log::debug( "KGD: serve: %s", e.what() );
 			}
 
+			Log::debug( "KGD: calling remove of %lu", conn->getID() );
 			this->remove( conn );
 		}
 
 		void Server::handle( KGD::Socket::Tcp * channel )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 
 			if ( _maxConnections != 0 && _conns.size() >= _maxConnections )
 				throw RTSP::Exception::Generic( "handle", "KGD: CONN limit already reached" );
@@ -150,7 +151,7 @@ namespace KGD
 
 		void Server::remove( Connection * conn ) throw( KGD::Exception::NotFound )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			Log::debug( "KGD: removing connection %lu", conn->getID() );
 
 			if ( !_running )
@@ -190,7 +191,11 @@ namespace KGD
 					{
 						// on interrupt we continue
 						if ( e.getErrcode() != EINTR )
+						{
+							Log::error("KGD: run: %s", e.what() );
 							throw;
+						}
+
 					}
 				}
 			}

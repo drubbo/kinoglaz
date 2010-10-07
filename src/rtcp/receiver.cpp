@@ -124,7 +124,7 @@ namespace KGD
 			_stats.octetCount = ntohl(hSR.octetCount);
 			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
 				this->updateStats( *it );
-			
+
 			return true;
 		}
 
@@ -154,7 +154,7 @@ namespace KGD
 			_stats.RRcount ++;
 			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
 				this->updateStats( *it );
-			
+
 			return true;
 		}
 
@@ -294,23 +294,27 @@ namespace KGD
 				{
 					while( _paused )
 					{
-						Lock lk( _mux );
+						Log::message( "%s: paused", getLogName() );
+						Lock lk( _muxPause );
 						_condUnPause.wait( lk );
 					}
 
-					try
+					if ( _running )
 					{
-						ssize_t read = 0;
-						Log::debug( "%s waiting message", getLogName() );
-						if ( ( read = _sock->readSome( buffer ) ) > 0 )
-							this->push( buffer.get(), read );
-					}
-					catch( const Socket::Exception & e )
-					{
-						if ( e.getErrcode() != EAGAIN )
+						try
 						{
-							Log::error( "%s: %s, stopping", getLogName(), e.what() );
-							this->stop();
+							ssize_t read = 0;
+							Log::debug( "%s waiting message", getLogName() );
+							if ( ( read = _sock->readSome( buffer ) ) > 0 )
+								this->push( buffer.get(), read );
+						}
+						catch( const Socket::Exception & e )
+						{
+							if ( e.getErrcode() != EAGAIN )
+							{
+								Log::error( "%s: %s, stopping", getLogName(), e.what() );
+								this->stop();
+							}
 						}
 					}
 				}
@@ -346,7 +350,6 @@ namespace KGD
 
 		void Receiver::unpause()
 		{
-			Lock lk( _mux );
 			_paused = false;
 			_condUnPause.notify_all();
 		}

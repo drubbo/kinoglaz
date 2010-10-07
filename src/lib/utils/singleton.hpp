@@ -46,21 +46,21 @@ namespace KGD
 		template< typename T >
 		InstanceRef< T >::InstanceRef( )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			++ _count;
 		}
 
 		template< typename T >
 		InstanceRef< T >::InstanceRef( const InstanceRef< T >& )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			++ this->_count;
 		}
 
 		template< typename T >
 		InstanceRef< T >::~InstanceRef( )
 		{
-			Lock lk( this->_mux );
+			RLock lk( this->_mux );
 			if ( (-- this->_count) <= 0 )
 				T::destroyInstance();
 		}
@@ -100,7 +100,7 @@ namespace KGD
 		template< typename T >
 		void Class< T >::destroyInstance()
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			if ( _instance )
 				Ptr::clear< T >( _instance );
 		}
@@ -114,7 +114,7 @@ namespace KGD
 		template< typename T >
 		InstanceRef< T > Class< T >::getInstance()
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			if ( !_instance )
 				_instance = new T;
 
@@ -136,7 +136,7 @@ namespace KGD
 		template< typename T >
 		T& Persistent< T >::getInstance()
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 
 			if ( !_instance )
 				_instance = new T;
@@ -144,13 +144,13 @@ namespace KGD
 			return *_instance;
 		}
 
-		template< typename T > Mutex InstanceRef< T >::_mux;
+		template< typename T > RMutex InstanceRef< T >::_mux;
 		template< typename T > long InstanceRef< T >::_count = 0;
-		template< typename T > Mutex Class< T >::_mux;
+		template< typename T > RMutex Class< T >::_mux;
 		template< typename T > T* Class< T >::_instance = 0;
 
 
-		template< typename T > Mutex Persistent< T >::_mux;
+		template< typename T > RMutex Persistent< T >::_mux;
 		template< typename T > Ptr::Scoped< T > Persistent< T >::_instance = 0;
 	}
 }

@@ -126,7 +126,7 @@ namespace KGD
 					rtpChan = rtsp.getInterleave( local.first );
 					rtcpChan = rtsp.getInterleave( local.second );
 				}
-				
+
 				// get description
 				int mediumIndex = fromString< int >( url.track );
 				SDP::Medium::Base & med = _conn->getDescription( url.file ).getMedium( mediumIndex );
@@ -189,6 +189,11 @@ namespace KGD
 			if ( _sessions.empty() )
 			{
 				Log::error( "%s: media insert: no sessions to add to", getLogName() );
+				return;
+			}
+			else if ( RTSP::Method::SUPPORT_SEEK )
+			{
+				Log::error( "%s: media insert: unsupported operation with seek support active", getLogName() );
 				return;
 			}
 
@@ -303,7 +308,7 @@ namespace KGD
 			else
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}
-		
+
 		const RTP::Session & Session::getSession( const string & track ) const throw( RTSP::Exception::ManagedError )
 		{
 			if ( _sessions.has( track ) )
@@ -319,7 +324,7 @@ namespace KGD
 			else
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}
-		
+
 		const TSessionID & Session::getID() const throw()
 		{
 			return _id;

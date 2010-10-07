@@ -7,7 +7,7 @@
 
 1.1   boost
 
-- Download boost libraries ( http://www.boost.org ) version 1.41.0
+- Download boost libraries ( http://www.boost.org ) version 1.41.0 or later
 
 - Unpack the tarball
 
@@ -38,18 +38,26 @@
 - check out sources from svn:
 
   cd
-  svn checkout svn://194.116.73.200/ussd/trunk ussd
+  svn checkout https://kinoglaz.svn.sourceforge.net/svnroot/kinoglaz/trunk \
+      kinoglaz
 
-- build
+- build and install
 
-  cd ~/ussd/linux/
+  cd ~/kinoglaz/linux/
   bash bootstrap
   make
+  sudo make install
+
+- generate reference in ~/kinoglaz/doc
+
+  cd ~/kinoglaz/linux/
+  doxygen doxyfile
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 3     RUNTIME CONFIGURATION
 
-- create a file with common "ini" structure like following:
+- create a file with common "ini" structure like following,
+  where bool params are 0 (false) or 1 (true)
 
   [DAEMON]
   pidfile=< string >
@@ -62,7 +70,7 @@
       max number of connections - 0 means no limit
 
   [RTSP]
-  supp-seek=< bool: 0|1 >
+  supp-seek=< bool >
       if 0 all plays will be announced as live streams; default to 1
 
 
@@ -81,12 +89,18 @@
   [SDP]
   base-dir=< string >
       base path for media files. MUST include trailing slash.
-  share-descriptors=< bool: 0|1 >
+  share-descriptors=< bool >
       if 1 concurrent request to same media containers will share index and
       frames; default to 0
+  aggregate=< bool >
+      announces aggregate (one command for all tracks) control if 1, or 
+      per-track if 0; clients usually don't care and perform aggregate
+      control regardless of the announcement; default to 1
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 4     RUNTIME CONTROL
+
+- executable name is kgd
 
 - kill with TERM signal
 
@@ -98,7 +112,7 @@
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 5     LAUNCHING
 
-- run from shell using following parameters:
+- run the kgd executable from shell using following parameters:
 
   -d                       starts as a daemon
 
@@ -110,7 +124,7 @@
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 6     CLIENT COMPATIBILITY
 
-  VLC 1.0.2 GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd          RFC non compliant
+  VLC 1.0.x GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd          RFC non compliant
   TOTEM 2.28.2:         PLAY, PAUSE                           RFC compliant
   QuickTime 7.6.6:      PLAY, PAUSE, SEEK, SCALE fwd          RFC compliant
   MPlayer:              PLAY                                  gui is crappy

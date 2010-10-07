@@ -70,6 +70,8 @@ namespace KGD
 				mutable double _displace;
 				//! RTP payload type for this frame
 				Payload::type _pt;
+				//! array index in medium
+				size_t _mediumPos;
 			public:
 				//! build from a ffmpeg packet and timebase to guess time
 				Base( const AVPacket &, double timebase );
@@ -77,16 +79,24 @@ namespace KGD
 				Base( double t );
 				//! copy
 				Base( const Base & );
+
+				//! set position in medium container
+				void setMediumPos( size_t );
+				//! get position in medium container
+				size_t getMediumPos() const;
+
 				//! permanently shifts time by delta seconds
 				void addTime( double delta );
 				//! set temporary time shift
 				void setDisplace( double delta ) const;
 				//! get frame time
 				double getTime() const;
+
 				//! get RTP payload type
 				Payload::type getPayloadType() const;
 				//! force different RTP payload type
 				void setPayloadType( Payload::type );
+
 				//! get fresh copy
 				virtual Base* getClone() const;
 			};

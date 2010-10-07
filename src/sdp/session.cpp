@@ -210,7 +210,7 @@ namespace KGD
 				{
 					// break cycle
 					if ( rdRes == AVERROR_EOF )
-						break;
+						_running = false;
 					else
 						Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
 				}
@@ -226,6 +226,8 @@ namespace KGD
 						Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
 				}
 				av_free_packet( &pkt );
+
+				Thread::yield();
 			}
 
 			av_close_input_file( fctx );

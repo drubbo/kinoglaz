@@ -58,7 +58,7 @@ namespace KGD
 		Descriptions::Descriptions()
 		{
 		}
-		
+
 		Descriptions::~Descriptions()
 		{
 			_descriptions.clear();
@@ -66,7 +66,7 @@ namespace KGD
 
 		SDP::Container & Descriptions::loadDescription( const string & file ) throw( SDP::Exception::Generic )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			Log::debug("SDP Pool: loading description for %s", file.c_str() );
 			if ( ! _descriptions.has( file ) )
 			{
@@ -85,20 +85,20 @@ namespace KGD
 
 			return *_descriptions( file );
 		}
-		
+
 		SDP::Container & Descriptions::getDescription( const string & file ) throw( KGD::Exception::NotFound )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			Log::debug("SDP Pool: getting description for %s", file.c_str() );
 			if ( _descriptions.has( file ) )
 				return *(_descriptions( file ) );
 			else
 				throw KGD::Exception::NotFound( "SDP description for " + file );
 		}
-		
+
 		void Descriptions::releaseDescription( const string & file ) throw( )
 		{
-			Lock lk( _mux );
+			RLock lk( _mux );
 			if ( _descriptions.has( file ) )
 			{
 				Log::debug("SDP Pool: releasing description for %s with count %llu", file.c_str(), _count[ file ] );

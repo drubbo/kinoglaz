@@ -120,7 +120,7 @@ namespace KGD
 		{
 			return *_medium;
 		}
-		SDP::Medium::Base & Session::getDescription() 
+		SDP::Medium::Base & Session::getDescription()
 		{
 			return *_medium;
 		}
@@ -174,6 +174,10 @@ namespace KGD
 					lk = new Lock( _mux );
 				}
 
+				// release sent frame
+				if ( _frameNext )
+					_medium->releaseFrame( _frameNext->getMediumPos() );
+				// update frame to send
 				_frameNext = tmp.release();
 
 				return _frameNext->getTime();
@@ -189,6 +193,7 @@ namespace KGD
 		{
 			Ptr::Scoped< Lock > lk = new Lock(_mux);
 			Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
+
 			try
 			{
 				uint64_t slp = 0;
@@ -196,51 +201,43 @@ namespace KGD
 				double ft = this->fetchNextFrame( lk ) ;
 
 // 				Log::verbose("%s: loop got frame at %lf s", getLogName(), ft );
-				
+
 				while (!_stopped)
 				{
 					Log::debug("%s: main loop entered", getLogName() );
 					try
 					{
-						// se sono stato fermato, messo in pausa, oppure lo stream è finito, esco dal loop
-						now = _time->getPresentationTime();
-						spd = _time->getSpeed();
+						// exit loop if stopped, paused, or stream time has ended
 						do
 						{
-							// build sleep while holding last fetched frame
+							// calc sleep while holding last fetched frame
 							{
 								Lock fLk( _frameMux );
+								// send frames while their time is before now
 								do
 								{
 									this->sendNextFrame( );
 									ft = this->fetchNextFrame( lk );
+
 									now = _time->getPresentationTime();
 									spd = _time->getSpeed();
-
-// 									if ( _medium->getType() == SDP::VIDEO )
-// 										Log::verbose("%s: loop got next frame at %lf, now %lf, spd %lf", getLogName(), ft, now, spd );
 								}
 								while ( ( ft - now ) * sign( spd ) <= 0.0 );
-
-								slp = Clock::secToNano(
-										( ft - now )
-										/ spd
-								);
+								// this will always be positive
+								slp = Clock::secToNano( ( ft - now ) / spd );
 							}
 							// don't sleep if nothing to wait for
 							if ( _frameNext )
 							{
 								lk.destroy();
-// 								if ( _medium->getType() == SDP::VIDEO )
-// 									Log::verbose("%s: sleeping for %lf", getLogName(), Clock::nanoToSec( slp ) );
 								KGD::Clock::sleepNano( slp );
 								lk = new Lock(_mux);
-							}
 
-							now = _time->getPresentationTime();
-							spd = _time->getSpeed();
+								now = _time->getPresentationTime();
+								spd = _time->getSpeed();
+							}
 						}
-						while( !( _stopped || _paused || (_timeEnd - now) * sign( spd ) <= 0.0 ) );
+						while( !( _stopped || _paused || ( _timeEnd - now ) * sign( spd ) <= 0.0 ) );
 					}
 					catch ( RTP::Eof )
 					{

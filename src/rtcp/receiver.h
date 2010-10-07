@@ -69,11 +69,11 @@ namespace KGD
 			Safe::Flag _running;
 			//! is thread paused ?
 			Safe::Flag _paused;
+
+			//! pause mutex
+			Mutex _muxPause;
 			//! un-pause condition
 			Condition _condUnPause;
-
-			//! generic mutex
-			Mutex _mux;
 			//! data buffer
 			Buffer _buffer;
 			//! stat mutex
@@ -109,7 +109,7 @@ namespace KGD
 			//! dtor
 			~Receiver();
 			//! log identifier
-			const char * getLogName() const throw();			
+			const char * getLogName() const throw();
 			//! returns receiver stats
 			Stat getStats() const throw();
 			//! starts receiver

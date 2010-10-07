@@ -128,6 +128,7 @@ namespace KGD
 		void Sender::sendLoop()
 		{
 			Log::debug( "%s: started", getLogName() );
+
 			// lock the clock
 			_lkClock = new TLock( _muxClock );
 			Log::debug( "%s: got lock", getLogName() );
@@ -220,7 +221,7 @@ namespace KGD
 				Lock lk( _muxLk );
 				_lkClock.destroy();
 			}
-				
+
 		}
 
 		void Sender::stop()
