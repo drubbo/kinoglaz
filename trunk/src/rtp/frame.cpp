@@ -60,6 +60,11 @@ namespace KGD
 				return _frame->getTime();
 			}
 
+			size_t Base::getMediumPos() const throw( KGD::Exception::NullPointer )
+			{
+				return _frame->getMediumPos();
+			}
+
 			void Base::setFrame( const SDP::Frame::Base & f ) throw( KGD::Exception::InvalidType )
 			{
 				_frame = f;

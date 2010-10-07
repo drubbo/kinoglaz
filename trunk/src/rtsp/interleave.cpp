@@ -99,15 +99,20 @@ namespace KGD
 		void Interleave::stop() throw()
 		{
 			Log::debug("%s: stopping", getLogName() );
+
 			_recvMux.lock();
 			if ( _running )
 			{
+				Log::debug( "%s: notify readers", getLogName() );
 				_running = false;
 				_recvMux.unlock();
 				_condNotEmpty.notify_all();
 			}
 			else
+			{
+				Log::debug( "%s: reader queue not running", getLogName() );
 				_recvMux.unlock();
+			}
 		}
 
 		size_t Interleave::writeSome( void const * data, size_t sz ) throw( KGD::Socket::Exception )
@@ -157,9 +162,13 @@ namespace KGD
 			for(;;)
 			{
 				if ( !_running )
+				{
+					Log::debug( "%s: socket has stopped", getLogName() );
 					throw KGD::Socket::Exception( "readSome", "connection shut down" );
+				}
 				else if ( ! _recv.empty() )
 				{
+					Log::debug( "%s: socket has data", getLogName() );
 					ByteArray * buf = _recv.front();
 					size_t rt = buf->copyTo( data, sz );
 					if ( rt >= buf->size() )
@@ -171,7 +180,7 @@ namespace KGD
 				}
 				else
 				{
-					Log::debug( "%s waiting interleaved data", getLogName() );
+					Log::debug( "%s: waiting interleaved data", getLogName() );
 					_condNotEmpty.wait( lk );
 				}
 			}
@@ -322,7 +331,7 @@ namespace KGD
 							Ptr::Scoped< Message::Response > resp = _inBuf.getNextResponse( msgSz );
 							if ( resp->getCseq() != _cseq )
 								throw RTSP::Exception::CSeq();
-							
+
 							throw resp.release();
 						}
 						catch( KGD::Exception::NotFound )
@@ -333,7 +342,7 @@ namespace KGD
 								pair< TPort, RTP::Packet * > intlv = _inBuf.getNextInterleave( msgSz );
 								Ptr::Scoped< RTP::Packet > pkt = intlv.second;
 								this->getInterleave( intlv.first )->pushToRead( pkt->data );
-								
+
 							}
 							catch( KGD::Exception::NotFound )
 							{

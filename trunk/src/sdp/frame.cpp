@@ -60,6 +60,7 @@ namespace KGD
 			: _time( b._time )
 			, _displace( 0 )
 			, _pt( b._pt )
+			, _mediumPos( b._mediumPos )
 			{
 			}
 
@@ -91,6 +92,16 @@ namespace KGD
 			void Base::setPayloadType( Payload::type p )
 			{
 				_pt = p;
+			}
+
+			void Base::setMediumPos( size_t p )
+			{
+				_mediumPos = p;
+			}
+
+			size_t Base::getMediumPos() const
+			{
+				return _mediumPos;
 			}
 
 			// ***********************************************************************************************

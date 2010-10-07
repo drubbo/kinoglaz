@@ -54,7 +54,7 @@ namespace KGD
 		{
 		private:
 			//! thread safer
-			static Mutex _mux;
+			static RMutex _mux;
 			//! counter of references to T* instance
 			static long _count;
 
@@ -90,7 +90,7 @@ namespace KGD
 
 		protected:
 			//! thread safer
-			static Mutex _mux;
+			static RMutex _mux;
 			//! the instance pointer
 			static T* _instance;
 
@@ -119,7 +119,7 @@ namespace KGD
 
 		protected:
 			//! thread safer
-			static Mutex _mux;
+			static RMutex _mux;
 			//! the instance pointer
 			static Ptr::Scoped< T > _instance;
 

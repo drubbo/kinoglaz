@@ -3,6 +3,11 @@
                         Kinoglaz Streaming Server
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+07/10/2010      Removed a deadlock issue in RTCP receiver
+
+                Unloading sent frames from memory when appliable
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 02/09/2010      Added AAC support, thanks to Edorado Radica
 
                 Aggregate / per track control is now configurable

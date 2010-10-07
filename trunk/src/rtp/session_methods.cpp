@@ -64,7 +64,7 @@ namespace KGD
 
 			return ret;
 		}
-			
+
 		void Session::play() throw()
 		{
 			// video, o audio a meno di 1x, faccio partire
@@ -169,7 +169,12 @@ namespace KGD
 			Lock flk( _frameMux );
 			_mux.lock();
 
-			if ( _paused )
+			if ( _stopped )
+			{
+				_mux.unlock();
+				Log::warning( "%s: session is stopped, can't go to pause", getLogName() );
+			}
+			else if ( _paused )
 			{
 				_mux.unlock();
 				Log::warning( "%s: already paused", getLogName() );
@@ -189,7 +194,7 @@ namespace KGD
 				_condPaused.wait( flk );
 				Log::message( "%s: effectively paused", getLogName() );
 			}
-			
+
 		}
 
 		void Session::unpause( const RTSP::PlayRequest & rq ) throw()
@@ -246,10 +251,12 @@ namespace KGD
 
 			_fRate.stop();
 
+			Log::debug( "%s: stopping RTCP Sender", getLogName() );
 			_RTCPsender->stop();
+			Log::debug( "%s: stopping RTCP Receiver", getLogName() );
 			_RTCPreceiver->stop();
-			_time->stop( rq.time );
 
+			_time->stop( rq.time );
 			this->logTimes();
 
 			Log::debug( "%s: teardown completed", getLogName() );

@@ -79,25 +79,25 @@ namespace KGD
 					return new Default( *this );
 				}
 
-				const SDP::Frame::Base & Default::at( size_t pos ) const throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Default::at( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					return _med->getFrame( pos );
 				}
-				const SDP::Frame::Base & Default::curr() const throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Default::curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					return _med->getFrame( _pos );
 				}
-				const SDP::Frame::Base & Default::next() throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Default::next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					return _med->getFrame( _pos ++ );
 				}
-				const SDP::Frame::Base & Default::seek( double t ) throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Default::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					_pos = _med->getFramePos( t );
 					return _med->getFrame( _pos );
 				}
 
-				const SDP::Frame::Base & Default::seek( size_t p ) throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Default::seek( size_t p ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					return _med->getFrame( _pos = p );
 				}
@@ -333,16 +333,16 @@ namespace KGD
 					return f;
 				}
 
-				const SDP::Frame::Base & Loop::at( size_t pos ) const throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Loop::at( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
 				{
 					return this->normalizeFrame( _it->at( this->normalizePos( pos ) ) );
 				}
 
-				const SDP::Frame::Base & Loop::curr() const throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Loop::curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
 				{
 					return this->normalizeFrame( _it->curr() );
 				}
-				const SDP::Frame::Base & Loop::next() throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Loop::next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
 				{
 					try
 					{
@@ -363,12 +363,12 @@ namespace KGD
 							throw;
 					}
 				}
-				const SDP::Frame::Base & Loop::seek( double t ) throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Loop::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
 				{
 					return this->normalizeFrame( _it->seek( this->seekTime( t ) ) );
 				}
 
-				const SDP::Frame::Base & Loop::seek( size_t p ) throw( KGD::Exception::OutOfBounds )
+				const SDP::Frame::Base & Loop::seek( size_t p ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
 				{
 					return this->normalizeFrame( _it->seek( this->seekPos( p ) ) );
 				}

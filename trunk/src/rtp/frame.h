@@ -70,6 +70,8 @@ namespace KGD
 				virtual list< Packet* > getPackets( RTP::TTimestamp , uint32_t , TCseq & ) throw( KGD::Exception::Generic );
 				//! get frame time
 				double getTime() const throw( KGD::Exception::NullPointer );
+				//! get frame position in medium array
+				size_t getMediumPos() const throw( KGD::Exception::NullPointer );
 				//! set reference to a frame description
 				virtual void setFrame( const SDP::Frame::Base & ) throw( KGD::Exception::InvalidType );
 				//! get frame data if any

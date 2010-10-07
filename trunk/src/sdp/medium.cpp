@@ -42,6 +42,7 @@
 #include "lib/utils/container.hpp"
 #include "lib/utils/virtual.hpp"
 #include "lib/array.hpp"
+#include "rtsp/method.h"
 
 #include <sstream>
 #include <iomanip>
@@ -109,7 +110,7 @@ namespace KGD
 				Ctr::clear( _frames );
 			}
 
-			Iterator::Base * Base::newFrameIterator() throw()
+			Iterator::Base * Base::newFrameIterator() const throw()
 			{
 				return _itModel->getClone();
 			}
@@ -119,7 +120,7 @@ namespace KGD
 				_itModel = it;
 			}
 
-			double Base::getIterationDuration() throw()
+			double Base::getIterationDuration() const throw()
 			{
 				return _itModel->duration();
 			}
@@ -225,6 +226,7 @@ namespace KGD
 					RLock lk(_fMux);
 					f->setPayloadType( _pt );
 					f->addTime( _frameTimeShift );
+					f->setMediumPos( _frames.size() );
 					_frames.push_back( f );
 				}
 				_condMoreFrames.notify_all();
@@ -274,20 +276,35 @@ namespace KGD
 				rt.reserve( toPos - fromPos + 1 );
 				for( size_t i = fromPos; i <= toPos; ++i )
 				{
-					Frame::Base * f = _frames[i]->getClone();
-					f->addTime( -from );
-					rt.push_back( f );
+					if ( _frames[i] )
+					{
+						Frame::Base * f = _frames[i]->getClone();
+						f->addTime( -from );
+						rt.push_back( f );
+					}
 				}
 
 				return rt;
 			}
 
 
-
-			const Frame::Base & Base::getFrame( size_t pos ) const throw( KGD::Exception::OutOfBounds )
+			void Base::releaseFrame( size_t pos ) throw()
 			{
 				RLock lk(_fMux);
-				if ( pos >= _frames.size() )
+				if ( ! RTSP::Method::SUPPORT_SEEK
+					&& pos < _frames.size()
+					&& ! _itModel->hasType< Medium::Iterator::Loop >() )
+				{
+					Frame::Base * ptr = _frames[ pos ];
+					Ptr::clear( ptr );
+					_frames[ pos ] = 0;
+				}
+			}
+
+			const Frame::Base & Base::getFrame( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
+			{
+				RLock lk(_fMux);
+				while ( pos >= _frames.size() )
 				{
 					if ( _frameCount < 0 )
 						_condMoreFrames.wait( lk );
@@ -295,7 +312,10 @@ namespace KGD
 						throw KGD::Exception::OutOfBounds( pos, 0, _frames.size() );
 				}
 
-				return * _frames[ pos ];
+				if ( _frames[ pos ] )
+					return * _frames[ pos ];
+				else
+					throw KGD::Exception::NullPointer( "Frame at position " + KGD::toString( pos ) + " out of " + KGD::toString( _frames.size() ) );
 			}
 
 			size_t Base::getFramePos( double t ) const throw( KGD::Exception::OutOfBounds )
@@ -315,7 +335,8 @@ namespace KGD
 					// frame time >= searched time
 					// if video frame, must be key
 					else if (
-						_frames[pos]->getTime() >= t
+						_frames[pos]
+						&& _frames[pos]->getTime() >= t
 						&& ( (_type == SDP::MediaType::Video && _frames[pos]->asPtrUnsafe< Frame::MediaFile >()->isKey() )
 							|| _type != SDP::MediaType::Video ) )
 						return pos;

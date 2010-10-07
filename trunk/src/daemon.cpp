@@ -50,7 +50,7 @@
 namespace KGD
 {
 	const string Daemon::APP_NAME = "Kinoglaz Streaming Server";
-	const string Daemon::APP_VER = "0.6.10";
+	const string Daemon::APP_VER = "0.6.11";
 
 	Singleton::InstanceRef< Daemon > Daemon::getInstance() throw( KGD::Exception::InvalidState )
 	{

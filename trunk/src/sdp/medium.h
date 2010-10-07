@@ -131,7 +131,7 @@ namespace KGD
 				//! adds a frame
 				virtual void addFrame( Frame::Base * ) throw();
 				//! retrieves a frame at a given position
-				const Frame::Base & getFrame( size_t ) const throw( KGD::Exception::OutOfBounds );
+				const Frame::Base & getFrame( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 				//! tells the position of the first valid frame at or immediately after the given time in seconds - this means a key frame for video media
 				size_t getFramePos( double ) const throw( KGD::Exception::OutOfBounds );
 
@@ -177,14 +177,16 @@ namespace KGD
 				//! set a new iterator model
 				void setFrameIteratorModel( Iterator::Base * ) throw();
 				//! returns a new frame iterator for this medium' frames, cloning the model
-				Iterator::Base * newFrameIterator() throw();
+				Iterator::Base * newFrameIterator() const throw();
 				//! returns the duration of this medium wrt its iterator model - HUGE_VAL is fine
-				double getIterationDuration() throw();
+				double getIterationDuration() const throw();
 				//! returns effective frame count, waiting until one has been determined
 				size_t getFrameCount( ) const throw( );
 				//! returns a portion of all frames based on time; limits are cropped if out of bounds
 				vector< Frame::Base * > getFrames( double from, double to = HUGE_VAL ) const throw( );
 				
+				//! frees the memory of a frame at given position
+				void releaseFrame( size_t pos ) throw();
 
 				//! insert other frames for a total duration at a defined time position
 				void insert( Iterator::Base & otherFrames, double start ) throw( KGD::Exception::OutOfBounds );
