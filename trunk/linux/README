@@ -122,7 +122,29 @@
   --version                prints software version
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-6     CLIENT COMPATIBILITY
+6     PLAYLISTS
+
+- create a text file with extension .kls containing the play list; first line
+  indicates the number of loops:
+
+- example 1: infinite loop of two files
+
+  loop
+  file1.avi
+  file2.avi
+
+- example 2: infinite loop of two files, equivalent to example one:
+
+  file1.avi
+  file2.avi
+
+- example 3: repeat a single file three times:
+
+  loop 3
+  file1.avi
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+7     CLIENT COMPATIBILITY
 
   VLC 1.0.x GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd          RFC non compliant
   TOTEM 2.28.2:         PLAY, PAUSE                           RFC compliant
