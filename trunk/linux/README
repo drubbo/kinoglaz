@@ -48,7 +48,7 @@
   make
   sudo make install
 
-- generate reference in ~/kinoglaz/doc
+- generate reference in ~/kinoglaz/reference
 
   cd ~/kinoglaz/linux/
   doxygen doxyfile
