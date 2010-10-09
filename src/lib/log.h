@@ -55,9 +55,9 @@ namespace KGD
 		static void warning( Exception::Generic const &e ) throw();
 		static void message( const char *fmt, ... ) throw();
 		//! log RTSP sending reply
-		static void reply( string s ) throw();
+		static void reply( const string & s ) throw();
 		//! log RTSP received request
-		static void request( string s ) throw();
+		static void request( const string & s ) throw();
 		static void debug( const char* fmt, ... ) throw();
 		static void verbose( const char* fmt, ... ) throw();
 	};

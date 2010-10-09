@@ -2,6 +2,17 @@
 
 autoreconf -i -v --force
 
-CXXFLAGS="-Wall -pthread -D_REENTRANT -O0 -g3 -I/usr/local/include -I../../src -I../src -L/usr/local/lib"
-export CXXFLAGS
-./configure --prefix=/usr/local
+CXXFLAGS="-Wall -pthread -D_REENTRANT -I../src -I../../src"
+echo $CXXFLAGS
+if [ -z "$@" ]; then
+  if [ -z "$PREFIX" ]; then
+    PREFIX="/usr/local"
+  fi
+  CXXFLAGS="$CXXFLAGS -I$PREFIX/include -L$PREFIX/lib"
+  echo $CXXFLAGS
+  export CXXFLAGS
+  ./configure --prefix="$PREFIX" --with-log-level=4 --enable-debug
+else
+  ./configure "$@"
+fi
+

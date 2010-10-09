@@ -37,7 +37,10 @@
 #include "lib/log.h"
 #include "lib/common.h"
 
-#include <config.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 
 extern "C"
 {
@@ -85,7 +88,7 @@ namespace KGD
 #endif
 	}
 
-	void Log::reply( string s ) throw()
+	void Log::reply( const string & s ) throw()
 	{
 #if ( LOG_VERBOSITY > VB_NOTICE )
 		vector< string > v = split( RTSP::EOL, s );
@@ -94,7 +97,7 @@ namespace KGD
 #endif		
 	}
 
-	void Log::request( string s ) throw()
+	void Log::request( const string & s ) throw()
 	{
 #if ( LOG_VERBOSITY > VB_NOTICE )
 		vector< string > v = split( RTSP::EOL, s );
