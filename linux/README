@@ -48,6 +48,17 @@
   make
   sudo make install
 
+- bootstrap will enable debug symbols and set log level to 4 (debug); change
+  this with appropriate configure switches:
+
+  --with-log-level
+  --enable-debug
+  --enable-mp3-adu
+
+  more info with
+
+  ./configure --help
+
 - generate reference in ~/kinoglaz/reference
 
   cd ~/kinoglaz/linux/
@@ -93,7 +104,7 @@
       if 1 concurrent request to same media containers will share index and
       frames; default to 0
   aggregate=< bool >
-      announces aggregate (one command for all tracks) control if 1, or 
+      announces aggregate (one command for all tracks) control if 1, or
       per-track if 0; clients usually don't care and perform aggregate
       control regardless of the announcement; default to 1
 
