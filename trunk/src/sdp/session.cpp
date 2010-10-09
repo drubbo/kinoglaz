@@ -33,7 +33,9 @@
  *
  **/
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include "sdp/sdp.h"
 #include "sdp/frame.h"

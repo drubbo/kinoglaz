@@ -8,8 +8,39 @@ AC_LANG_CPLUSPLUS
 AC_PROG_CXX
 AM_PROG_LIBTOOL
 
-AC_DEFINE([LOG_VERBOSITY], [4], [Verbosity level 0-5])
-AC_DEFINE([MP3_ADU], [0], [Mpeg2 audio layer III ADU packetization])
+# log level
+AC_ARG_WITH(log_level,
+    [AS_HELP_STRING([--with-log-level=N],[Log verbosity: 0=nothing, 1=errors, 2=warnings, 3=notice, 4=debug, 5=verbose [default=3]])],
+    [use_log_level=$withval], [use_log_level=3])
+AC_MSG_CHECKING([log verbosity])
+AC_MSG_RESULT(${use_log_level})
+AC_DEFINE_UNQUOTED(LOG_VERBOSITY, [$use_log_level], [log verbosity])
+
+# mp3 adu support
+AC_ARG_ENABLE(mp3_adu,
+    [AS_HELP_STRING([--enable-mp3-adu],[Enable Mpeg2 audio layer III ADU packetization [default=no]])],
+    [enable_mp3_adu="yes"], [enable_mp3_adu="no"])
+AC_MSG_CHECKING([whether to enable mp3 adu packetization])
+AC_MSG_RESULT(${enable_mp3_adu})
+if test "x${enable_mp3_adu}" = "xyes" ; then
+  AC_DEFINE([MP3_ADU], [1], [Enable Mpeg2 audio layer III ADU packetization])
+else
+  AC_DEFINE([MP3_ADU], [0], [Disable Mpeg2 audio layer III ADU packetization])
+fi
+
+# compile with symbols
+AC_ARG_ENABLE(debug,
+    [AC_HELP_STRING([--enable-debug],[enable debug support [default="no"]])],
+    [enable_debug="yes"], [enable_debug="no"])
+AC_MSG_CHECKING([whether to build in debug mode])
+AC_MSG_RESULT(${enable_debug})
+
+if test "x${enable_debug}" = "xyes" ; then
+  AC_DEFINE(CMAID_ENABLE_DEBUG, 1, [Enable debug support])
+  CXXFLAGS="-O0 -g3 $CXXFLAGS"
+else
+  CXXFLAGS="-O3 -g0 $CXXFLAGS"
+fi
 
 AC_C_BIGENDIAN([BIGENDIAN="Big Endian"] AC_DEFINE([WORDS_BIGENDIAN], 1, [Define if manchine is big-endian]),[BIGENDIAN="Little Endian"] )
 

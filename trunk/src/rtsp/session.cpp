@@ -38,7 +38,9 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include <config.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "lib/utils/container.hpp"
 #include "rtsp/session.h"

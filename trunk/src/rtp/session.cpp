@@ -43,7 +43,9 @@
 #include "lib/utils/container.hpp"
 #include "rtsp/ports.h"
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 namespace KGD
 {
