@@ -61,7 +61,7 @@
 
 - generate reference in ~/kinoglaz/reference
 
-  cd ~/kinoglaz/linux/
+  cd ~/kinoglaz/src/
   doxygen doxyfile
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
