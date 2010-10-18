@@ -45,7 +45,7 @@ namespace KGD
 	{
 		RTSP::PlayRequest Session::play( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
 		{
-			_frameLk.reset( new Lock( _frameMux ) );
+			_frameMux.lock();
 			Lock lk(_mux);
 
 			RTSP::PlayRequest ret;
@@ -77,7 +77,7 @@ namespace KGD
 				_RTCPsender->wait();
 
 				Log::message( "%s: start play", getLogName() );
-				_frameLk.reset();
+				_frameMux.unlock();
 				{
 					Lock lk(_mux);
 					_paused = false;
@@ -86,7 +86,7 @@ namespace KGD
 				_playing = true;
 			}
 			else
-				_frameLk.reset();
+				_frameMux.unlock();
 		}
 
 		RTSP::PlayRequest Session::doFirstPlay( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )

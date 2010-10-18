@@ -66,8 +66,8 @@ namespace KGD
 			_rtspSocket.release( _channel );
 			Log::debug("%s: released", getLogName() );
 			{
-				Lock lk( _recvMux );
-				_recv.clear();
+				InputBuffer::LockerType lk( _recv );
+				(*_recv).clear();
 			}
 			Log::debug("%s: cleared", getLogName() );
 		}
@@ -89,9 +89,10 @@ namespace KGD
 
 		void Interleave::pushToRead( void const * data, size_t sz ) throw( )
 		{
-			_recvMux.lock();
-			_recv.push_back( new ByteArray( data, sz ) );
-			_recvMux.unlock();
+			{
+				InputBuffer::LockerType lk( _recv );
+				(*_recv).push_back( new ByteArray( data, sz ) );
+			}
 
 			_condNotEmpty.notify_all();
 		}
@@ -99,18 +100,18 @@ namespace KGD
 		{
 			Log::debug("%s: stopping", getLogName() );
 
-			_recvMux.lock();
+			_recv.lock();
 			if ( _running )
 			{
 				Log::debug( "%s: notify readers", getLogName() );
 				_running = false;
-				_recvMux.unlock();
+				_recv.unlock();
 				_condNotEmpty.notify_all();
 			}
 			else
 			{
 				Log::debug( "%s: reader queue not running", getLogName() );
-				_recvMux.unlock();
+				_recv.unlock();
 			}
 		}
 
@@ -139,7 +140,7 @@ namespace KGD
 
 		size_t Interleave::readSome( void * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			Lock lk( _recvMux );
+			InputBuffer::LockerType lk( _recv );
 			for(;;)
 			{
 				if ( !_running )
@@ -147,13 +148,13 @@ namespace KGD
 					Log::debug( "%s: socket has stopped", getLogName() );
 					throw KGD::Socket::Exception( "readSome", "connection shut down" );
 				}
-				else if ( ! _recv.empty() )
+				else if ( ! (*_recv).empty() )
 				{
 					Log::debug( "%s: socket has data", getLogName() );
-					ByteArray & buf = _recv.front();
+					ByteArray & buf = (*_recv).front();
 					size_t rt = buf.copyTo( data, sz );
 					if ( rt >= buf.size() )
-						_recv.pop_front();
+						(*_recv).pop_front();
 					else
 						buf.chopFront( rt );
 					return rt;
@@ -161,7 +162,7 @@ namespace KGD
 				else
 				{
 					Log::debug( "%s: waiting interleaved data", getLogName() );
-					_condNotEmpty.wait( lk );
+					_condNotEmpty.wait( lk.getLock() );
 				}
 			}
 		}

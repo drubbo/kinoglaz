@@ -214,32 +214,45 @@ namespace KGD
 
 		void Sender::unpause()
 		{
-			Status::type::LockerType lk( _status );
+			_status.lock();
 			if ( _status[ Status::PAUSED ] )
 			{
 				_status[ Status::PAUSED ] = false;
+				_status.unlock();
 				_condUnPause.notify_all();
 			}
 			else if ( _status[ Status::RUNNING ] )
 			{
+				_status.unlock();
 				_th->interrupt();
 			}
-
 		}
 
 		void Sender::stop()
 		{
-			Status::type::LockerType lk( _status );
+			_status.lock();
 			if ( _status[ Status::RUNNING ] )
 			{
 				_status[ Status::RUNNING ] = false;
-				this->unpause();
+
+				if ( _status[ Status::PAUSED ] )
+				{
+					_status[ Status::PAUSED ] = false;
+					_status.unlock();
+					_condUnPause.notify_all();
+				}
+				else
+				{
+					_status.unlock();
+					_th->interrupt();
+				}
 			}
 		}
 
 		void Sender::restart()
 		{
 			Log::debug( "%s: restarting", getLogName() );
+
 			Status::type::LockerType lk( _status );
 
 			_status[ Status::SYNC_WITH_RTP ] = true;
