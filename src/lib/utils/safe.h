@@ -54,8 +54,9 @@ namespace KGD
 			boost::scoped_ptr< L > _lk;
 		public:
 			template< class Lk >
-			Locker( Lk const & l ) : _lk( new typename Lk::LockType( l.mux() ) ) { }
-			L & getLock() { return *_lk; }
+			Locker( Lk const & l );
+
+			L & getLock();
 		};
 
 		//! Temporarily unlocks a previous acquired lock
@@ -65,8 +66,8 @@ namespace KGD
 		{
 			Locker< L > & _lk;
 		public:
-			UnLocker( Locker< L > & l ) : _lk( l ) { _lk.getLock().unlock(); }
-			~UnLocker( ) { _lk.getLock().lock(); }
+			UnLocker( Locker< L > & l );
+			~UnLocker( );
 		};
 
 		//! Mutex-based lockable class
@@ -80,9 +81,9 @@ namespace KGD
 			typedef M MutexType;
 			typedef L LockType;
 
-			void lock() const { _mux.lock(); }
-			void unlock() const { _mux.unlock(); }
-			M & mux() const { return _mux; }
+			void lock() const;
+			void unlock() const;
+			M & mux() const;
 		};
 
 		//! Lockable flag set
@@ -96,8 +97,8 @@ namespace KGD
 			typedef Locker< L > LockerType;
 			typedef UnLocker< L > UnLockerType;
 
-			bool operator[]( size_t pos ) const { return _bits[ pos ]; }
-			typename bitset< N >::reference operator[]( size_t pos ) { return _bits[ pos ]; }
+			bool operator[]( size_t pos ) const;
+			typename bitset< N >::reference operator[]( size_t pos );
 		};
 
 		//! Lockable single flag
@@ -111,10 +112,10 @@ namespace KGD
 			typedef Locker< L > LockerType;
 			typedef UnLocker< L > UnLockerType;
 
-			Flag( bool b ) : _bit( b ) {}
+			Flag( bool b );
 
-			operator bool() const { LockerType lk( *this ); return _bit; }
-			Flag& operator=( bool b ) { LockerType lk( *this ); _bit = b; return *this; }
+			operator bool() const;
+			Flag& operator=( bool b );
 		};
 
 		//! Lockable single flag typedef sugar
@@ -131,8 +132,8 @@ namespace KGD
 			typedef Locker< L > LockerType;
 			typedef UnLocker< L > UnLockerType;
 
-			T& operator*() { return _obj; }
-			T const & operator*() const { return _obj; }
+			T& operator*();
+			T const & operator*() const;
 		};
 	}
 }

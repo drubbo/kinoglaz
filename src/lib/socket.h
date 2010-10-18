@@ -339,10 +339,6 @@ namespace KGD
 			//! dtor
 			virtual ~Tcp() throw();
 		};
-
-
-		//! tcp socket with related mutex
-// 		typedef pair< boost::scoped_ptr< Tcp >, RMutex > TcpShared;
 		
 		//! UDP Socket
 		class Udp

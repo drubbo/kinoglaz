@@ -38,7 +38,7 @@
 #define __KGD_UTILS_SINGLETON_H
 
 #include "lib/common.h"
-#include "lib/utils/safe.h"
+#include "lib/utils/safe.hpp"
 
 using namespace std;
 

@@ -71,23 +71,22 @@ namespace KGD
 	typedef boost::condition Condition;
 	//! boost barrier
 	typedef boost::barrier Barrier;
+
 	//! boost mutex
 	typedef boost::mutex Mutex;
 	//! boost mutex lock
 	typedef boost::mutex::scoped_lock Lock;
+
 	//! boost recursive mutex
 	typedef boost::recursive_mutex RMutex;
 	//! boost recursive lock
 	typedef boost::recursive_mutex::scoped_lock RLock;
-	//! boost timed mutex
-	typedef boost::timed_mutex TMutex;
-	//! boost timed lock
-	typedef boost::timed_mutex::scoped_lock TLock;
 
 	//! network port type
 	typedef ushort TPort;
 	//! network port pair type
 	typedef pair< TPort, TPort > TPortPair;
+
 	//! synchronization source identifier type
 	typedef uint32_t TSSrc;
 

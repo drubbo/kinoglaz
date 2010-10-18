@@ -39,108 +39,80 @@ namespace KGD
 {
 	namespace Safe
 	{
-/*
-		template< class T >
-		Number< T >::Number( const Number< T > & i )
-		: _val( i.getValue() )
-		{
-		}
-		template< class T >
-		template< class S >
-		Number< T >::Number( const S & v )
-		: _val( v )
-		{
-		}
-		template< class T >
-		template< class S >
-		Number< T >::Number( const Number< S > & i )
-		: _val( i.getValue() )
-		{}
+		template< class L >
+		template< class Lk >
+		Locker< L >::Locker( Lk const & l )
+		: _lk( new typename Lk::LockType( l.mux() ) )
+		{ }
 
-		template< class T >
-		Number< T > Number< T >::operator++( int )
+		template< class L >
+		L & Locker< L >::getLock()
+		{ return *_lk; }
+
+		// ********************************************************************************
+
+		template< class L >
+		UnLocker< L >::UnLocker( Locker< L > & l )
+		: _lk( l )
+		{ _lk.getLock().unlock(); }
+
+		template< class L >
+		UnLocker< L >::~UnLocker( )
+		{ _lk.getLock().lock(); }
+
+		// ********************************************************************************
+
+		template< class M, class L >
+		void MutexLockable< M, L >::lock() const
+		{ _mux.lock(); }
+
+		template< class M, class L >
+		void MutexLockable< M, L >::unlock() const
+		{ _mux.unlock(); }
+
+		template< class M, class L >
+		M & MutexLockable< M, L >::mux() const
+		{ return _mux; }
+
+		// ********************************************************************************
+
+		template< size_t N, class M, class L >
+		bool FlagSet< N, M, L >::operator[]( size_t pos ) const
+		{ return _bits[ pos ]; }
+
+		template< size_t N, class M, class L >
+		typename bitset< N >::reference FlagSet< N, M, L >::operator[]( size_t pos )
+		{ return _bits[ pos ]; }
+
+		// ********************************************************************************
+
+		template< class M, class L >
+		Flag< M, L >::Flag( bool b ) : _bit( b ) {}
+
+		template< class M, class L >
+		Flag< M, L >::operator bool() const
 		{
-			Lock lk( _mux );
-			T cur = _val ++;
-			return cur;
-		}
-		template< class T >
-		Number< T >& Number< T >::operator++( )
-		{
-			Lock lk( _mux );
-			++ _val;
-			return *this;
-		}
-		template< class T >
-		Number< T > Number< T >::operator--( int )
-		{
-			Lock lk( _mux );
-			T cur = _val --;
-			return cur;
-		}
-		template< class T >
-		Number< T >& Number< T >::operator--( )
-		{
-			Lock lk( _mux );
-			-- _val;
-			return *this;
+			LockerType lk( *this );
+			return _bit;
 		}
 
-		template< class T >
-		template< class S >
-		Number< T >& Number< T >::operator=( const S & v )
+		template< class M, class L >
+		Flag< M, L >& Flag< M, L >::operator=( bool b )
 		{
-			Lock lk( _mux );
-			_val = v;
-			return *this;
-		}
-		template< class T >
-		template< class S >
-		Number< T >& Number< T >::operator+=( const S & v )
-		{
-			Lock lk( _mux );
-			_val += v;
-			return *this;
-		}
-		template< class T >
-		template< class S >
-		Number< T >& Number< T >::operator-=( const S & v )
-		{
-			Lock lk( _mux );
-			_val -= v;
-			return *this;
-		}
-		template< class T >
-		template< class S >
-		Number< T >& Number< T >::operator*=( const S & v )
-		{
-			Lock lk( _mux );
-			_val *= v;
-			return *this;
-		}
-		template< class T >
-		template< class S >
-		Number< T >& Number< T >::operator/=( const S & v )
-		{
-			Lock lk( _mux );
-			_val /= v;
+			LockerType lk( *this );
+			_bit = b;
 			return *this;
 		}
 
+		// ********************************************************************************
 
-		template< class T >
-		T Number< T >::getValue() const
-		{
-			Lock lk( _mux );
-			return _val;
-		}
-		template< class T >
-		Number< T >::operator T () const
-		{
-			Lock lk( _mux );
-			return _val;
-		}
-*/
+		template< class T, class M, class L >
+		T& Lockable< T, M, L >::operator*()
+		{ return _obj; }
+
+		template< class T, class M, class L >
+		T const & Lockable< T, M, L >::operator*() const
+		{ return _obj; }
 	}
 }
 
