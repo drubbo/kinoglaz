@@ -126,7 +126,7 @@ namespace KGD
 			return *_medium;
 		}
 
-		double Session::fetchNextFrame( boost::scoped_ptr< Lock > & lk) throw( RTP::Eof )
+		double Session::fetchNextFrame( Lock & lk) throw( RTP::Eof )
 		{
 
 			try
@@ -143,7 +143,7 @@ namespace KGD
 						fTime = HUGE_VAL,
 						sendWorse = HUGE_VAL;
 
-					lk.reset();
+					lk.unlock();
 
 					for(;;)
 					{
@@ -165,14 +165,14 @@ namespace KGD
 						else
 							break;
 					}
-					lk.reset( new Lock( _mux ) );
+					lk.lock( );
 					_seeked = false;
 				}
 				else
 				{
-					lk.reset();
+					lk.unlock();
 					tmp.reset( _frameBuf->getNextFrame() );
-					lk.reset( new Lock( _mux ) );
+					lk.lock();
 				}
 
 				// release sent frame
@@ -192,7 +192,7 @@ namespace KGD
 
 		void Session::loop()
 		{
-			boost::scoped_ptr< Lock > lk( new Lock(_mux) );
+			Lock lk( _mux );
 			Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
 
 			try
@@ -230,9 +230,9 @@ namespace KGD
 							// don't sleep if nothing to wait for
 							if ( _frameNext )
 							{
-								lk.reset();
+								lk.unlock();
 								KGD::Clock::sleepNano( slp );
-								lk.reset( new Lock ( _mux ) );
+								lk.lock();
 
 								now = _time->getPresentationTime();
 								spd = _time->getSpeed();
@@ -265,9 +265,8 @@ namespace KGD
 
 						Log::message( "%s: go pause", getLogName() );
 						_condPaused.notify_all();
-						if ( !lk )
-							lk.reset( new Lock ( _mux ) );
-						_condUnPause.wait(*lk);
+						lk.try_lock();
+						_condUnPause.wait( lk );
 					}
 				}
 			}
@@ -282,7 +281,7 @@ namespace KGD
 			_stopped = true;
 			_paused  = false;
 
-			lk.reset();
+			lk.unlock();
 
 			Log::debug( "%s: loop terminated", getLogName() );
 		}

@@ -129,7 +129,7 @@ namespace KGD
 			RTSP::PlayRequest doSeekScale( const RTSP::PlayRequest & ) throw( KGD::Exception::OutOfBounds );
 
 			//! retrieves next frame from frame buffer
-			double fetchNextFrame( boost::scoped_ptr< Lock > & ) throw( RTP::Eof );
+			double fetchNextFrame( Lock & ) throw( RTP::Eof );
 
 			//! packetized and sends a frame on the RTP socket, marking the frame with the specified time on media timeline
 			void sendNextFrame( ) throw( KGD::Socket::Exception );
