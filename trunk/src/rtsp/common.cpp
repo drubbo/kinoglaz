@@ -73,7 +73,7 @@ namespace KGD
 		string PlayRequest::toString() const throw()
 		{
 			ostringstream rt;
-			rt << "[" << from << "-" << to << "] x " << speed << "(" << hasRange << "|" << hasScale << ")";
+			rt << "[" << from << "-" << to << "] x " << speed << " ( wr: " << hasRange << " | ws: " << hasScale << " )";
 			return rt.str();
 		}
 

@@ -85,7 +85,7 @@ namespace KGD
 				if ( lineNo > 0 )
 					Log::warning( "%s: invalid loop declaration at line %u", _fileName.c_str(), lineNo );
 				else
-					_loops = fromString< ushort >( match.str(1) );
+					_loops = fromString< uint16_t >( match.str(1) );
 			}
 			else if (boost::regex_search(bg, ed, match, rxFile))
 				_media.push_back( match.str(1) );
@@ -99,7 +99,7 @@ namespace KGD
 		return _fileName;
 	}
 
-	const ushort & PlayList::getLoops() const throw()
+	const uint16_t & PlayList::getLoops() const throw()
 	{
 		return _loops;
 	}

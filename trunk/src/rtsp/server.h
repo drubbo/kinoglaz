@@ -53,34 +53,35 @@ namespace KGD
 		class Connection;
 
 		//! RTSP (socket) server
-		class Server :
-			public Singleton::Persistent< Server >
+		class Server
+		: public Singleton::Class< Server >
 		{
 		protected:
 			//! tcp server socket
-			Ptr::Scoped< Socket::TcpServer > _socket;
+			boost::scoped_ptr< Socket::TcpServer > _socket;
+			typedef boost::ptr_list< Connection > ConnectionList;
 			//! active requests
-			list< Connection * > _conns;
+			ConnectionList _conns;
 			//! max servable requests
-			ushort _maxConnections;
+			uint16_t _maxConnections;
 			//! listen port
 			TPort _port;
 			//! is main loop running ?
-			Safe::Flag _running;
+			Safe::Flag<> _running;
 
 			//! handle new connection starting new serve-thread if connection limit has not been reached
-			void handle( Socket::Tcp * channel );
+			void handle( auto_ptr< Socket::Tcp > channel );
 			//! a thread to serve last connection - one per connection
 			void serve( Connection * );
 			//! removes the connection when the serve-thread has ended
-			void remove( Connection * ) throw( KGD::Exception::NotFound );
+			void remove( Connection & ) throw( KGD::Exception::NotFound );
 
 			//! main loop: waits for TCP incoming connections and serves them
 			void run();
 
 			//! ctor
 			Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, Socket::Exception );
-			friend class Singleton::Persistent< Server >;
+			friend class Singleton::Class< Server >;
 		public:
 			//! dtor
 			~Server();
@@ -93,9 +94,9 @@ namespace KGD
 			void stop();
 
 			//! get first instance
-			static Server& getInstance( const Ini::Entries & ) throw( KGD::Exception::Generic );
+			static Server::Reference getInstance( const Ini::Entries & ) throw( KGD::Exception::Generic );
 			//! get next instance references
-			static Server& getInstance() throw( KGD::Exception::InvalidState );
+			static Server::Reference getInstance() throw( KGD::Exception::InvalidState );
 		};
 	}
 }

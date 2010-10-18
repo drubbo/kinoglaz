@@ -72,15 +72,16 @@ namespace KGD
 
 		long Sender::SR_INTERVAL = 5;
 
-		Sender::Sender( RTP::Session & s, const Ptr::Shared< Channel::Bi > & sock )
+		Sender::Sender( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
 		: _rtp(s)
 		, _sock(sock)
 		, _sync( 2 )
-		, _running(false)
-		, _paused(false)
-		, _RTPsync(false)
 		, _logName( s.getLogName() + string(" RTCP Sender") )
 		{
+			Status::type::LockerType lk( _status );
+			_status[ Status::RUNNING ] = false;
+			_status[ Status::PAUSED ] = false;
+			_status[ Status::SYNC_WITH_RTP ] = false;
 		}
 
 		Sender::~Sender()
@@ -91,7 +92,7 @@ namespace KGD
 			{
 				Log::message( "%s: waiting thread", getLogName() );
 				_th->join();
-				_th.destroy();
+				_th.reset();
 			}
 
 			Log::message( "%s: destroyed", getLogName() );
@@ -104,24 +105,28 @@ namespace KGD
 
 		void Sender::registerPacketSent( size_t sz ) throw()
 		{
-			RLock lk( _muxStats );
-			_stats.pktCount ++;
-			_stats.octetCount += sz;
+			Stats::LockerType lk( _stats );
+			(*_stats).pktCount ++;
+			(*_stats).octetCount += sz;
 		}
 
 		void Sender::wait()
 		{
-// 			Log::debug("BARRIER sync");
 			_sync.wait();
 		}
 
 		void Sender::releaseRTP()
 		{
-			if ( _RTPsync )
+			Status::type::LockerType lk( _status );
+
+			if ( _status[ Status::SYNC_WITH_RTP ] )
 			{
 				Log::debug( "%s: release barrier", getLogName() );
-				this->wait();
-				_RTPsync = false;
+				{
+					Status::type::UnLockerType ulk( lk );
+					_sync.wait();
+				}
+				_status[ Status::SYNC_WITH_RTP ] = false;
 			}
 		}
 
@@ -129,40 +134,33 @@ namespace KGD
 		{
 			Log::debug( "%s: started", getLogName() );
 
-			// lock the clock
-			_lkClock = new TLock( _muxClock );
-			Log::debug( "%s: got lock", getLogName() );
-
 			try
 			{
-				while( _running )
+				Status::type::LockerType lk( _status );
+				while( _status[ Status::RUNNING ] )
 				{
-// 					Log::debug("RTCP Sender %d about to ...", _sock->getDescription().ports.first );
-					// send SR and SDES
-					*_sock << enqueueReport().enqueueDescription();
-					// give RTP way if needed
-					this->releaseRTP();
+					while ( _status[ Status::PAUSED ] )
+						_condUnPause.wait( lk.getLock() );
 
+					if ( _status[ Status::RUNNING ] )
+					{
+						// send SR and SDES
+						*_sock << enqueueReport().enqueueDescription();
+						// give RTP way if needed
+						this->releaseRTP();
 
-					while ( _paused )
-					{
-						if ( ! _lkClock )
-							_lkClock = new TLock( _muxClock );
-						_condUnPause.wait( *_lkClock );
-					}
-					if ( _running )
-					{
-						// try a lock for at most "sending interval"
-						Ptr::Scoped< TLock > lkT = new TLock( _muxClock, boost::posix_time::seconds( SR_INTERVAL ) );
-						// if i own the lock some else should have given us free way destroying clock lock
-						if ( lkT->owns_lock() )
 						{
-							Lock lk( _muxLk );
-							_lkClock = lkT.release();
-// 							Log::debug("RTCP lock owned");
+							Status::type::UnLockerType ulk( lk );
+							try
+							{
+								_th->sleep( boost::get_system_time() + boost::posix_time::seconds( SR_INTERVAL ) );
+								Log::debug("%s has sleeped enough", getLogName());
+							}
+							catch( boost::thread_interrupted )
+							{
+								Log::debug("%s was awakened", getLogName());
+							}
 						}
-// 						else
-// 							Log::debug("RTCP lock timeout");
 					}
 				}
 
@@ -176,9 +174,9 @@ namespace KGD
 
 			this->releaseRTP();
 
-			_running = false;
-			_paused = false;
-
+			_status[ Status::RUNNING ] = false;
+			_status[ Status::PAUSED ] = false;
+			
 			Log::debug( "%s: stopped", getLogName() );
 
 			this->getStats().log( "Sender" );
@@ -186,49 +184,55 @@ namespace KGD
 
 		void Sender::start()
 		{
-			_RTPsync = true;
-			if ( !_running )
-			{
-				_stats.RRcount = 0;
-				_stats.SRcount = 0;
+			Status::type::LockerType lk( _status );
 
-				_running = true;
-				_th = new Thread(boost::bind(&Sender::sendLoop,this));
+			_status[ Status::SYNC_WITH_RTP ] = true;
+
+			if ( !_status[ Status::RUNNING ] )
+			{
+				{
+					Stats::LockerType lk( _stats );
+					(*_stats).RRcount = 0;
+					(*_stats).SRcount = 0;
+				}
+
+				_status[ Status::RUNNING ] = true;
+				_th.reset( new boost::thread(boost::bind(&Sender::sendLoop,this)) );
 			}
-			else if ( _paused )
+			else if ( _status[ Status::PAUSED ] )
 				this->unpause();
 		}
 
 		void Sender::pause()
 		{
-			if ( !_paused )
+			Status::type::LockerType lk( _status );
+			if ( !_status[ Status::PAUSED ] )
 			{
-				Lock lk( _muxLk );
-				_paused = true;
-				_lkClock.destroy();
+				_status[ Status::PAUSED ] = true;
 			}
 		}
 
 		void Sender::unpause()
 		{
-			if ( _paused )
+			Status::type::LockerType lk( _status );
+			if ( _status[ Status::PAUSED ] )
 			{
-				_paused = false;
+				_status[ Status::PAUSED ] = false;
 				_condUnPause.notify_all();
 			}
-			else
+			else if ( _status[ Status::RUNNING ] )
 			{
-				Lock lk( _muxLk );
-				_lkClock.destroy();
+				_th->interrupt();
 			}
 
 		}
 
 		void Sender::stop()
 		{
-			if ( _running )
+			Status::type::LockerType lk( _status );
+			if ( _status[ Status::RUNNING ] )
 			{
-				_running = false;
+				_status[ Status::RUNNING ] = false;
 				this->unpause();
 			}
 		}
@@ -236,10 +240,11 @@ namespace KGD
 		void Sender::restart()
 		{
 			Log::debug( "%s: restarting", getLogName() );
+			Status::type::LockerType lk( _status );
 
-			_RTPsync = true;
+			_status[ Status::SYNC_WITH_RTP ] = true;
 
-			if ( _running )
+			if ( _status[ Status::RUNNING ] )
 				this->unpause();
 			else
 				this->start();
@@ -252,7 +257,7 @@ namespace KGD
 			// times
 			{
 				double curTime = Clock::getSec();
-				const RTP::Timeline::Medium & tm = _rtp->getTimeline();
+				const RTP::Timeline::Medium & tm = _rtp.getTimeline();
 				double presTime = tm.getPresentationTime( curTime );
 				RTP::TTimestamp timeRTP = tm.getRTPtime( presTime, curTime );
 
@@ -267,12 +272,12 @@ namespace KGD
 			}
 
 			{
-				RLock lk( _muxStats );
-				++ _stats.SRcount;
-				h.pktCount   = htonl( _stats.pktCount );
-				h.octetCount = htonl( _stats.octetCount );
+				Stats::LockerType lk( _stats );
+				++ (*_stats).SRcount;
+				h.pktCount   = htonl( (*_stats).pktCount );
+				h.octetCount = htonl( (*_stats).octetCount );
 			}
-			h.ssrc = htonl( _rtp->getSsrc() );
+			h.ssrc = htonl( _rtp.getSsrc() );
 
 			Header hh( PacketType::SenderReport, sizeof(h) );
 			_buffer.enqueue( &hh, sizeof(hh) );
@@ -286,10 +291,10 @@ namespace KGD
 			SourceDescription::Header h;
 			SourceDescription::Payload pName, pTool;
 
-			h.ssrc = htonl( _rtp->getSsrc() );
+			h.ssrc = htonl( _rtp.getSsrc() );
 
 			pName.attributeName = SourceDescription::Payload::Attribute::CNAME;
-			pName.length = _rtp->getUrl().host.size();
+			pName.length = _rtp.getUrl().host.size();
 
 			pTool.attributeName = SourceDescription::Payload::Attribute::TOOL;
 			pTool.length = KGD::Daemon::getName().size();
@@ -310,7 +315,7 @@ namespace KGD
 			_buffer.enqueue( &hh, sizeof(hh) );
 			_buffer.enqueue( &h, sizeof(h) );
 			_buffer.enqueue( &pName, sizeof(pName) );
-			_buffer.enqueue( _rtp->getUrl().host );
+			_buffer.enqueue( _rtp.getUrl().host );
 			_buffer.enqueue( &pTool, sizeof(pTool) );
 			_buffer.enqueue( KGD::Daemon::getName() );
 
@@ -326,7 +331,7 @@ namespace KGD
 			Bye::Header h;
 			string reason = "Stream terminated";
 
-			h.ssrc = htonl( _rtp->getSsrc() );
+			h.ssrc = htonl( _rtp.getSsrc() );
 			h.length = htonl( reason.size() );
 
 			Header hh( PacketType::Bye, sizeof(h) );
@@ -341,8 +346,8 @@ namespace KGD
 
 		Stat Sender::getStats() const throw()
 		{
-			RLock lk( _muxStats );
-			return _stats;
+			Stats::LockerType lk( _stats );
+			return *_stats;
 		}
 
 	}

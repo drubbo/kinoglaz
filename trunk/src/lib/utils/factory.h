@@ -41,9 +41,7 @@
 #include <list>
 
 #include "lib/common.h"
-#include "lib/utils/map.hpp"
 #include "lib/utils/virtual.hpp"
-#include "lib/utils/pointer.hpp"
 #include "lib/exceptions.h"
 
 using namespace std;
@@ -86,8 +84,8 @@ namespace KGD
 
 		//! A factory of objects of ConcreteType, who is derived from AbstractType
 		template< class AbstractType, class ConcreteType >
-		class Multi :
-				public Abstract< AbstractType * >
+		class Multi
+		: public Abstract< AbstractType * >
 		{
 		public:
 			//! returns new instance of ConcreteType using default constructor; ConcreteType is-a (must-be) AbstractType
@@ -96,35 +94,22 @@ namespace KGD
 
 		// *********************************************************************************************************
 
-		//! A "factory" of singleton instances of ConcreteType, who is derived from AbstractType
-		template< class AbstractType, class ConcreteType >
-		class Single :
-				public Abstract< AbstractType & >
-		{
-		public:
-			//! returns new instance of ConcreteType using default constructor; ConcreteType is-a (must-be) AbstractType
-			virtual AbstractType & newInstance() const;
-		};
-
-		// *********************************************************************************************************
-
 		//! this class is needed to provide compile-time static mappings for Enabled class types
 		template< class AbstractType >
 		class RegistrationHelper
+		: public boost::noncopyable
 		{
 		private:
 			ClassID::type _typeID;
 		public:
 			//! calls Registry< AbstractType >::registerFactory
-			RegistrationHelper( ClassID::type typeID, const Abstract< AbstractType > * factory ) throw( Exception::InvalidState );
+			RegistrationHelper( ClassID::type typeID, Abstract< AbstractType > * factory ) throw( Exception::InvalidState );
 			//! calls Registry< AbstractType >::unregisterFactory
 			~RegistrationHelper();
 		};
 
 		// *********************************************************************************************************
 
-		//! storage for factory mappings
-		extern map< string, void * > * GlobalMappings;
 
 		//! global factory mappings
 
@@ -136,6 +121,9 @@ namespace KGD
 		class Mappings
 		{
 		private:
+			typedef map< string, void * > GenericMap;
+			//! storage for factory mappings
+			static GenericMap * _factories;
 		public:
 			//! returns typed mappings associated to a correspondent registry instance
 			template< class FactoryMap >
@@ -155,10 +143,10 @@ namespace KGD
 		{
 		private:
 			//! type of factory mappings in this tree
-			typedef Ptr::Map< ClassID::type, const Abstract< AbstractType > > TFactoryMap;
+			typedef boost::ptr_map< ClassID::type, Abstract< AbstractType > > FactoryMap;
 		private:
 			//! registers the bound between a typeID and an object factory
-			static void registerFactory( ClassID::type typeID, const Abstract< AbstractType > * factory ) throw( Exception::InvalidState );
+			static void registerFactory( ClassID::type typeID, Abstract< AbstractType > * factory ) throw( Exception::InvalidState );
 			//! registers the bound between a typeID and an object factory
 			static void unregisterFactory( ClassID::type typeID ) throw( Exception::NotFound );
 			//! just the helper can register factories
@@ -167,7 +155,7 @@ namespace KGD
 			//! returns internal class name to identify this registry in the GlobalMappings
 			static string getClassName() throw();
 			//! returns factory mappings for this factory tree
-			static TFactoryMap & getFactoryMappings( ) throw( Exception::NotFound );
+			static FactoryMap & getFactoryMappings( ) throw( Exception::NotFound );
 		public:
 			virtual ~Registry();
 
@@ -185,23 +173,17 @@ namespace KGD
 
 		//! class registry, for classes suitable to factory pattern
 		template< class AbstractType >
-		class ClassRegistry :
-				public Registry< AbstractType * >
-		{
-		};
-
-		template< class AbstractType >
-		class InstanceRegistry :
-				public Registry< AbstractType & >
+		class ClassRegistry
+		: public Registry< AbstractType * >
 		{
 		};
 
 		// *********************************************************************************************************
 
-		//! A class should extend this template to be registered into Register< AbstractType > with typeID mapped to a default Class factory of ConcreteType
+		//! Facility to enable factory pattern for a class
 		template< class AbstractType, class FactoryClass, ClassID::type typeID >
-		class Enabled :
-			virtual public Base
+		class Enabled
+		: virtual public Base
 		{
 		private:
 			static const RegistrationHelper< AbstractType > _entry;
@@ -218,15 +200,10 @@ namespace KGD
 
 		// *********************************************************************************************************
 
+		//! A class should extend this template to be registered into Register< AbstractType > with typeID mapped to a default Class factory of ConcreteType
 		template< class AbstractType, class ConcreteType, ClassID::type typeID >
-		class Multiton :
-			public Enabled< AbstractType *, Multi< AbstractType, ConcreteType >, typeID >
-		{
-		};
-
-		template< class AbstractType, class ConcreteType, ClassID::type typeID >
-		class Singleton :
-			public Enabled< AbstractType &, Single< AbstractType, ConcreteType >, typeID >
+		class Multiton
+		: public Enabled< AbstractType *, Multi< AbstractType, ConcreteType >, typeID >
 		{
 		};
 	}

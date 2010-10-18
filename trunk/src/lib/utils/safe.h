@@ -38,60 +38,101 @@
 #define _USS_SAFE_VARS_H
 
 #include "lib/common.h"
+#include <boost/detail/atomic_count.hpp>
+#include <bitset>
 
 namespace KGD
 {
 	//! Thread-safe utilities
 	namespace Safe
 	{
-		//! Thread-safe number with desired precision
-		template< class T >
-		class Number
+		//! Locker for any MutexLockable
+		template< class L >
+		class Locker
+		: public boost::noncopyable
 		{
-		protected:
-			T _val;
-			mutable Mutex _mux;
+			boost::scoped_ptr< L > _lk;
 		public:
-			Number( const Number< T >& );
-			template< class S >
-			Number( const Number< S >& );
-			template< class S >
-			Number( const S & );
-
-			Number< T >& operator++( );
-			Number< T > operator++( int );
-			Number< T >& operator--( );
-			Number operator--( int );
-
-			template< class S >
-			Number< T >& operator=( const S & );
-			template< class S >
-			Number< T >& operator+=( const S & );
-			template< class S >
-			Number< T >& operator-=( const S & );
-			template< class S >
-			Number< T >& operator*=( const S & );
-			template< class S >
-			Number< T >& operator/=( const S & );
-
-			T getValue() const;
-			operator T () const;
+			template< class Lk >
+			Locker( Lk const & l ) : _lk( new typename Lk::LockType( l.mux() ) ) { }
+			L & getLock() { return *_lk; }
 		};
 
-		//! Thread-safe boolean flag
+		//! Temporarily unlocks a previous acquired lock
+		template< class L >
+		class UnLocker
+		: public boost::noncopyable
+		{
+			Locker< L > & _lk;
+		public:
+			UnLocker( Locker< L > & l ) : _lk( l ) { _lk.getLock().unlock(); }
+			~UnLocker( ) { _lk.getLock().lock(); }
+		};
+
+		//! Mutex-based lockable class
+		template< class M = RMutex, class L = RLock >
+		class MutexLockable
+		: public boost::noncopyable
+		{
+		private:
+			mutable M _mux;
+		public:
+			typedef M MutexType;
+			typedef L LockType;
+
+			void lock() const { _mux.lock(); }
+			void unlock() const { _mux.unlock(); }
+			M & mux() const { return _mux; }
+		};
+
+		//! Lockable flag set
+		template< size_t N, class M = RMutex, class L = RLock >
+		class FlagSet
+		: public MutexLockable< M, L >
+		{
+		private:
+			bitset< N > _bits;
+		public:
+			typedef Locker< L > LockerType;
+			typedef UnLocker< L > UnLockerType;
+
+			bool operator[]( size_t pos ) const { return _bits[ pos ]; }
+			typename bitset< N >::reference operator[]( size_t pos ) { return _bits[ pos ]; }
+		};
+
+		//! Lockable single flag
+		template< class M = RMutex, class L = RLock >
 		class Flag
+		: public MutexLockable< M, L >
+		{
+		private:
+			bool _bit;
+		public:
+			typedef Locker< L > LockerType;
+			typedef UnLocker< L > UnLockerType;
+
+			Flag( bool b ) : _bit( b ) {}
+
+			operator bool() const { LockerType lk( *this ); return _bit; }
+			Flag& operator=( bool b ) { LockerType lk( *this ); _bit = b; return *this; }
+		};
+
+		//! Lockable single flag typedef sugar
+		typedef Flag<> Bool;
+
+		//! Generic lockable
+		template< class T, class M = RMutex, class L = RLock >
+		class Lockable
+		: public MutexLockable< M, L >
 		{
 		protected:
-			bool _val;
-			mutable Mutex _mux;
+			T _obj;
 		public:
-			Flag( const Flag& );
-			Flag( bool );
+			typedef Locker< L > LockerType;
+			typedef UnLocker< L > UnLockerType;
 
-			Flag& operator=( bool );
-
-			bool getValue() const;
-			operator bool() const;
+			T& operator*() { return _obj; }
+			T const & operator*() const { return _obj; }
 		};
 	}
 }

@@ -40,33 +40,31 @@
 #include "lib/ini.h"
 #include "lib/common.h"
 #include "lib/log.h"
-#include "lib/utils/container.hpp"
 
 namespace KGD
 {
 	namespace RTSP
 	{
-		Server& Server::getInstance( const Ini::Entries & params ) throw( KGD::Exception::Generic )
+		Server::Reference Server::getInstance( const Ini::Entries & params ) throw( KGD::Exception::Generic )
 		{
-			RLock lk( _mux );
+			Instance::LockerType lk( _instance );
 
-			if ( !_instance )
-			{
-				_instance = new Server( params );
-			}
+			if ( !*_instance )
+				(*_instance).reset( new Server( params ) );
 			else
 				throw KGD::Exception::InvalidState( "KGD instance already initialized" );
 
-			return *_instance;
+			return newInstanceRef();
 		}
 
-		Server& Server::getInstance() throw( KGD::Exception::InvalidState )
+		Server::Reference Server::getInstance() throw( KGD::Exception::InvalidState )
 		{
-			RLock lk( _mux );
-			if ( !_instance )
+			Instance::LockerType lk( _instance );
+
+			if ( !*_instance )
 				throw KGD::Exception::InvalidState( "KGD instance not yet initialized" );
 
-			return *_instance;
+			return newInstanceRef();
 		}
 
 		Server::Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception )
@@ -79,23 +77,20 @@ namespace KGD
 
 		void Server::setupParameters( const Ini::Entries & params ) throw( KGD::Exception::NotFound, KGD::Socket::Exception )
 		{
-			_maxConnections = fromString< ushort >( params[ "limit" ] );
+			_maxConnections = fromString< uint16_t >( params[ "limit" ] );
 			while( _maxConnections != 0 && _conns.size() > _maxConnections )
-			{
-				Ptr::clear( _conns.back() );
-				_conns.pop_back();
-			}
+				_conns.erase( _conns.rbegin().base() );
 
 			TPort newPort = fromString< TPort >( params[ "port" ] );
 			if ( _socket && _port != newPort )
 			{
 				Log::message( "KGD: switching port from %d to %d", _port, newPort );
-				_socket.destroy();
+				_socket.reset();
 			}
 			if ( !_socket )
 			{
 				_port = newPort;
-				_socket = new KGD::Socket::TcpServer( _port );
+				_socket.reset( new KGD::Socket::TcpServer( _port ) );
 				Log::message( "KGD: binding to port %d", newPort );
 			}
 
@@ -104,18 +99,8 @@ namespace KGD
 
 		Server::~Server()
 		{
-			RLock lk(_mux);
-
 			Log::message("KGD: tearing down %d connections", _conns.size());
-			Ctr::clear( _conns );
-
-			// if still running, shut down the socket
-			if ( _running )
-			{
-				_running = false;
-				_socket.destroy();
-			}
-
+			_conns.clear();
 			Log::message("KGD: shut down");
 		}
 
@@ -131,49 +116,50 @@ namespace KGD
 			}
 
 			Log::debug( "KGD: calling remove of %lu", conn->getID() );
-			this->remove( conn );
+			this->remove( *conn );
 		}
 
-		void Server::handle( KGD::Socket::Tcp * channel )
+		void Server::handle( auto_ptr< KGD::Socket::Tcp > channel )
 		{
-			RLock lk( _mux );
+			RLock lk( Server::mux() );
 
 			if ( _maxConnections != 0 && _conns.size() >= _maxConnections )
 				throw RTSP::Exception::Generic( "handle", "KGD: CONN limit already reached" );
 
 			// creo il gestore della richiesta
-			Connection * conn = new Connection( channel );
+			auto_ptr< Connection > conn( new Connection( channel.release() ) );
+			Connection * cPtr = conn.get();
 			// accodo
 			_conns.push_back( conn );
 			// lancio il thread di gestione
-			new Thread(boost::bind(&RTSP::Server::serve, this, conn));
+			new boost::thread( boost::bind( &RTSP::Server::serve, this, cPtr ) );
 		}
 
-		void Server::remove( Connection * conn ) throw( KGD::Exception::NotFound )
+		void Server::remove( Connection & conn ) throw( KGD::Exception::NotFound )
 		{
-			RLock lk( _mux );
-			Log::debug( "KGD: removing connection %lu", conn->getID() );
+			RLock lk( Server::mux() );
+
+			Log::debug( "KGD: removing connection %lu", conn.getID() );
 
 			if ( !_running )
 			{
-				Log::debug( "KGD: server is not running" );
+				Log::warning( "KGD: server is not running" );
 				return;
 			}
 
-			for( Ctr::Iterator< list< Connection * > > it( _conns ); it.isValid(); it.next() )
+
+			for( ConnectionList::iterator it = _conns.begin(); it != _conns.end(); ++it )
 			{
-				if ( (*it)->getID() == conn->getID() )
+				if ( it->getID() == conn.getID() )
 				{
-					Ptr::clear( conn );
 					_conns.erase( it );
 					Log::message("KGD: CONN removed, %d remaining", _conns.size());
 					return;
 				}
 			}
 
-			Log::error("KGD: no connection %lu found", conn->getID() );
-
-			throw KGD::Exception::NotFound( "KGD: CONN to remove" );
+			Log::error("KGD: no connection %lu found", conn.getID() );
+			throw KGD::Exception::NotFound( "KGD: CONN to remove " + toString( conn.getID() ) );
 		}
 
 		void Server::run()

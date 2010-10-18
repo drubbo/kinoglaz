@@ -39,7 +39,11 @@
 
 #include "sdp/frame.h"
 
-#include <config.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#else
+#error "Please use platform configuration file."
+#endif
 
 namespace KGD
 {

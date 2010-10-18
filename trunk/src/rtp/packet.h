@@ -43,6 +43,8 @@ namespace KGD
 		//! RTP packet
 		struct Packet
 		{
+			typedef boost::ptr_list< Packet > List;
+			
 			//! Maximum Transfer Unit of the network, so maximum size of a packet
 			static size_t MTU;
 			//! data of this packet

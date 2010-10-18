@@ -48,6 +48,7 @@ extern "C"
 #include <sstream>
 
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/xtime.hpp>
 #include <boost/thread/mutex.hpp>
@@ -55,13 +56,17 @@ extern "C"
 #include <boost/thread/condition.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
+#include <boost/ptr_container/ptr_list.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 using namespace std;
 
 namespace KGD
 {
 	//! boost thread
-	typedef boost::thread Thread;
+	typedef boost::scoped_ptr< boost::thread > Thread;
 	//! boost condition
 	typedef boost::condition Condition;
 	//! boost barrier
@@ -87,6 +92,12 @@ namespace KGD
 	typedef uint32_t TSSrc;
 
 
+	//! common string -> string map
+	typedef map< string, string > KeyValueMap;
+	//! common string -> string pair
+	typedef pair< string, string > KeyValuePair;
+
+	
 	//! search string begin operator
 	class BeginsWith :
 		public unary_function< string, bool >

@@ -76,9 +76,9 @@ namespace KGD
 					
 			protected:
 				//! medium descriptor
-				Ptr::Ref< SDP::Medium::Base > _medium;
+				ref< SDP::Medium::Base > _medium;
 				//! frame iterator
-				Ptr::Scoped< SDP::Medium::Iterator::Base > _frameIndex;
+				boost::scoped_ptr< SDP::Medium::Iterator::Base > _frameIndex;
 				//! speed
 				double _scale;  
 
@@ -88,8 +88,9 @@ namespace KGD
 				Condition _condFull;
 				//! data requested in out buffer
 				Condition _condEmpty;
+				typedef boost::ptr_list< RTP::Frame::Base > FrameList;
 				//! out frame buffer
-				deque< RTP::Frame::Base * > _bufferOut;
+				FrameList _bufferOut;
 
 				//! log identifier
 				string _logName;
@@ -145,7 +146,7 @@ namespace KGD
 			{
 			private:
 				//! fetch thread
-				Ptr::Scoped< Thread > _th;
+				Thread _th;
 				//! running status indicator
 				bool _running;
 				//! mutex to cleanly seek

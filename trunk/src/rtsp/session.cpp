@@ -42,7 +42,6 @@
 #include "config.h"
 #endif
 
-#include "lib/utils/container.hpp"
 #include "rtsp/session.h"
 #include "rtsp/connection.h"
 #include "rtp/session.h"
@@ -77,7 +76,7 @@ namespace KGD
 
 		void Session::reply( const Error::Definition & d ) throw( KGD::Socket::Exception )
 		{
-			_conn->reply( d );
+			_conn.reply( d );
 		}
 
 		RTP::Session & Session::createSession(const Url &url, const Channel::Description & remote ) throw( RTSP::Exception::ManagedError )
@@ -85,18 +84,18 @@ namespace KGD
 			try
 			{
 				// setup channel
-				Ptr::Scoped< Channel::Bi > rtpChan, rtcpChan;
+				boost::shared_ptr< Channel::Bi > rtpChan, rtcpChan;
 				TPortPair local;
 
 				// udp
 				if ( remote.type == Channel::Owned )
 				{
-					local = Port::Udp::getInstance().getPair();
+					local = Port::Udp::getInstance()->getPair();
 
 					Log::debug("%s: creating udp socket locally bound to %d / %d", getLogName(), local.first, local.second );
-					Ptr::Scoped< KGD::Socket::Udp >
-						rtp = new KGD::Socket::Udp( local.first, url.host ),
-						rtcp = new KGD::Socket::Udp( local.second, url.host );
+					auto_ptr< KGD::Socket::Udp >
+						rtp( new KGD::Socket::Udp( local.first, url.host ) ),
+						rtcp( new KGD::Socket::Udp( local.second, url.host ) );
 
 					Log::debug("%s: connecting udp socket to remote %d / %d", getLogName(), remote.ports.first, remote.ports.second);
 
@@ -116,13 +115,13 @@ namespace KGD
 					rtcp->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 					rtcp->setReadBlock( true );
 
-					rtpChan = rtp.release();
-					rtcpChan = rtcp.release();
+					rtpChan = rtp;
+					rtcpChan = rtcp;
 				}
 				// tcp interleaved
 				else
 				{
-					Socket & rtsp = _conn->getSocket();
+					Socket & rtsp = _conn.getSocket();
 					local = rtsp.addInterleavePair( remote.ports, _id );
 
 					rtpChan = rtsp.getInterleave( local.first );
@@ -131,11 +130,16 @@ namespace KGD
 
 				// get description
 				int mediumIndex = fromString< int >( url.track );
-				SDP::Medium::Base & med = _conn->getDescription( url.file ).getMedium( mediumIndex );
+				SDP::Medium::Base & med = _conn.getDescription( url.file ).getMedium( mediumIndex );
 
 				// create session
-				RTP::Session *s = new RTP::Session( url, med, rtpChan.release(), rtcpChan.release(), getLogName(), _conn->getUserAgent() );
-				_sessions( url.track ) = s;
+				auto_ptr< RTP::Session > s( new RTP::Session( url, med, rtpChan, rtcpChan, getLogName(), _conn.getUserAgent() ) );
+				RTP::Session * sPtr = s.get();
+				{
+					string tmpTrack( url.track );
+					_sessions.insert( tmpTrack, s );
+				}
+				
 
 				Log::debug("%s: RTP session created / track: %s / ports: RTP %d %d - RTCP %d %d"
 					, getLogName()
@@ -145,7 +149,7 @@ namespace KGD
 					, local.second
 					, remote.ports.second );
 
-				return *s;
+				return *sPtr;
 			}
 			catch( const KGD::Socket::Exception & e )
 			{
@@ -167,14 +171,14 @@ namespace KGD
 				Log::debug( "%s: pre-play", getLogName() );
 				// guess common parameters
 				PlayRequest rt( rq );
-				TSessionMap::Iterator it( _sessions );
-				for( ; it.isValid(); it.next() )
-					rt.merge( it.val().eval( rq ) );
+				BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+					rt.merge( sess->second->eval( rq ) );
+					
 
 				Log::debug( "%s: play setup with %s", getLogName(), rt.toString().c_str() );
 				// set it up
-				for( it.first(); it.isValid(); it.next() )
-					it.val().play( rt );
+				BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+					sess->second->play( rt );
 
 				_playIssued = true;
 				return rt;
@@ -186,7 +190,7 @@ namespace KGD
 			}
 		}
 
-		void Session::insertMedia( SDP::Container & media, double curMediaTime ) throw( KGD::Exception::OutOfBounds )
+		void Session::insertMedia( SDP::Container & other, double curMediaTime ) throw( KGD::Exception::OutOfBounds )
 		{
 			if ( _sessions.empty() )
 			{
@@ -199,18 +203,18 @@ namespace KGD
 				return;
 			}
 
-			TSessionMap::Iterator sessIt( _sessions );
+			SessionMap::iterator sessIt = _sessions.begin();
 			// list of sessions forced to pause
 			list< string > pausedSessions;
 			PlayRequest pauseRq;
 			// pause all RTP sessions
-			for( ; sessIt.isValid(); sessIt.next() )
+			for( ; sessIt != _sessions.end(); ++sessIt )
 			{
-				if ( sessIt.val().isPlaying() )
+				if ( sessIt->second->isPlaying() )
 				{
-					Log::message( "%s: media insert: pause %s", getLogName(), sessIt.key().c_str() );
-					pausedSessions.push_back( sessIt.key() );
-					sessIt.val().pause( pauseRq );
+					Log::message( "%s: media insert: pause %s", getLogName(), sessIt->first.c_str() );
+					pausedSessions.push_back( sessIt->first );
+					sessIt->second->pause( pauseRq );
 				}
 			}
 
@@ -218,52 +222,53 @@ namespace KGD
 			double insertTime = HUGE_VAL;
 			// video medium will lead
 			Log::debug( "%s: media insert: search video track", getLogName() );
-			for( sessIt.first(); sessIt.isValid(); sessIt.next() )
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
 			{
-				if ( sessIt.val().getDescription().getType() == SDP::MediaType::Video )
+				if ( sess->second->getDescription().getType() == SDP::MediaType::Video )
 				{
-					insertTime = sessIt.val().evalMediumInsertion( curMediaTime );
+					insertTime = sess->second->evalMediumInsertion( curMediaTime );
 					break;
 				}
 			}
 			// not found, use first medium
 			if ( insertTime == HUGE_VAL )
-				insertTime = sessIt.first().val().evalMediumInsertion( curMediaTime );
+				insertTime = _sessions.begin()->second->evalMediumInsertion( curMediaTime );
 			Log::debug( "%s: media insert: time to insert at is %lf", getLogName(), insertTime );
 
 			// insert mediums with correspondent payload type
 			// get media to insert
-			list< Ptr::Ref< SDP::Medium::Base > > ml = media.getMedia();
+			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
 			// for every local medium
-			for( sessIt.first(); sessIt.isValid(); sessIt.next() )
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
 			{
-				SDP::Medium::Base & sessMed = sessIt.val().getDescription();
+				SDP::Medium::Base & sessMed = sess->second->getDescription();
 				Log::debug( "%s: media insert: look for payload type %u", getLogName(), sessMed.getPayloadType() );
 				// search correspondent medium to insert
 				bool found = false;
-				for( Ctr::Iterator< list< Ptr::Ref< SDP::Medium::Base > > > it( ml ); !found && it.isValid(); it.next() )
+				BOOST_FOREACH( SDP::Medium::Base & otherMedium, otherMedia )
 				{
 					// if same PT, insert
-					if ( sessMed.getPayloadType() == it->get().getPayloadType() )
+					if ( sessMed.getPayloadType() == otherMedium.getPayloadType() )
 					{
-						Log::debug("%s: media insert: found payload type %u", getLogName(), it->get().getPayloadType() );
-						sessIt.val().insertMedium( it->get(), insertTime );
+						Log::debug("%s: media insert: found payload type %u", getLogName(), otherMedium.getPayloadType() );
+						sess->second->insertMedium( otherMedium, insertTime );
 						found = true;
+						break;
 					}
 				}
 				// no correspondence found, add void
 				if ( !found )
 				{
 					Log::debug( "%s: media insert: add void to payload type %u", getLogName(), sessMed.getPayloadType() );
-					sessIt.val().insertTime( media.getDuration(), insertTime );
+					sess->second->insertTime( other.getDuration(), insertTime );
 				}
 			}
 
 			// restart paused sessions
-			for( Ctr::Iterator< list< string > > pauseIt( pausedSessions ); pauseIt.isValid(); pauseIt.next() )
+			BOOST_FOREACH( const string & sessID, pausedSessions )
 			{
-				Log::message( "%s: media insert: unpause %s", getLogName(), pauseIt->c_str() );
-				_sessions( *pauseIt )->unpause( pauseRq );
+				Log::message( "%s: media insert: unpause %s", getLogName(), sessID.c_str() );
+				_sessions.at( sessID ).unpause( pauseRq );
 			}
 		}
 
@@ -271,59 +276,71 @@ namespace KGD
 		{
 			Log::debug( "%s: play effective", getLogName() );
 
-			for( TSessionMap::Iterator it( _sessions ); it.isValid(); it.next() )
-				it.val().play();
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+				sess->second->play();
 		}
 
 		void Session::pause( const PlayRequest & rq ) throw()
 		{
 			Log::debug( "%s: pause", getLogName() );
 
-			for( TSessionMap::Iterator it( _sessions ); it.isValid(); it.next() )
-				it.val().pause( rq );
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+				sess->second->pause( rq );
 		}
 
 		void Session::unpause( const PlayRequest & rq ) throw()
 		{
 			Log::debug( "%s: unpause", getLogName() );
 
-			for( TSessionMap::Iterator it( _sessions ); it.isValid(); it.next() )
-				it.val().unpause( rq );
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+				sess->second->unpause( rq );
 		}
 
-		list< Ptr::Ref< RTP::Session > > Session::getSessions() throw()
+		ref_list< RTP::Session > Session::getSessions() throw()
 		{
-			list< RTP::Session * > l = _sessions.values< list >();
-			return Ctr::toRef( l );
+			list< RTP::Session * > rt;
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+				rt.push_back( sess->second );
+
+			return rt;
 		}
 
-		list< Ptr::Ref< const RTP::Session > > Session::getSessions() const throw()
+		ref_list< const RTP::Session > Session::getSessions() const throw()
 		{
-			list< RTP::Session * > l = _sessions.values< list >();
-			return Ctr::toConstRef( l );
+			list< RTP::Session const * > rt;
+			BOOST_FOREACH( SessionMap::const_iterator::reference sess, _sessions )
+				rt.push_back( sess->second );
+
+			return rt;
 		}
 
 		RTP::Session & Session::getSession( const string & track ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( _sessions.has( track ) )
-				return *_sessions( track );
-			else
+			try
+			{
+				return _sessions.at( track );
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
 				throw RTSP::Exception::ManagedError( Error::NotFound );
+			}
 		}
 
 		const RTP::Session & Session::getSession( const string & track ) const throw( RTSP::Exception::ManagedError )
 		{
-			if ( _sessions.has( track ) )
-				return _sessions[ track ];
-			else
+			try
+			{
+				return _sessions.at( track );
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
 				throw RTSP::Exception::ManagedError( Error::NotFound );
+			}
 		}
 
 		void Session::removeSession( const string & track ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( _sessions.has( track ) )
-				_sessions.erase( track );
-			else
+			if ( ! _sessions.erase( track ) )
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}
 
@@ -331,13 +348,13 @@ namespace KGD
 		{
 			return _id;
 		}
-		RTSP::Connection & Session::getConnection() throw( KGD::Exception::NullPointer )
+		RTSP::Connection & Session::getConnection() throw( )
 		{
-			return _conn.get();
+			return _conn;
 		}
-		const RTSP::Connection & Session::getConnection() const throw( KGD::Exception::NullPointer )
+		const RTSP::Connection & Session::getConnection() const throw( )
 		{
-			return _conn.get();
+			return _conn;
 		}
 	}
 

@@ -45,7 +45,7 @@ namespace KGD
 	{
 		RTSP::PlayRequest Session::play( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
 		{
-			_frameLk = new Lock( _frameMux );
+			_frameLk.reset( new Lock( _frameMux ) );
 			Lock lk(_mux);
 
 			RTSP::PlayRequest ret;
@@ -77,7 +77,7 @@ namespace KGD
 				_RTCPsender->wait();
 
 				Log::message( "%s: start play", getLogName() );
-				_frameLk.destroy();
+				_frameLk.reset();
 				{
 					Lock lk(_mux);
 					_paused = false;
@@ -86,7 +86,7 @@ namespace KGD
 				_playing = true;
 			}
 			else
-				_frameLk.destroy();
+				_frameLk.reset();
 		}
 
 		RTSP::PlayRequest Session::doFirstPlay( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
@@ -108,7 +108,7 @@ namespace KGD
 			_time->seek( ret.time, ret.from, ret.speed );
 			_frameBuf->seek( ret.from, ret.speed );
 
-			_th = new Thread(boost::bind(&RTP::Session::loop, this));
+			_th.reset( new boost::thread(boost::bind(&RTP::Session::loop, this)) );
 			_RTCPreceiver->start();
 
 			return ret;
@@ -146,7 +146,7 @@ namespace KGD
 				// posso anche avere seek + scale; in ogni caso lo scale viene passato alla funzione quindi ok
 				if ( _paused || ret.hasRange || ret.hasScale )
 				{
-					_frameNext.destroy();
+					_frameNext.reset();
 					_frameBuf->seek( ret.from, ret.speed );
 					_seqStart = _seqCur + 1;
 					_time->seek( rq.time, ret.from, ret.speed );
@@ -244,7 +244,7 @@ namespace KGD
 				Log::debug( "%s: waiting loop termination", getLogName() );
 				_condUnPause.notify_all();
 				_th->join();
-				_th.destroy();
+				_th.reset();
 			}
 			_playing = false;
 

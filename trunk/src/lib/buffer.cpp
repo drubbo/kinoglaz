@@ -42,42 +42,41 @@ using namespace std;
 
 namespace KGD
 {
-	Buffer::Buffer()
-	: _data( (char*)malloc( 4096 ) )
-	, _len( 0 )
-	, _size( 4096 )
+	namespace
 	{
+		const size_t BLOCK_SIZE = 4096;
+	}
+	
+	Buffer::Buffer()
+	{
+		_data.reserve( BLOCK_SIZE );
+		// ensure string termination for later uses
+		_data.push_back( 0 );
 	}
 
 	Buffer::~Buffer()
 	{
-		free( _data );
 	}
 
-	const char * Buffer::getDataBegin() const throw()
+	const char * Buffer::getDataBegin( size_t pos ) const throw( KGD::Exception::OutOfBounds )
 	{
-		return _data;
+		if ( pos > _data.size() - 2 )
+			throw KGD::Exception::OutOfBounds( pos, 0, _data.size() - 2 );
+		return &_data[pos];
 	}
 
-	uint16_t Buffer::getDataLength() const throw()
+	size_t Buffer::getDataLength() const throw()
 	{
-		return _len;
+		return _data.size() - 1;
 	}
 
 	void Buffer::enqueue( const void * s, uint16_t len ) throw( KGD::Exception::Generic )
 	{
-		if ( _len + len > _size )
-		{
-			_size += 1024;
-			_data = (char*)realloc( _data, _size + 1 );
-			if ( _data == 0 )
-				throw KGD::Exception::Generic( "memory allocation error" );
-		}
+		while( _data.size() + len > _data.capacity() )
+			_data.reserve( _data.capacity() + BLOCK_SIZE );
 
-		memcpy(&_data[_len], s, len);
-		_len += len;
-		// ensure string termination for later uses
-		_data[ _len ] = 0;
+		const char * c = reinterpret_cast< const char * >( s );		
+		_data.insert( _data.begin(), c, c + len );
 	}
 
 	void Buffer::enqueue( const string &s ) throw( KGD::Exception::Generic )
@@ -92,13 +91,11 @@ namespace KGD
 
 	void Buffer::dequeue( uint16_t len ) throw( KGD::Exception::Generic )
 	{
-		if (len > 0 && _len >= len)
+		if (len > 0 && _data.size() > len)
 		{
-			memmove( _data, _data + len, _size - len);
-			_size -= len;
-			_len -= len;
+			_data.erase( _data.begin(), _data.begin() + len );
 		}
 		else if ( len > 0 )
-			throw KGD::Exception::Generic( "buffer underrun " + toString( len ) + " on " + toString( _len ) );
+			throw KGD::Exception::Generic( "buffer underrun " + toString( len ) + " on " + toString( _data.size() - 1 ) );
 	}
 }

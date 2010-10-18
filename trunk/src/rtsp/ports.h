@@ -37,7 +37,7 @@
 #ifndef __KGD_RTSP_PORTS_H
 #define __KGD_RTSP_PORTS_H
 
-#include "lib/utils/pointer.hpp"
+#include "lib/exceptions.h"
 #include "lib/utils/singleton.hpp"
 #include "lib/utils/safe.hpp"
 
@@ -91,11 +91,11 @@ namespace KGD
 			//! udp shared port pool
 			class Udp
 			: public Pool
-			, public Singleton::Persistent< Udp >
+			, public Singleton::Class< Udp >
 			{
 			protected:
 				Udp();
-				friend class Singleton::Persistent< Udp >;
+				friend class Singleton::Class< Udp >;
 			public:
 				//! first UDP available port: can be reset from parameters
 				static TPort FIRST;

@@ -44,16 +44,14 @@ namespace KGD
 	{
 		namespace Error
 		{
-			Ptr::Scoped< Ctr::Map< TCode, Ptr::Ref< Definition > > > Definition::_all = new Ctr::Map< TCode, Ptr::Ref< Definition > >();
+			boost::scoped_ptr< map< TCode, ref< const Definition > > > Definition::_all( new map< TCode, ref< const Definition > >() );
 			Mutex Definition::_allMux;
 
 			Definition::Definition( const TCode code, const string & description )
 			: _code( code ), _description( description )
 			{
 				Lock lk( _allMux );
-
-				if ( ! _all->has( code ) )
-					(*_all)( code ) = *this;
+				_all->insert( make_pair( code, *this ) );
 			}
 
 			TCode Definition::getCode() const throw()
@@ -71,10 +69,17 @@ namespace KGD
 				return _code > 202;
 			}
 
-			Definition & Definition::getDefinition( const TCode code ) throw( KGD::Exception::NotFound )
+			const Definition & Definition::getDefinition( const TCode code ) throw( KGD::Exception::NotFound )
 			{
 				Lock lk( _allMux );
-				return (*_all)( code, Exception::NotFound( "RTSP error definition for code " + KGD::toString( code ) ) );
+				try
+				{
+					return *_all->at( code );
+				}
+				catch( boost::bad_ptr_container_operation )
+				{
+					throw Exception::NotFound( "RTSP error definition for code " + KGD::toString( code ) );
+				}
 			}
 
 

@@ -141,6 +141,7 @@ namespace KGD
 
 		//! base socket class
 		class Abstract
+		: public boost::noncopyable
 		{
 		public:
 			//! valid socket types
@@ -203,9 +204,9 @@ namespace KGD
 
 
 		//! Socket reader: abstract class, implements read logic and practices
-		class Reader :
-			virtual public Abstract,
-			virtual public Channel::In
+		class Reader
+		: virtual public Abstract
+		, virtual public Channel::In
 		{
 		public:
 			static const unsigned int MAX_READABLE_STRING_LEN = 4096;
@@ -244,9 +245,9 @@ namespace KGD
 
 
 		//! Socket writer: abstract class, implements write logic and practices
-		class Writer :
-			virtual public Abstract,
-			virtual public Channel::Out
+		class Writer
+		: virtual public Abstract
+		, virtual public Channel::Out
 		{
 		protected:
 			//! next packet will be last of a sequence ?
@@ -305,10 +306,10 @@ namespace KGD
 		};
 
 		//! Socket reader/writer: redefines read to allow successive write without explicit connectTo calls
-		class ReaderWriter :
-			public Reader,
-			public Writer,
-			virtual public Channel::Bi
+		class ReaderWriter
+		: public Reader
+		, public Writer
+		, virtual public Channel::Bi
 		{
 		protected:
 
@@ -324,8 +325,8 @@ namespace KGD
 		};
 
 		//! TCP Socket
-		class Tcp :
-			public ReaderWriter
+		class Tcp
+		: public ReaderWriter
 		{
 		protected:
 			//! protected ctor used by TcpServer during accept
@@ -337,35 +338,27 @@ namespace KGD
 			Tcp( const TPort bindPort = 0, const string & bindIP = "*" ) throw( Socket::Exception );
 			//! dtor
 			virtual ~Tcp() throw();
-
-		private:
-			//! no copy
-			Tcp(const Tcp&);
-			//! no assign
-			Tcp& operator=(const Tcp&);
 		};
 
+
+		//! tcp socket with related mutex
+// 		typedef pair< boost::scoped_ptr< Tcp >, RMutex > TcpShared;
+		
 		//! UDP Socket
-		class Udp :
-			public ReaderWriter
+		class Udp
+		: public ReaderWriter
 		{
 		public:
 			//! opens a new socket potentially bound to a local address
 			Udp(const TPort bindPort = 0, const string & bindIP = "*") throw( Socket::Exception );
 			//! dtor
 			virtual ~Udp() throw();
-
-		private:
-			//! no copy
-			Udp(const Udp&);
-			//! no assign
-			Udp& operator=(const Udp&);
 		};
 
 
 		//! TCP socket server: accepts inbound connections giving out TCP sockets
-		class TcpServer :
-			public Abstract
+		class TcpServer
+		: public Abstract
 		{
 		public:
 			//! opens a socket bound to a local port and sets up listen queue
@@ -373,13 +366,7 @@ namespace KGD
 			virtual ~TcpServer() throw();
 
 			//! waits for a connection and returns it's correspondent socket
-			Tcp* accept() throw( Socket::Exception );
-
-		private:
-			//! no copy
-			TcpServer(const TcpServer&);
-			//! no assign
-			TcpServer& operator=(const TcpServer&);
+			auto_ptr< Tcp > accept() throw( Socket::Exception );
 		};
 	}
 

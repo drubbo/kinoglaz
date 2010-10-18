@@ -50,16 +50,10 @@ namespace KGD
 			return new ConcreteType;
 		}
 
-		template< class AbstractType, class ConcreteType >
-		AbstractType & Single< AbstractType, ConcreteType >::newInstance() const
-		{
-			return ConcreteType::getInstance();
-		}
-
 		// ******************************************************************************************
 
 		template< class AbstractType >
-		RegistrationHelper< AbstractType >::RegistrationHelper( ClassID::type typeID, const Abstract< AbstractType > * factory ) throw( Exception::InvalidState )
+		RegistrationHelper< AbstractType >::RegistrationHelper( ClassID::type typeID, Abstract< AbstractType > * factory ) throw( Exception::InvalidState )
 		: _typeID( typeID )
 		{
 			// do register the binding
@@ -77,9 +71,10 @@ namespace KGD
 		template< class FactoryMap >
 		FactoryMap & Mappings::getRegistryMappings( const string & className ) throw( Exception::NotFound )
 		{
-			if( GlobalMappings && GlobalMappings->find( className ) != GlobalMappings->end() )
+			GenericMap::const_iterator it;
+			if( _factories && ( it = _factories->find( className ) ) != _factories->end() )
 			{
-				return *( reinterpret_cast< FactoryMap * >( (*GlobalMappings)[ className ] ) );
+				return *( reinterpret_cast< FactoryMap * >( it->second ) );
 			}
 			else
 				throw Exception::NotFound( "factory mappings for tree " + className );
@@ -88,16 +83,16 @@ namespace KGD
 		template< class FactoryMap >
 		void Mappings::unregisterRegistry( const string & className ) throw( Exception::NotFound )
 		{
-			if( GlobalMappings && GlobalMappings->find( className ) != GlobalMappings->end() )
+			GenericMap::const_iterator it;
+			if( _factories && ( it = _factories->find( className ) ) != _factories->end() )
 			{
 				Log::debug( "removing factory mapping for tree %s", className.c_str() );
-				FactoryMap * f = reinterpret_cast< FactoryMap * >( (*GlobalMappings)[ className ] );
-				Ptr::clear( f );
-				GlobalMappings->erase( className );
-				if ( GlobalMappings->empty() )
+				delete reinterpret_cast< FactoryMap * >( it->second );
+				_factories->erase( className );
+				if ( _factories->empty() )
 				{
-					Log::debug( "removing global mapping" );
-					Ptr::clear( GlobalMappings );
+					Log::debug( "removing factory registry" );
+					delete _factories;
 				}
 			}
 			else
@@ -117,71 +112,87 @@ namespace KGD
 		}
 
 		template< class AbstractType >
-		typename Registry< AbstractType >::TFactoryMap & Registry< AbstractType >::getFactoryMappings( ) throw( Exception::NotFound )
+		typename Registry< AbstractType >::FactoryMap & Registry< AbstractType >::getFactoryMappings( ) throw( Exception::NotFound )
 		{
-			return Mappings::getRegistryMappings< TFactoryMap >( getClassName() );
+			return Mappings::getRegistryMappings< FactoryMap >( getClassName() );
 		}
 
 		template< class AbstractType >
-		void Registry< AbstractType >::registerFactory( ClassID::type typeID, const Abstract< AbstractType > * factory ) throw( Exception::InvalidState )
+		void Registry< AbstractType >::registerFactory( ClassID::type typeID, Abstract< AbstractType > * factory ) throw( Exception::InvalidState )
 		{
-			Log::debug( "registering class id %llu", typeID );
+			string className = getClassName();
+
+			Log::debug( "registering class id %llu for type %s", typeID, className.c_str() );
 
 			// setup local mappings
-			string className = getClassName();
 			if ( ! Mappings::isRegistryRegistered( className ) )
-				Mappings::registerRegistry( className, new TFactoryMap );
+				Mappings::registerRegistry( className, new FactoryMap );
 
 			// add type id to local mappings
-			TFactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
-			if ( ! f.has( typeID ) )
-				f( typeID ) = factory;
-			else
-				throw Exception::InvalidState("already registered factory specification for typeID " + toString( typeID ));
+			FactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
+			pair< typename FactoryMap::iterator, bool > fIns = f.insert( typeID, factory );
+			if ( ! fIns.second )
+				throw Exception::InvalidState("already registered factory specification for typeID " + toString( typeID ) + " of type " + className );
 		}
 
 		template< class AbstractType >
 		void Registry< AbstractType >::unregisterFactory( ClassID::type typeID ) throw( Exception::NotFound )
 		{
 			string className = getClassName();
+
+			Log::debug( "unregistering class id %llu of type %s", typeID, className.c_str() );
+
 			if ( ! Mappings::isRegistryRegistered( className ) )
-				throw Exception::NotFound("registry empty during unregistration of " + toString( typeID ));
+				throw Exception::NotFound("registry empty during unregistration of typeID " + toString( typeID ) + " of type " + className );
 
 			// remove type id from local mappings
-			TFactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
-			if ( f.has( typeID ) )
+			FactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
+			if ( f.erase( typeID ) )
 			{
-				Log::debug( "unregistering class id %llu", typeID );
-
-				f.erase( typeID );
-
 				if ( f.empty() )
-					Mappings::unregisterRegistry< TFactoryMap >( className );
+					Mappings::unregisterRegistry< FactoryMap >( className );
 			}
 			else
-				throw Exception::NotFound("no factory specification for typeID " + toString( typeID ));
+				throw Exception::NotFound("no factory specification for typeID " + toString( typeID ) + " of type " + className );
 		}
 
 		template< class AbstractType >
 		list< ClassID::type > Registry< AbstractType >::getRegisteredClassIDs() throw()
 		{
-			TFactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
-			return f.keys();
+			list< ClassID::type > rt;
+			FactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
+			BOOST_FOREACH( typename FactoryMap::iterator::reference it, f )
+				rt.push_back( it.first );
+			return rt;
 		}
 
 		template< class AbstractType >
 		AbstractType Registry< AbstractType >::newInstance ( ClassID::type typeID ) throw( Exception::NotFound )
 		{
-			TFactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
-			const Abstract< AbstractType > & fac = f( typeID, Exception::NotFound( "factory for typeID " + toString( typeID ) ) );
-			return fac.newInstance();
+			try
+			{
+				FactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
+				Abstract< AbstractType > & fac = f.at( typeID );
+				return fac.newInstance();
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
+				throw Exception::NotFound( "factory for typeID " + toString( typeID ) + " of type " + getClassName() );
+			}
 		}
 
 		template< class AbstractType >
 		const Abstract< AbstractType > & Registry< AbstractType >::getFactory( ClassID::type typeID ) throw( Exception::NotFound )
 		{
-			TFactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
-			return f( typeID, Exception::NotFound( "factory for typeID " + toString( typeID ) ) );
+			try
+			{
+				FactoryMap & f = Registry< AbstractType >::getFactoryMappings( );
+				return f.at( typeID );
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
+				throw Exception::NotFound( "factory for typeID " + toString( typeID ) + " of type " + getClassName() );
+			}
 		}
 
 		// ******************************************************************************************
@@ -209,7 +220,7 @@ namespace KGD
 
 		template< class AbstractType, class FactoryClass, ClassID::type typeID >
 		const RegistrationHelper< AbstractType >
-		Enabled< AbstractType, FactoryClass, typeID >::_entry = RegistrationHelper< AbstractType > ( typeID, new FactoryClass() );
+		Enabled< AbstractType, FactoryClass, typeID >::_entry( typeID, new FactoryClass() );
 
 	}
 }

@@ -35,6 +35,7 @@
 
 
 #include "lib/clock.h"
+#include <boost/assert.hpp>
 
 #include <cstring>
 #include <cstdlib>
@@ -65,8 +66,7 @@ namespace KGD
 
 		uint64_t secToNano( double timesec ) throw()
 		{
-		//       if ( timesec < 0 )
-		//         log::error ( "sec_2_nano on negative timesec %f", timesec );
+			BOOST_ASSERT( timesec >= 0 );
 			return uint64_t( timesec * SEC_2_NSEC );
 		}
 

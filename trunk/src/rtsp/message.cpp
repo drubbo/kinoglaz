@@ -153,7 +153,7 @@ namespace KGD
 
 			void Request::loadUrl( const string & url, const string & remoteHost ) throw()
 			{
-				Ptr::Scoped< Url > u = new Url();
+				auto_ptr< Url > u( new Url() );
 				u->remoteHost = remoteHost;
 
 				if ( url.find( "rtsp://" ) == 0 )
@@ -181,7 +181,7 @@ namespace KGD
 					u->file = join("/", pathParts);
 				}
 
-				_url = u.release();
+				_url.reset( u.release() );
 			}
 
 

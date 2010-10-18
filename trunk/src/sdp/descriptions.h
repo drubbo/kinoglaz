@@ -36,7 +36,6 @@
 #define __KGD_SDP_DESCRIPTIONS_H
 
 #include "lib/common.h"
-#include "lib/utils/map.hpp"
 #include "lib/utils/singleton.hpp"
 #include "sdp/session.h"
 
@@ -51,17 +50,17 @@ namespace KGD
 	{
 		//! session description cache
 		class Descriptions
-		: public Singleton::Persistent< Descriptions >
+		: public Singleton::Class< Descriptions >
 		{
 		private:
-			typedef Ptr::Map< string, Container > TContainerMap;
+			typedef boost::ptr_map< string, Container > ContainerMap;
 			//! loaded media container descriptors
-			TContainerMap _descriptions;
-			//! reference count for every described bedia
-			Ctr::Map< string, int64_t > _count;
+			ContainerMap _descriptions;
+			//! reference count for every described media
+			map< string, int64_t > _count;
 			//! ctor
 			Descriptions();
-			friend class Singleton::Persistent< Descriptions >;
+			friend class Singleton::Class< Descriptions >;
 		public:
 			~Descriptions();
 			//! returns description of file or creates if needed

@@ -40,7 +40,7 @@ namespace KGD
 {
 	namespace Safe
 	{
-
+/*
 		Flag::Flag( const Flag& f )
 		: _val( f.getValue() )
 		{
@@ -68,6 +68,6 @@ namespace KGD
 			Lock lk( _mux );
 			return _val;
 		}
-
+*/
 	}
 }

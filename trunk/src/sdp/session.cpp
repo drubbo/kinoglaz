@@ -44,7 +44,6 @@
 #include "daemon.h"
 #include "lib/log.h"
 #include "lib/array.hpp"
-#include "lib/utils/container.hpp"
 #include "lib/utils/virtual.hpp"
 #include "lib/pls.h"
 
@@ -93,7 +92,7 @@ namespace KGD
 			{
 				_running = false;
 				_th->join();
-				_th.destroy();
+				_th.reset();
 			}
 			_media.clear();
 			Log::debug( "%s: destroyed", getLogName() );
@@ -116,9 +115,9 @@ namespace KGD
 				PlayList pl( this->getFilePath() );
 
 				bool first = true;
-				for( Ctr::ConstIterator< list< string > > it( pl.getMediaList() ); it.isValid(); it.next() )
+				BOOST_FOREACH( const string & row, pl.getMediaList() )
 				{
-					Container c( *it );
+					Container c( row );
 					if ( first )
 					{
 						this->assign( c );
@@ -139,8 +138,9 @@ namespace KGD
 
 		void Container::loop( uint8_t times ) throw()
 		{
-			for( TMediumMap::Iterator it( _media ); it.isValid(); it.next() )
-				it.val().loop( times );
+			
+			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+				medium.second->loop( times );
 		}
 
 
@@ -169,7 +169,7 @@ namespace KGD
 				AVRational ratBase = str->time_base;
 				try
 				{
-					Medium::Base * m = Factory::ClassRegistry< Medium::Base >::newInstance( cdc->codec_id );
+					auto_ptr< Medium::Base > m( Factory::ClassRegistry< Medium::Base >::newInstance( cdc->codec_id ) );
 					m->setIndex( i );
 					m->setExtraData( cdc->extradata, cdc->extradata_size );
 					m->setFileName( this->getFileName() );
@@ -184,7 +184,7 @@ namespace KGD
 						ma->setChannels( cdc->channels );
 					}
 
-					_media( i ) = m;
+					_media.insert( i, m );
 				}
 				catch( const KGD::Exception::NotFound & e )
 				{
@@ -195,8 +195,8 @@ namespace KGD
 				}
 			}
 
-			_th = new Thread( boost::bind( &Container::loadFrameIndex, this, fctx ) );
-			Thread::yield();
+			_th.reset( new boost::thread( boost::bind( &Container::loadFrameIndex, this, fctx ) ));
+			_th->yield();
 		}
 
 		void Container::loadFrameIndex( AVFormatContext *fctx )
@@ -218,9 +218,10 @@ namespace KGD
 				}
 				else
 				{
-					if ( _media.has( pkt.stream_index ) && pkt.size > 0 )
+					MediaMap::iterator medium = _media.find( pkt.stream_index );
+					if ( medium != _media.end() && pkt.size > 0 )
 					{
-						Medium::Base & m = *_media( pkt.stream_index );
+						Medium::Base & m = *medium->second;
 						Frame::MediaFile * f = new Frame::MediaFile( pkt, m.getTimeBase() );
 						m.addFrame( f );
 					}
@@ -229,14 +230,14 @@ namespace KGD
 				}
 				av_free_packet( &pkt );
 
-				Thread::yield();
+				_th->yield();
 			}
 
 			av_close_input_file( fctx );
 
 			// finalize sizes
-			for( TMediumMap::Iterator it( _media ); it.isValid(); it.next() )
-				it.val().finalizeFrameCount();
+			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+				medium->second->finalizeFrameCount();
 
 		}
 
@@ -260,57 +261,73 @@ namespace KGD
 
 		const Medium::Base & Container::getMedium( size_t i ) const throw( RTSP::Exception::ManagedError )
 		{
-			if ( _media.has( i ) )
-				return _media[ i ];
-			else
+			try
+			{
+				return _media.at( i );
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
 				throw RTSP::Exception::ManagedError( RTSP::Error::NotFound );
+			}				
 		}
 		Medium::Base & Container::getMedium( size_t i ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( _media.has( i ) )
-				return *_media( i );
-			else
+			try
+			{
+				return _media.at( i );
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
 				throw RTSP::Exception::ManagedError( RTSP::Error::NotFound );
+			}
 		}
 
-		list< Ptr::Ref< const Medium::Base > > Container::getMedia() const throw()
+		ref_list< const Medium::Base > Container::getMedia() const throw()
 		{
-			list< Medium::Base * > meds = _media.values< list >( );
-			return Ctr::toConstRef( meds );
+			list< Medium::Base const * > rt;
+			BOOST_FOREACH( MediaMap::const_iterator::reference medium, _media )
+				rt.push_back( medium->second );
+
+			return rt;
 		}
-		list< Ptr::Ref< Medium::Base > > Container::getMedia() throw()
+		ref_list< Medium::Base > Container::getMedia() throw()
 		{
-			list< Medium::Base * > meds = _media.values< list >( );
-			return Ctr::toRef( meds );
+			list< Medium::Base * > rt;
+			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+				rt.push_back( medium->second );
+
+			return rt;
 		}
 
 		void Container::insert( SDP::Container & other, double insertTime ) throw( KGD::Exception::OutOfBounds )
 		{
 			// insert mediums with correspondent payload type
 			// get media to insert
-			list< Ptr::Ref< SDP::Medium::Base > > ml = other.getMedia();
+			ref_list< Medium::Base > otherMedia = other.getMedia();
 			// for every local medium
-			for( TMediumMap::Iterator myIt( _media ); myIt.isValid(); myIt.next() )
+			BOOST_FOREACH( MediaMap::iterator::reference localIt, _media )
 			{
-				Log::debug( "%s: media insert: look for payload type %u", getLogName(), myIt.val().getPayloadType() );
+				MediaMap::mapped_reference localMedium = *localIt->second;
+				Log::debug( "%s: media insert: look for payload type %u", getLogName(), localMedium.getPayloadType() );
 				// search correspondent medium to insert
 				bool found = false;
-				for( Ctr::Iterator< list< Ptr::Ref< SDP::Medium::Base > > > it( ml ); !found && it.isValid(); it.next() )
+				BOOST_FOREACH( Medium::Base & otherMedium, otherMedia )
 				{
 					// if same PT, insert
-					if ( myIt.val().getPayloadType() == it->get().getPayloadType() )
+					if ( localMedium.getPayloadType() == otherMedium.getPayloadType() )
 					{
-						Log::debug("%s: media insert: found payload type %u", getLogName(), it->get().getPayloadType() );
-						Ptr::Scoped< Medium::Iterator::Base > frameIt = it->get().newFrameIterator();
-						myIt.val().insert( *frameIt, insertTime );
+						Log::debug("%s: media insert: found payload type %u", getLogName(), otherMedium.getPayloadType() );
+						boost::scoped_ptr< Medium::Iterator::Base > frameIt( otherMedium.newFrameIterator() );
+						localMedium.insert( *frameIt, insertTime );
 						found = true;
+						break;
 					}
 				}
 				// no correspondence found, add void
 				if ( !found )
 				{
-					Log::debug( "%s: media insert: add void to payload type %u", getLogName(), myIt.val().getPayloadType() );
-					myIt.val().insert( other.getDuration(), insertTime );
+					Log::debug( "%s: media insert: add void to payload type %u", getLogName(), localMedium.getPayloadType() );
+					localMedium.insert( other.getDuration(), insertTime );
 				}
 			}
 
@@ -321,20 +338,21 @@ namespace KGD
 		{
 			// insert mediums with correspondent payload type
 			// get media to insert
-			list< Ptr::Ref< SDP::Medium::Base > > ml = other.getMedia();
+			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
 			// for every local medium
-			for( TMediumMap::Iterator myIt( _media ); myIt.isValid(); myIt.next() )
+			for( MediaMap::iterator localIt = _media.begin(); localIt != _media.end(); ++localIt )
 			{
-				Log::debug( "%s: media append: look for payload type %u", getLogName(), myIt.val().getPayloadType() );
+				MediaMap::mapped_reference localMedium = *localIt->second;
+				Log::debug( "%s: media append: look for payload type %u", getLogName(), localMedium.getPayloadType() );
 				// search correspondent medium to insert
-				for( Ctr::Iterator< list< Ptr::Ref< SDP::Medium::Base > > > it( ml ); it.isValid(); it.next() )
+				BOOST_FOREACH( Medium::Base & otherMedium, otherMedia )
 				{
 					// if same PT, insert
-					if ( myIt.val().getPayloadType() == it->get().getPayloadType() )
+					if ( localMedium.getPayloadType() == otherMedium.getPayloadType() )
 					{
-						Log::debug("%s: media append: found payload type %u", getLogName(), it->get().getPayloadType() );
-						Ptr::Scoped< Medium::Iterator::Base > frameIt = it->get().newFrameIterator();
-						myIt.val().append( *frameIt );
+						Log::debug("%s: media append: found payload type %u", getLogName(), otherMedium.getPayloadType() );
+						boost::scoped_ptr< Medium::Iterator::Base > frameIt( otherMedium.newFrameIterator() );
+						localMedium.append( *frameIt );
 						break;
 					}
 				}
@@ -348,19 +366,20 @@ namespace KGD
 			{
 				_running = false;
 				_th->join();
-				_th.destroy();
+				_th.reset();
 			}
 			_media.clear();
 
-			list< Ptr::Ref< SDP::Medium::Base > > ml = other.getMedia();
-			for( Ctr::Iterator< list< Ptr::Ref< SDP::Medium::Base > > > it( ml ); it.isValid(); it.next() )
+			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
+			BOOST_FOREACH( SDP::Medium::Base & otherMedium, otherMedia )
 			{
-				uint8_t medIdx = it->get().getIndex();
-				Ptr::Scoped< SDP::Medium::Base > newMed = it->get().getInfoClone();
+				uint8_t medIdx = otherMedium.getIndex();
+				auto_ptr< SDP::Medium::Base > newMed( otherMedium.getInfoClone() );
 				newMed->setFileName( this->getFileName() );
-				Ptr::Scoped< Medium::Iterator::Base > frameIt = it->get().newFrameIterator();
+				boost::scoped_ptr< Medium::Iterator::Base > frameIt( otherMedium.newFrameIterator() );
 				newMed->append( *frameIt );
-				_media( medIdx ) = newMed.release();
+				_media.erase( medIdx );
+				_media.insert( medIdx, newMed );
 			}
 
 			_duration = other._duration;
@@ -403,8 +422,8 @@ namespace KGD
 			else
 				s << EOL;
 
-			for( TMediumMap::ConstIterator it( _media ); it.isValid(); it.next() )
-				s << it.val().getReply( u );
+			for( MediaMap::const_iterator it = _media.begin(); it != _media.end(); ++it )
+				s << it->second->getReply( u );
 
 			return s.str();
 		}

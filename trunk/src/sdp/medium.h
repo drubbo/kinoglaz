@@ -71,7 +71,8 @@ namespace KGD
 			
 			//! Resource Medium metadata and stream informations
 			class Base
-			: virtual public Factory::Base
+			: public boost::noncopyable
+			, virtual public Factory::Base
 			{
 				friend class SDP::Container;
 			protected:
@@ -104,14 +105,14 @@ namespace KGD
 				//! number of frames; -1 means no effective value has been determined
 				int64_t _frameCount;
 
-				typedef vector< Frame::Base * > TFrameList;
+				typedef boost::ptr_vector< boost::nullable< Frame::Base > > FrameList;
 				//! frame list
-				TFrameList _frames;
+				FrameList _frames;
 
 				//! number of instanced iterators
-				mutable Safe::Number< size_t > _itCount;
+				mutable boost::detail::atomic_count _itCount;
 				//! frame iterator model
-				Ptr::Scoped< Iterator::Base > _itModel;
+				auto_ptr< Iterator::Base > _itModel;
 
 				//! condition for dtor to wait for no more iterator instances
 				mutable Condition _condItReleased;
@@ -182,8 +183,8 @@ namespace KGD
 				double getIterationDuration() const throw();
 				//! returns effective frame count, waiting until one has been determined
 				size_t getFrameCount( ) const throw( );
-				//! returns a portion of all frames based on time; limits are cropped if out of bounds
-				vector< Frame::Base * > getFrames( double from, double to = HUGE_VAL ) const throw( );
+				//! returns a cloned portion of all frames based on time; limits are cropped if out of bounds
+				FrameList getFrames( double from, double to = HUGE_VAL ) const throw( );
 				
 				//! frees the memory of a frame at given position
 				void releaseFrame( size_t pos ) throw();

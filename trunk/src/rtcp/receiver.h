@@ -37,8 +37,6 @@
 #ifndef __KGD_RTCP_RECV_H
 #define __KGD_RTCP_RECV_H
 
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/sharedptr.hpp"
 #include "lib/utils/safe.hpp"
 
 #include "lib/common.h"
@@ -59,27 +57,36 @@ namespace KGD
 	{
 		//! RTCP receiver - receives client stats
 		class Receiver
+		: public boost::noncopyable
 		{
 		private:
 			//! communication channel
-			Ptr::Shared< Channel::Bi > _sock;
+			boost::shared_ptr< Channel::Bi > _sock;
 			//! receive thread
-			Ptr::Scoped< Thread > _th;
-			//! is thread running ?
-			Safe::Flag _running;
-			//! is thread paused ?
-			Safe::Flag _paused;
+			Thread _th;
 
-			//! pause mutex
-			Mutex _muxPause;
+			struct Status
+			{
+				typedef Safe::FlagSet< 2 > type;
+
+				enum flag
+				{
+					RUNNING,
+					PAUSED
+				};
+			};
+
+			
+			//! is thread running ?
+			Status::type _status;
+
 			//! un-pause condition
 			Condition _condUnPause;
 			//! data buffer
 			Buffer _buffer;
-			//! stat mutex
-			mutable RMutex _muxStats;
+			typedef Safe::Lockable< Stat > Stats;
 			//! receive stats
-			Stat _stats;
+			Stats _stats;
 
 			//! log identifier
 			const string _logName;
@@ -105,7 +112,7 @@ namespace KGD
 			void unpause();
 		public:
 			//! ctor
-			Receiver( RTP::Session &, const Ptr::Shared< Channel::Bi > & );
+			Receiver( RTP::Session &, const boost::shared_ptr< Channel::Bi > & );
 			//! dtor
 			~Receiver();
 			//! log identifier

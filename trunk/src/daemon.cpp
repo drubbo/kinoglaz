@@ -47,26 +47,31 @@
 #include <cstdlib>
 #include <csignal>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#else
+#error "Please use platform configuration file."
+#endif
+
 namespace KGD
 {
-	const string Daemon::APP_NAME = "Kinoglaz Streaming Server";
-	const string Daemon::APP_VER = "0.6.11";
-
-	Singleton::InstanceRef< Daemon > Daemon::getInstance() throw( KGD::Exception::InvalidState )
+	Daemon::Reference Daemon::getInstance() throw( KGD::Exception::InvalidState )
 	{
-		if ( _instance == 0 )
+		Instance::LockerType lk( _instance );
+		if ( ! *_instance )
 			throw KGD::Exception::InvalidState( "KGD: daemon instance not initialized" );
 		else
 			return newInstanceRef();
 	}
 
-	Singleton::InstanceRef< Daemon > Daemon::getInstance( const string & fileName ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound )
+	Daemon::Reference Daemon::getInstance( const string & fileName ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound )
 	{
-		if ( _instance != 0 )
+		Instance::LockerType lk( _instance );
+		if ( *_instance )
 			throw KGD::Exception::InvalidState( "KGD: daemon instance already initialized" );
 		else
 		{
-			_instance = new Daemon( fileName );
+			(*_instance).reset( new Daemon( fileName ) );
 			return newInstanceRef();
 		}
 	}
@@ -88,7 +93,7 @@ namespace KGD
 
 		RTSP::Port::Udp::FIRST = fromString< TPort >( (*_ini)("RTP", "udp-first", "30000") );
 		RTSP::Port::Udp::LAST = fromString< TPort >( (*_ini)("RTP", "udp-last", "40000") );
-		RTSP::Port::Udp::getInstance().reset( RTSP::Port::Udp::FIRST, RTSP::Port::Udp::LAST );
+		RTSP::Port::Udp::getInstance()->reset( RTSP::Port::Udp::FIRST, RTSP::Port::Udp::LAST );
 
 		SDP::Container::BASE_DIR = (*_ini)( "SDP", "base-dir");
 		SDP::Container::AGGREGATE_CONTROL = ( "1" == (*_ini)( "SDP", "aggregate", "1") );
@@ -99,10 +104,11 @@ namespace KGD
 
 		ostringstream s;
 		s << "KGD: Parameters: Buffer [" << RTP::Buffer::Base::SIZE_LOW << "-" << RTP::Buffer::Base::SIZE_FULL
-			<< "] MTU " << RTP::Packet::MTU
-			<< " RTP [" << RTSP::Port::Udp::FIRST << "-" << RTSP::Port::Udp::LAST << "]"
-			<< " SDP shared descriptors " << RTSP::Connection::SHARE_DESCRIPTORS
-			<< " RTSP seek support " << RTSP::Method::SUPPORT_SEEK;
+			<< "] | MTU " << RTP::Packet::MTU
+			<< " | RTP [" << RTSP::Port::Udp::FIRST << "-" << RTSP::Port::Udp::LAST << "]"
+			<< " | SDP shared descriptors " << RTSP::Connection::SHARE_DESCRIPTORS
+			<< " | SDP aggregate control " << SDP::Container::AGGREGATE_CONTROL
+			<< " | RTSP seek support " << RTSP::Method::SUPPORT_SEEK;
 		Log::debug( "%s", s.str().c_str() );
 	}
 
@@ -114,8 +120,10 @@ namespace KGD
 
 		try
 		{
-			RTSP::Server & s = RTSP::Server::getInstance( (*_ini)[ "SERVER" ] );
-			s.start();
+			{
+				RTSP::Server::Reference s = RTSP::Server::getInstance( (*_ini)[ "SERVER" ] );
+				s->start();
+			}
 			RTSP::Server::destroyInstance();
 		}
 		catch ( KGD::Socket::Exception & e )
@@ -134,7 +142,7 @@ namespace KGD
 
 	string Daemon::getName() throw()
 	{
-		return APP_NAME + " version " + APP_VER;
+		return PACKAGE_NAME + string(" version ") + PACKAGE_VERSION;
 	}
 	string Daemon::getFullName() const throw()
 	{
@@ -144,8 +152,8 @@ namespace KGD
 	void Daemon::SigHandler::term( int )
 	{
 		Log::warning("KGD: received SIGTERM");
-		RTSP::Server & s = RTSP::Server::getInstance( );
-		s.stop();
+		RTSP::Server::Reference s = RTSP::Server::getInstance( );
+		s->stop();
 	}
 
 	void Daemon::SigHandler::hup( int )
@@ -153,10 +161,10 @@ namespace KGD
 		try
 		{
 			Log::warning("KGD: received SIGHUP");
-			Singleton::InstanceRef< KGD::Daemon > d = KGD::Daemon::getInstance( );
+			KGD::Daemon::Reference d = KGD::Daemon::getInstance( );
 			d->setupParameters();
-			RTSP::Server & s = RTSP::Server::getInstance( );
-			s.setupParameters( d->getParameters()[ "SERVER" ] );
+			RTSP::Server::Reference s = RTSP::Server::getInstance( );
+			s->setupParameters( d->getParameters()[ "SERVER" ] );
 		}
 		catch( KGD::Exception::Generic const &e )
 		{
@@ -183,7 +191,7 @@ namespace KGD
 		sigfillset(&sig_mask);
 		act.sa_handler = Daemon::SigHandler::term;
 		act.sa_mask    = sig_mask;
-		act.sa_flags   = SA_RESETHAND;
+		act.sa_flags   = 0; //SA_RESETHAND;
 		sigaction(SIGTERM, &act, NULL);
 		sigaction(SIGINT, &act, NULL);
 

@@ -45,21 +45,28 @@
 namespace KGD
 {
 
-	Singleton::InstanceRef< Ini > Ini::getInstance() throw( Exception::InvalidState )
+	Ini::Reference Ini::getInstance() throw( Exception::InvalidState )
 	{
-		if ( _instance == 0 )
-			throw Exception::InvalidState( "ini instance not initialized" );
-		else
+		Instance::LockerType lk( _instance );
+		if ( *_instance )
 			return newInstanceRef();
+		else
+			throw Exception::InvalidState( "ini instance not initialized" );
 	}
 
-	Singleton::InstanceRef< Ini > Ini::getInstance( const string & fileName ) throw( Exception::InvalidState, Exception::NotFound )
+	Ini::Reference Ini::getInstance( const string & fileName ) throw( Exception::InvalidState, Exception::NotFound )
 	{
-		if ( _instance != 0 && _instance->_fileName != fileName )
-			throw Exception::InvalidState( "ini instance already initialized" );
+		Instance::LockerType lk( _instance );
+		if ( *_instance )
+		{
+			if ( (*_instance)->_fileName != fileName )
+				throw Exception::InvalidState( "ini instance already initialized with file name " + (*_instance)->_fileName );
+			else
+				return newInstanceRef();
+		}
 		else
 		{
-			_instance = new Ini( fileName );
+			(*_instance).reset( new Ini( fileName ) );
 			return newInstanceRef();
 		}
 	}
@@ -97,12 +104,12 @@ namespace KGD
 			if (boost::regex_search(bg, ed, match, rxSection))
 			{
 				currentSection = match.str(1);
-				_sections( currentSection ) = Entries( currentSection );
+				_sections[ currentSection ] = Entries( currentSection );
 			}
 			// if params, add to current section
 			else if (boost::regex_search(bg, ed, match, rxParams))
 			{
-				_sections( currentSection )[ match.str(1) ] = match.str(2);
+				_sections[ currentSection ][ match.str(1) ] = match.str(2);
 			}
 		}
 		// close file
@@ -115,36 +122,56 @@ namespace KGD
 		return _fileName;
 	}
 
+	const Ini::Entries & Ini::operator[]( const string & section ) const throw( Exception::NotFound )
+	{
+		SectionsMap::const_iterator it = _sections.find( section );
+		if ( it == _sections.end() )
+			throw KGD::Exception::NotFound( _fileName + "::[" + section + "]" );
+		else
+			return it->second;
+	}
+
 	string Ini::operator()( const string & section, const string & key ) const throw( Exception::NotFound )
 	{
-		return _sections( section, KGD::Exception::NotFound( _fileName + "::[" + section + "]" ) )[ key ];
+		SectionsMap::const_iterator it = _sections.find( section );
+		if ( it == _sections.end() )
+			throw KGD::Exception::NotFound( _fileName + "::[" + section + "]" );
+		else
+			return it->second[ key ];
 	}
 
 	string Ini::operator()( const string & section, const string & key, const string & defaultValue ) const throw( )
 	{
-		return _sections( section, KGD::Exception::NotFound( _fileName + "::[" + section + "]" ) )( key, defaultValue );
-	}
-
-	const Ini::Entries & Ini::operator[]( const string & section ) const throw( Exception::NotFound )
-	{
-		return _sections( section, KGD::Exception::NotFound( _fileName + "::[" + section + "]" ) );
+		SectionsMap::const_iterator it = _sections.find( section );
+		if ( it == _sections.end() )
+			throw KGD::Exception::NotFound( _fileName + "::[" + section + "]" );
+		else
+			return it->second( key, defaultValue );
 	}
 
 
 
 	string & Ini::Entries::operator[]( const string & key ) throw( )
 	{
-		return _entries( key );
+		return _entries[ key ];
 	}
 
 	const string & Ini::Entries::operator[]( const string & key ) const throw( Exception::NotFound )
 	{
-		return _entries( key, Exception::NotFound( "[" + _section + "]" + "::" + key ) );
+		KeyValueMap::const_iterator it = _entries.find( key );
+		if ( it == _entries.end() )
+			throw Exception::NotFound( "[" + _section + "]" + "::" + key );
+		else
+			return it->second;
 	}
 
 	string Ini::Entries::operator()( const string & key, const string & defaultValue ) const throw( )
 	{
-		return _entries( key, defaultValue );
+		KeyValueMap::const_iterator it = _entries.find( key );
+		if ( it == _entries.end() )
+			return defaultValue;
+		else
+			return it->second;
 	}
 
 	Ini::Entries::Entries()
@@ -155,6 +182,5 @@ namespace KGD
 	: _section( section )
 	{
 	}
-
 
 }

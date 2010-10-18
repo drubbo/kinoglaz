@@ -43,10 +43,10 @@
 #include "rtsp/exceptions.h"
 #include "lib/common.h"
 #include "lib/array.hpp"
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/map.hpp"
 #include "lib/utils/safe.hpp"
 #include "lib/urlencode.h"
+#include "lib/utils/ref.hpp"
+#include "lib/utils/ref_container.hpp"
 
 #include <string>
 #include <map>
@@ -72,6 +72,7 @@ namespace KGD
 
 		//! session description
 		class Container
+		: public boost::noncopyable
 		{
 		protected:
 			//! resource name
@@ -83,14 +84,14 @@ namespace KGD
 			//! medium bit rate
 			int _bitRate;
 
-			typedef Ptr::Map< uint8_t, Medium::Base > TMediumMap;
+			typedef boost::ptr_map< uint8_t, Medium::Base > MediaMap;
 			//! medium list
-			TMediumMap _media;
+			MediaMap _media;
 
 			//! load frame thread
-			Ptr::Scoped< Thread > _th;
+			Thread _th;
 			//! is load frame thread running ?
-			Safe::Flag _running;
+			Safe::Bool _running;
 
 			//! loads a kinoglaz playlist
 			void loadPlayList() throw( SDP::Exception::Generic );
@@ -130,8 +131,8 @@ namespace KGD
 			//!@}
 			//!@{
 			//! returns media list
-			list< Ptr::Ref< const Medium::Base > > getMedia() const throw();
-			list< Ptr::Ref< Medium::Base > > getMedia() throw();
+			ref_list< const Medium::Base > getMedia() const throw();
+			ref_list< Medium::Base > getMedia() throw();
 			//!@}
 
 			//! get full path of source media container

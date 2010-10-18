@@ -43,7 +43,6 @@
 #include "sdp/sdp.h"
 #include "lib/socket.h"
 #include "lib/utils/safe.hpp"
-#include "lib/utils/sharedptr.hpp"
 
 namespace KGD
 {
@@ -62,6 +61,7 @@ namespace KGD
 	{
 		//! Sessione RTP
 		class Session
+		: public boost::noncopyable
 		{
 		private:
 			//! mutex
@@ -71,43 +71,43 @@ namespace KGD
 			//! condition to wait to enter pause
 			Condition _condPaused;
 			//! send thread
-			Ptr::Scoped< Thread > _th;
+			Thread _th;
 
 			//! medium combined timeline
-			Ptr::Scoped< Timeline::Medium > _time;
+			boost::scoped_ptr< Timeline::Medium > _time;
 			//! is session paused ?
 			bool _paused;
 			//! is session stopped ?
 			bool _stopped;
 			//! playing indicator (not stopped and not paused)
-			Safe::Flag _playing;
+			Safe::Bool _playing;
 			//! seek request indicator
 			bool _seeked;
 
 			//! url, with track, to play
 			Url _url;
 			//! medium description
-			Ptr::Ref< SDP::Medium::Base > _medium;
+			ref< SDP::Medium::Base > _medium;
 			//! frame rate evaluator
 			FrameRate _fRate;
 
 			//! RTP socket
-			Ptr::Scoped< Channel::Out > _RTPsock;
+			boost::shared_ptr< Channel::Out > _RTPsock;
 			//! RTCP socket
-			Ptr::Shared< Channel::Bi > _RTCPsock;
+			boost::shared_ptr< Channel::Bi > _RTCPsock;
 			//! RTCP receiver for this session
-			Ptr::Scoped< RTCP::Receiver > _RTCPreceiver;
+			boost::scoped_ptr< RTCP::Receiver > _RTCPreceiver;
 			//! RTCP sender for this session
-			Ptr::Scoped< RTCP::Sender > _RTCPsender;
+			boost::scoped_ptr< RTCP::Sender > _RTCPsender;
 
 			//! frame access mutex
 			Mutex _frameMux;
 			//! cross-method frame mutex locker
-			Ptr::Scoped< Lock > _frameLk;
+			boost::scoped_ptr< Lock > _frameLk;
 			//! frame buffer
-			Ptr::Scoped< Buffer::Base > _frameBuf;
+			boost::scoped_ptr< Buffer::Base > _frameBuf;
 			//! next frame to send
-			Ptr::Scoped< RTP::Frame::Base > _frameNext;
+			boost::scoped_ptr< RTP::Frame::Base > _frameNext;
 
 			//! time elapsed on media timeline when to stop play
 			double _timeEnd;
@@ -131,7 +131,7 @@ namespace KGD
 			RTSP::PlayRequest doSeekScale( const RTSP::PlayRequest & ) throw( KGD::Exception::OutOfBounds );
 
 			//! retrieves next frame from frame buffer
-			double fetchNextFrame( Ptr::Scoped< Lock > & ) throw( RTP::Eof );
+			double fetchNextFrame( boost::scoped_ptr< Lock > & ) throw( RTP::Eof );
 
 			//! packetized and sends a frame on the RTP socket, marking the frame with the specified time on media timeline
 			void sendNextFrame( ) throw( KGD::Socket::Exception );
@@ -144,8 +144,8 @@ namespace KGD
 		public:
 			//! ctor: given the request URL, the track descriptor, RTP / RTCP channels and the user agent
 			Session( const Url &, SDP::Medium::Base &,
-					 Channel::Out * rtp,
-					 Channel::Bi * rtcp,
+					 const boost::shared_ptr< Channel::Out > rtp,
+					 const boost::shared_ptr< Channel::Bi > rtcp,
 					 const string & parentLogName,
 					 RTSP::UserAgent::type = RTSP::UserAgent::Generic );
 			//! dtor

@@ -41,7 +41,6 @@
 #include "lib/utils/safe.hpp"
 #include "rtsp/common.h"
 #include "rtsp/exceptions.h"
-#include "lib/utils/pointer.hpp"
 #include "lib/utils/factory.hpp"
 
 #include <string>
@@ -96,7 +95,7 @@ namespace KGD
 			{
 			protected:
 				//! reference to the RTSP connection through which the method-request arrived
-				Ptr::Ref< Connection > _conn;
+				ref< Connection > _conn;
 
 				//! returns current timestamp formatted as RFC requires
 				static string getTimestamp( double t = HUGE_VAL ) throw();
@@ -121,9 +120,8 @@ namespace KGD
 			{
 			protected:
 				//! requested url
-				Ptr::Ref< const KGD::Url > _url;
+				ref< const KGD::Url > _url;
 
-				const KGD::Url & urlGet() const throw( RTSP::Exception::ManagedError );
 				//! throw error if file not exists
 				void urlCheckValid() const throw( RTSP::Exception::ManagedError );
 				//! throw error if track not exists
@@ -144,7 +142,7 @@ namespace KGD
 				//! requested RTSP session ID
 				TSessionID _sessionID;
 				//! RTSP session related to ID
-				Ptr::Ref< RTSP::Session > _rtsp;
+				ref< RTSP::Session > _rtsp;
 
 				//! extracts session ID from request
 				virtual TSessionID getSessionID() const throw( RTSP::Exception::ManagedError );
@@ -215,7 +213,7 @@ namespace KGD
 			{
 			protected:
 				//! reference to RTP session setting up
-				Ptr::Ref< RTP::Session > _rtp;
+				ref< RTP::Session > _rtp;
 				//! return requested RTSP session ID or generate one if none provided
 				virtual TSessionID getSessionID() const throw( RTSP::Exception::ManagedError );
 				//! return RTSP session related to ID or create new if none existent

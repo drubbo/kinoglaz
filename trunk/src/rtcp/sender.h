@@ -37,8 +37,6 @@
 #ifndef __KGD_RTCP_SENDER_H
 #define __KGD_RTCP_SENDER_H
 
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/sharedptr.hpp"
 #include "lib/utils/safe.hpp"
 
 #include "lib/common.h"
@@ -66,38 +64,44 @@ namespace KGD
 	{
 		//! RTCP sender - delivers sender stats
 		class Sender
+		: public boost::noncopyable
 		{
 		private:
 			//! ref to rtp session
-			Ptr::Ref< RTP::Session > _rtp;
+			RTP::Session & _rtp;
 			//! socket abstraction
-			Ptr::Shared< Channel::Bi > _sock;
+			boost::shared_ptr< Channel::Bi > _sock;
 
-			//! timed mutex to wake up and send
-			TMutex _muxClock;
-			//! mutex to access stats
-			mutable RMutex _muxStats;
 			//! sync barrier with RTP session
 			Barrier _sync;
-			//! mutex to access lkClock
-			Mutex _muxLk;
-			//! timed lock to muxClock
-			Ptr::Scoped< TLock > _lkClock;
 			//! send thread
-			Ptr::Scoped< Thread > _th;
-			//! is sender running ?
-			Safe::Flag _running;
-			//! is sender paused ?
-			Safe::Flag _paused;
-			//! must sender sync with RTP session ?
-			Safe::Flag _RTPsync;
+			Thread _th;
 			//! un-pause condition
 			Condition _condUnPause;
 
+			//! status flags declaration
+			struct Status
+			{
+				//! thread safe flag set
+				typedef Safe::FlagSet< 3 > type;
+				//! status identifiers 
+				enum flag
+				{
+					RUNNING,
+					PAUSED,
+					SYNC_WITH_RTP
+				};
+			};
+			//! sender status flags
+			Status::type _status;
+
 			//! buffer of data to send
 			Buffer _buffer;
+
+			//! safe stats type
+			typedef Safe::Lockable< Stat > Stats;
 			//! sending stats
-			Stat _stats;
+			Stats _stats;
 			//! log identifier
 			const string _logName;
 
@@ -119,7 +123,7 @@ namespace KGD
 			void releaseRTP();
 		public:
 			//! ctor
-			Sender( RTP::Session &, const Ptr::Shared< Channel::Bi > & );
+			Sender( RTP::Session &, const boost::shared_ptr< Channel::Bi > & );
 			//! dtor
 			~Sender();
 

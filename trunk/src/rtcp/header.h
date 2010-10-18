@@ -37,10 +37,6 @@
 #ifndef __KGD_RTCP_HEADER_H
 #define __KGD_RTCP_HEADER_H
 
-#include <config.h>
-
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/sharedptr.hpp"
 #include "lib/utils/safe.hpp"
 
 #include "lib/common.h"
@@ -48,6 +44,12 @@
 #include "lib/socket.h"
 
 #include "lib/common.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#else
+#error "Please use platform configuration file."
+#endif
 
 namespace KGD
 {

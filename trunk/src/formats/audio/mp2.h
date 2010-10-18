@@ -29,6 +29,9 @@
  *
  **/
 
+#ifndef __KGD_FMT_A_MP2
+#define __KGD_FMT_A_MP2
+
 #include "sdp/medium.h"
 #include "rtp/frame.h"
 #include "rtp/buffer.h"
@@ -95,9 +98,11 @@ namespace KGD
 					friend class Factory::Multi< Base, MP2 >;
 				public:
 					//! mpeg2 audio packetization
-					virtual list< Packet* > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
+					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
 				};
 			}
 		}
 	}
 }
+
+#endif

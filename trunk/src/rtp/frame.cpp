@@ -38,7 +38,6 @@
 #include "sdp/sdp.h"
 #include "lib/log.h"
 #include <cstdio>
-#include <lib/utils/container.hpp>
 
 namespace KGD
 {
@@ -82,14 +81,14 @@ namespace KGD
 				}
 			}
 
-			list< Packet* > Base::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw( KGD::Exception::Generic )
+			auto_ptr< Packet::List > Base::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw( KGD::Exception::Generic )
 			{
 				Header h;
 				h.pt = _frame->getPayloadType();
 				h.timestamp = htonl(rtp);
 				h.ssrc = htonl(ssrc);
 
-				list< Packet* > rt;
+				auto_ptr< Packet::List > rt( new Packet::List );
 
 				size_t payloadSize = Packet::MTU - Header::SIZE;
 				size_t packetized = 0, tot = this->getData().size();
@@ -100,7 +99,7 @@ namespace KGD
 					// next payload size
 					size_t copySize = min( payloadSize, tot - packetized );
 					// alloc packet
-					Ptr::Scoped< Packet > pkt = new Packet( copySize + Header::SIZE );
+					auto_ptr< Packet > pkt( new Packet( copySize + Header::SIZE ) );
 					// make packet
 					h.seqNo = htons(++ seq);
 					h.marker = 0;
@@ -109,9 +108,9 @@ namespace KGD
 						.set( &payload[packetized], copySize, Header::SIZE );
 					// advance
 					packetized += copySize;
-					rt.push_back( pkt.release() );
+					rt->push_back( pkt );
 				}
-				rt.back()->isLastOfSequence = true;
+				rt->back().isLastOfSequence = true;
 				return rt;
 			}
 

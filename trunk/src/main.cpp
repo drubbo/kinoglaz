@@ -46,12 +46,16 @@
 using namespace std;
 using namespace KGD;
 
-Ctr::KeyValueMap options;
+KeyValueMap options;
 list< string > switches;
 
 string optGet( const string & opt ) throw( KGD::Exception::NotFound )
 {
-	return options( opt, Exception::NotFound( "Option " + opt ) );
+	KeyValueMap::const_iterator it = options.find( opt ) ;
+	if ( it != options.end() )
+		return it->second;
+	else
+		throw Exception::NotFound( "Option " + opt );
 }
 
 bool switchIsSet( const string & sw )
@@ -81,7 +85,7 @@ int main(int argc, char** argv)
 		else if ( opt == "-c" )
 		{
 			if ( i + 1 < argc )
-				options( opt ) = argv[ ++i ];
+				options.insert( make_pair( opt, argv[ ++i ] ) );
 			else
 				cerr << "Bad option " << opt << endl;
 		}
@@ -101,7 +105,7 @@ int main(int argc, char** argv)
 	{
 		try
 		{
-			Singleton::InstanceRef< KGD::Daemon > d = KGD::Daemon::getInstance( optGet( "-c" ) );
+			KGD::Daemon::Reference d = KGD::Daemon::getInstance( optGet( "-c" ) );
 			bool runResult = d->start( switchIsSet( "-d" ) );
 			return ( runResult ? EXIT_SUCCESS : EXIT_FAILURE );
 		}

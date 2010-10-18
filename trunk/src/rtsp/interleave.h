@@ -38,8 +38,6 @@
 #define __KGD_RSTP_INTERLEAVE_H
 
 #include "lib/socket.h"
-#include "lib/utils/sharedptr.hpp"
-#include "lib/utils/map.hpp"
 #include "rtsp/buffer.h"
 #include "rtsp/ports.h"
 
@@ -47,6 +45,7 @@ namespace KGD
 {
 	namespace RTSP
 	{
+		typedef Safe::Lockable< boost::scoped_ptr< KGD::Socket::Tcp > > TcpTunnel;
 
 		class Socket;
 		
@@ -55,7 +54,8 @@ namespace KGD
 		//! output is done on socket prepended by channel identifier
 		//! input comes from a buffer fed by the RTSP socket itself
 		class Interleave
-		: public Channel::Bi
+		: public boost::noncopyable
+		, public Channel::Bi
 		{
 		protected:
 			//! interleave channel local identifier
@@ -65,11 +65,11 @@ namespace KGD
 			//! RTSP session this interleaved channel is used by
 			TSessionID _ssid;
 			//! shared tcp socket
-			Ptr::Shared< KGD::Socket::Tcp > _sock;
+			TcpTunnel & _sock;
 			//! ref to overall interleave channel
-			Ptr::Ref< Socket > _rtsp;
+			Socket & _rtspSocket;
 			//! receive buffer
-			list< ByteArray * > _recv;
+			boost::ptr_list< ByteArray > _recv;
 			//! receive mutex
 			Mutex _recvMux;
 			//! receive data ready
@@ -79,7 +79,7 @@ namespace KGD
 			//! log identifier
 			const string _logName;
 
-			Interleave( TPort local, TPort remote, TSessionID, const Ptr::Shared< KGD::Socket::Tcp > &, Socket & );
+			Interleave( TPort local, TPort remote, TSessionID, TcpTunnel &, Socket & );
 			friend class Socket;
 		public:
 			~Interleave();
@@ -108,14 +108,13 @@ namespace KGD
 		//! dispatches inbound interleaves and throws new requests / responses 
 		//! when told to listen
 		class Socket
-			: public Channel::Out
+		: public boost::noncopyable
+		, public Channel::Out
 		{
 		protected:
-			typedef Ctr::Map< TPort, Ptr::Ref< Interleave > > TChannelMap;
-			//! recursive socket mux
-			RMutex _mux;
+			typedef map< TPort, ref< Interleave > > ChannelMap;
 			//! shared tcp socket
-			Ptr::Shared< KGD::Socket::Tcp > _sock;
+			TcpTunnel _sock;
 			//! mutex for port assign / release
 			Mutex _muxPorts;
 			//! interleave shutdown wait condition
@@ -123,7 +122,7 @@ namespace KGD
 			//! interleave port source
 			Port::Interleave _iPorts;
 			//! interleave channels map
-			TChannelMap _iChans;
+			ChannelMap _iChans;
 			//! rtsp input buffer
 			InputBuffer _inBuf;
 			//! current message sequence
@@ -133,6 +132,9 @@ namespace KGD
 
 			//! will be called by Interleave destructor
 			void release( TPort );
+
+			//! local utils to get channel from port
+			Interleave & getInterleaveRef( TPort p ) throw( KGD::Exception::NotFound );
 
 			friend class Interleave;
 			
@@ -148,7 +150,7 @@ namespace KGD
 			//! adds interleave channel
 			TPortPair addInterleavePair( const TPortPair & remote, const TSessionID & ) throw( KGD::Exception::NotFound );
 			//! get interleave channel p
-			Interleave * getInterleave( TPort p ) throw( KGD::Exception::NotFound );
+			boost::shared_ptr< Interleave > getInterleave( TPort p ) throw( KGD::Exception::NotFound );
 			//! listen for incoming messages
 			void listen() throw( Message::Request *, Message::Response *, KGD::Exception::Generic );
 			//! stop all interleaved channels

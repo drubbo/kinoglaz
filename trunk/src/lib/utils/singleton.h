@@ -38,7 +38,7 @@
 #define __KGD_UTILS_SINGLETON_H
 
 #include "lib/common.h"
-#include "lib/utils/pointer.hpp"
+#include "lib/utils/safe.h"
 
 using namespace std;
 
@@ -47,90 +47,42 @@ namespace KGD
 	//! Singleton pattern tools
 	namespace Singleton
 	{
-		template< class T > class Class;
-
-		//! this class represents a reference to a singleton instance of class T; the destruction of last reference causes instance destruction
-		template< class T > class InstanceRef
-		{
-		private:
-			//! thread safer
-			static RMutex _mux;
-			//! counter of references to T* instance
-			static long _count;
-
-		public:
-			//! constructs an instance reference
-			InstanceRef( );
-
-			//! everybody can copy the reference
-			InstanceRef( const InstanceRef< T >& );
-
-			//! deletes cascade the instance if last reference
-			~InstanceRef( );
-
-			T * operator->();
-			const T * operator->() const;
-
-			T & operator*();
-			const T & operator*() const;
-
-			//! let Class< T > access private members
-			friend class Class< T >;
-		};
 
 		//! singleton base class
-		template< class T > class Class
+		template< class T >
+		class Class
+		: public boost::noncopyable
 		{
+		public:
+			typedef boost::shared_ptr< T > Reference;
 		private:
-			//! static thread-safe delete
-			static void destroyInstance();
-
 			//! the class implementing singleton pattern must not be copyable
 			Class( const Class< T > & );
 
 		protected:
-			//! thread safer
-			static RMutex _mux;
+			typedef Safe::Lockable< Reference > Instance;
 			//! the instance pointer
-			static T* _instance;
+			static Instance _instance;
 
 			//! just derived classes can create a new instance
 			Class();
 			//! just derived classes can get new instance references
-			static InstanceRef< T > newInstanceRef();
+			static Reference newInstanceRef();
 
 		public:
 
 			//! basic instance retrieve, using default T constructor
-			static InstanceRef< T > getInstance();
+			static Reference getInstance();
 
-			//! reference should access private members
-			friend class InstanceRef< T >;
-		};
-
-		//! a class implementing persistent pattern will be instantiated at first request and never destroyied
-		template< class T > class Persistent
-		{
-		private:
-			//! the class implementing singleton persistent pattern must not be copyable
-			Persistent( const Persistent< T > & );
-			//! the class implementing singleton persistent pattern must not be copyable
-			Persistent< T >& operator=( const Persistent< T > & );
-
-		protected:
-			//! thread safer
-			static RMutex _mux;
-			//! the instance pointer
-			static Ptr::Scoped< T > _instance;
-
-			//! just derived classes can create a new instance
-			Persistent();
-
-		public:
-			//! basic instance initializer and retriever
-			static T& getInstance();
-			//! static thread-safe delete
+			//! destroy last instance
 			static void destroyInstance();
+			
+			//! lock static mux
+			static void lock();
+			//! unlock static mux
+			static void unlock();
+			//! get static mux
+			static RMutex & mux();
 		};
 	}
 }
