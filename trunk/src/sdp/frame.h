@@ -101,6 +101,10 @@ namespace KGD
 				virtual Base* getClone() const;
 			};
 
+
+			//! ptr container clone support
+			Base* new_clone( const Base & b );
+			
 			//! a frame gently described by ffmpeg, with data
 			class MediaFile
 			: public Base

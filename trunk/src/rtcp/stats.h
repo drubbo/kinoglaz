@@ -38,6 +38,7 @@
 #define __KGD_RTCP_STATS_H
 
 #include "lib/common.h"
+#include "lib/utils/safe.hpp"
 
 namespace KGD
 {
@@ -61,6 +62,9 @@ namespace KGD
 			Stat();
 			void log( const string & lbl ) const;
 		};
+
+		typedef Safe::Lockable< Stat > SafeStats;
+
 	}
 }
 
