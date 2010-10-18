@@ -68,10 +68,10 @@ namespace KGD
 			TcpTunnel & _sock;
 			//! ref to overall interleave channel
 			Socket & _rtspSocket;
+			//! safe receiver buffer
+			typedef Safe::Lockable< boost::ptr_list< ByteArray > > InputBuffer;
 			//! receive buffer
-			boost::ptr_list< ByteArray > _recv;
-			//! receive mutex
-			Mutex _recvMux;
+			InputBuffer _recv;
 			//! receive data ready
 			Condition _condNotEmpty;
 			//! running flag

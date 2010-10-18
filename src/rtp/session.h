@@ -102,8 +102,6 @@ namespace KGD
 
 			//! frame access mutex
 			Mutex _frameMux;
-			//! cross-method frame mutex locker
-			boost::scoped_ptr< Lock > _frameLk;
 			//! frame buffer
 			boost::scoped_ptr< Buffer::Base > _frameBuf;
 			//! next frame to send
