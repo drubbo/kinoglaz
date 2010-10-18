@@ -15,18 +15,11 @@ noinst_HEADERS = \
 	../../src/lib/log.h \
 	../../src/lib/socket.h \
 	../../src/lib/urlencode.h \
-	../../src/lib/utils/container.h \
-	../../src/lib/utils/container.hpp \
-	../../src/lib/utils/iterator.h \
-	../../src/lib/utils/iterator.hpp \
-	../../src/lib/utils/map.h \
-	../../src/lib/utils/map.hpp \
-	../../src/lib/utils/pointer.h \
-	../../src/lib/utils/pointer.hpp \
+	../../src/lib/utils/ref.h \
+	../../src/lib/utils/ref.hpp \
+	../../src/lib/utils/ref_container.hpp \
 	../../src/lib/utils/singleton.h \
 	../../src/lib/utils/singleton.hpp \
-	../../src/lib/utils/sharedptr.h \
-	../../src/lib/utils/sharedptr.hpp \
 	../../src/lib/utils/safe.h \
 	../../src/lib/utils/safe.hpp \
 	../../src/lib/utils/factory.h \
@@ -47,7 +40,6 @@ libkgd_lib_la_SOURCES = \
 	../../src/lib/array.cpp \
 	../../src/lib/socket.cpp \
 	../../src/lib/urlencode.cpp \
-	../../src/lib/utils/safe.cpp \
 	../../src/lib/utils/factory.cpp \
 	../../src/lib/utils/virtual.cpp
 
