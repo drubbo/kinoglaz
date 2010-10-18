@@ -65,28 +65,27 @@ namespace KGD
 			//! receive thread
 			Thread _th;
 
+			//! status flags declaration
 			struct Status
 			{
+				//! thread safe flag set
 				typedef Safe::FlagSet< 2 > type;
-
+				//! status identifiers 
 				enum flag
 				{
 					RUNNING,
 					PAUSED
 				};
 			};
-
-			
-			//! is thread running ?
+			//! receiver status flags
 			Status::type _status;
 
 			//! un-pause condition
 			Condition _condUnPause;
 			//! data buffer
 			Buffer _buffer;
-			typedef Safe::Lockable< Stat > Stats;
 			//! receive stats
-			Stats _stats;
+			SafeStats _stats;
 
 			//! log identifier
 			const string _logName;

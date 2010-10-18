@@ -43,7 +43,14 @@ namespace KGD
 	namespace SDP
 	{
 		namespace Frame
-		{			
+		{
+
+			Base* new_clone( const Base & b )
+			{
+				return b.getClone();
+			}
+
+			
 			Base::Base( const AVPacket & pkt, double timebase )
 			: _time( pkt.dts * timebase )
 			, _displace( 0 )

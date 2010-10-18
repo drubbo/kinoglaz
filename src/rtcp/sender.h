@@ -97,11 +97,9 @@ namespace KGD
 
 			//! buffer of data to send
 			Buffer _buffer;
-
-			//! safe stats type
-			typedef Safe::Lockable< Stat > Stats;
 			//! sending stats
-			Stats _stats;
+			SafeStats _stats;
+
 			//! log identifier
 			const string _logName;
 

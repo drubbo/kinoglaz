@@ -105,7 +105,7 @@ namespace KGD
 
 		void Sender::registerPacketSent( size_t sz ) throw()
 		{
-			Stats::LockerType lk( _stats );
+			SafeStats::LockerType lk( _stats );
 			(*_stats).pktCount ++;
 			(*_stats).octetCount += sz;
 		}
@@ -191,7 +191,7 @@ namespace KGD
 			if ( !_status[ Status::RUNNING ] )
 			{
 				{
-					Stats::LockerType lk( _stats );
+					SafeStats::LockerType lk( _stats );
 					(*_stats).RRcount = 0;
 					(*_stats).SRcount = 0;
 				}
@@ -272,7 +272,7 @@ namespace KGD
 			}
 
 			{
-				Stats::LockerType lk( _stats );
+				SafeStats::LockerType lk( _stats );
 				++ (*_stats).SRcount;
 				h.pktCount   = htonl( (*_stats).pktCount );
 				h.octetCount = htonl( (*_stats).octetCount );
@@ -346,7 +346,7 @@ namespace KGD
 
 		Stat Sender::getStats() const throw()
 		{
-			Stats::LockerType lk( _stats );
+			SafeStats::LockerType lk( _stats );
 			return *_stats;
 		}
 

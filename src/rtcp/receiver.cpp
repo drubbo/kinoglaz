@@ -82,7 +82,7 @@ namespace KGD
 
 		void Receiver::updateStats( const ReceiverReport::Payload & pRR )
 		{
-			Stats::LockerType lk( _stats );
+			SafeStats::LockerType lk( _stats );
 
 			(*_stats).fractLost = pRR.fractLost;
 			(*_stats).pktLost = ntohl(pRR.pktLost);
@@ -120,7 +120,7 @@ namespace KGD
 			}
 			// packet complete, update stats
 			{
-				Stats::LockerType lk( _stats );
+				SafeStats::LockerType lk( _stats );
 				(*_stats).SRcount ++;
 				(*_stats).pktCount   = ntohl(hSR.pktCount);
 				(*_stats).octetCount = ntohl(hSR.octetCount);
@@ -155,7 +155,7 @@ namespace KGD
 			}
 			// packet complete, update stats
 			{
-				Stats::LockerType lk( _stats );
+				SafeStats::LockerType lk( _stats );
 				(*_stats).RRcount ++;
 			}
 			
@@ -232,7 +232,7 @@ namespace KGD
 
 				// update stats
 				{
-					Stats::LockerType lk( _stats );
+					SafeStats::LockerType lk( _stats );
 					(*_stats).destSsrc = ntohs( hSD.ssrc );
 				}
 			}
@@ -380,7 +380,7 @@ namespace KGD
 		}
 		Stat Receiver::getStats() const throw()
 		{
-			Stats::LockerType lk( _stats );
+			SafeStats::LockerType lk( _stats );
 			return *_stats;
 		}
 
