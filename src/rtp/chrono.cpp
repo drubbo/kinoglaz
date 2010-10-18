@@ -179,7 +179,7 @@ namespace KGD
 					if ( spd < HUGE_VAL )
 						_speed = spd;
 
-					_current = new Segment( t, _speed );
+					_current.reset( new Segment( t, _speed ) );
 				}
 			}
 
@@ -192,7 +192,7 @@ namespace KGD
 				if ( spd < HUGE_VAL )
 					_speed = spd;
 
-				_current = new Segment( t, _speed );
+				_current.reset( new Segment( t, _speed ) );
 			}
 
 			// **************************************************************************************************************

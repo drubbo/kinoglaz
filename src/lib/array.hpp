@@ -45,27 +45,67 @@ namespace KGD
 {
 	template< class T >
 	Array< T >::Array( size_t sz )
-	: Ptr::Copyable< T >( sz )
+	: _ptr( 0 )
 	, _size( sz )
 	{
+		if ( this->_size )
+		{
+			this->_ptr = new T[ this->_size ];
+			memset( this->_ptr, 0, this->_size );
+		}
 	}
 
 	template< class T >
-	Array< T >::Array( Array< T > const & a )
-	: Ptr::Copyable< T >( a._size )
+	Array< T >::Array( Array const & a )
+	: _ptr( 0 )
 	, _size( a._size )
 	{
 		if ( this->_size )
-			memcpy( this->_ptr, a.get(), this->_size );
+		{
+			this->_ptr = new T[ this->_size ];
+			memcpy( this->_ptr, a._ptr, this->_size );
+		}
 	}
 
 	template< class T >
 	Array< T >::Array( void const * data, size_t sz )
-	: Ptr::Copyable< T >( sz )
+	: _ptr( 0 )
 	, _size( sz )
 	{
 		if ( this->_size )
+		{
+			this->_ptr = new T[ this->_size ];
 			memcpy( this->_ptr, data, this->_size );
+		}
+	}
+
+	template< class T >
+	Array< T >::~Array( ) throw()
+	{
+		this->clear();
+	}
+
+	template< class T >
+	void Array< T >::clear( ) throw()
+	{
+		if ( this->_ptr )
+			delete [] this->_ptr, this->_ptr = 0;
+	}
+
+
+	template< class T >
+	void Array< T >::swap( Array & a ) throw()
+	{
+		std::swap( this->_size, a._size );
+		std::swap( this->_ptr, a._ptr );
+	}
+	
+	template< class T >
+	Array< T > & Array< T >::operator=( Array const & a )
+	{
+		Array< T > tmp( a );
+		this->swap( tmp );
+		return *this;
 	}
 
 	template< class T >
@@ -76,7 +116,17 @@ namespace KGD
 	template< class T >
 	bool Array< T >::empty() const
 	{
-		return _size <= 0;
+		return _size == 0;
+	}
+	template< class T >
+	T * Array< T >::get() throw()
+	{
+		return this->_ptr;
+	}
+	template< class T >
+	T const * Array< T >::get() const throw()
+	{
+		return const_cast< T const * const >( this->_ptr );
 	}
 
 	template< class T >
@@ -220,10 +270,7 @@ namespace KGD
 				this->_size = sz;
 			}
 			else
-			{
-				this->destroy();
-				this->_size = 0;
-			}
+				this->clear();
 		}
 		return *this;
 	}
@@ -277,56 +324,62 @@ namespace KGD
 			this->resize( this->_size - n );
 	}
 
-	template< class T >
-	Array< T > * Base64::encode( const Array< T >& b )
-	{
-		unsigned char in[3], out[4];
-		Ptr::Scoped< Array< T > > rt = new Array< T >( 0 );
-		for( size_t i = 0; i < b.size(); i += 3 )
-		{
-			memset( in, 0, 3 );
-			size_t cpN = min( b.size(), i + 3 ) % 3;
-			if ( cpN == 0 ) cpN = 3;
-			for( size_t cp = 0; cp < cpN; ++cp )
-				in[cp] = b[ i + cp ];
-			encodeBlock( in, out, cpN );
-			rt->append( out, 4 );
-		}
-		return rt.release();
-	}
 
-	template< class T >
-	Array< T > * Base64::decode( const Array< T >& b )
+	namespace Base64
 	{
-		static const char cd64[]="|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
+		extern void encodeBlock( const unsigned char in[3], unsigned char out[4], size_t len ) throw();
+		extern void decodeBlock( const unsigned char in[4], unsigned char out[3] ) throw();
 
-		unsigned char in[4], out[3];
-		Ptr::Scoped< Array< T > > rt = new Array< T >( 0 );
-		for( size_t i = 0; i < b.size(); i += 4 )
+		template< class T >
+		auto_ptr< Array< T > > encode( const Array< T >& b )
 		{
-			memset( in, 0, 4 );
-			size_t cpN = min( b.size(), i + 4 ) % 4;
-			if ( cpN == 0 ) cpN = 4;
-			for( size_t cp = 0; cp < cpN; ++cp )
+			unsigned char in[3], out[4];
+			auto_ptr< Array< T > > rt( new Array< T >( 0 ) );
+			for( size_t i = 0; i < b.size(); i += 3 )
 			{
-				unsigned char c = b[ i + cp ];
-				c = (c < 43 || c > 122) ? 0 : cd64[ c - 43 ];
-				if( c ) c = (c == '$') ? 0 : c - 62;
-				in[cp] = c;
+				memset( in, 0, 3 );
+				size_t cpN = min( b.size(), i + 3 ) % 3;
+				if ( cpN == 0 ) cpN = 3;
+				for( size_t cp = 0; cp < cpN; ++cp )
+					in[cp] = b[ i + cp ];
+				encodeBlock( in, out, cpN );
+				rt->append( out, 4 );
 			}
-			decodeBlock( in, out );
-			rt->append( out, 3);
+			return rt;
 		}
-		return rt.release();
-	}
 
-	template< class T >
-	Array< T > * Base64::decode( const string & s )
-	{
-		Array< T > data( s.c_str(), s.size() );
-		return decode( data );
-	}
+		template< class T >
+		auto_ptr< Array< T > > decode( const Array< T >& b )
+		{
+			static const char cd64[]="|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
 
+			unsigned char in[4], out[3];
+			auto_ptr< Array< T > > rt( new Array< T >( 0 ) );
+			for( size_t i = 0; i < b.size(); i += 4 )
+			{
+				memset( in, 0, 4 );
+				size_t cpN = min( b.size(), i + 4 ) % 4;
+				if ( cpN == 0 ) cpN = 4;
+				for( size_t cp = 0; cp < cpN; ++cp )
+				{
+					unsigned char c = b[ i + cp ];
+					c = (c < 43 || c > 122) ? 0 : cd64[ c - 43 ];
+					if( c ) c = (c == '$') ? 0 : c - 62;
+					in[cp] = c;
+				}
+				decodeBlock( in, out );
+				rt->append( out, 3);
+			}
+			return rt;
+		}
+
+		template< class T >
+		auto_ptr< Array< T > > decode( const string & s )
+		{
+			Array< T > data( s.c_str(), s.size() );
+			return decode( data );
+		}
+	}
 }
 
 #endif

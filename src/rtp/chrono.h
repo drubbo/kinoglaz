@@ -41,7 +41,6 @@
 #include "lib/utils/factory.hpp"
 
 #include <lib/clock.h>
-#include <lib/utils/pointer.hpp>
 #include <rtsp/common.h>
 
 namespace KGD
@@ -93,7 +92,7 @@ namespace KGD
 			{
 			protected:
 				//! the current segment, can be null before start
-				Ptr::Scoped< Segment > _current;
+				boost::scoped_ptr< Segment > _current;
 				//! current / last speed, is default speed for new segments
 				double _speed;
 				//! start time

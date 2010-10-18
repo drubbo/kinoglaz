@@ -37,8 +37,6 @@
 #ifndef __KGD_RTSP_CONNECTION_H
 #define __KGD_RTSP_CONNECTION_H
 
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/map.hpp"
 #include "rtsp/interleave.h"
 #include "rtsp/common.h"
 #include "rtsp/buffer.h"
@@ -59,13 +57,14 @@ namespace KGD
 	{	
 		//! RTSP client connection management
 		class Connection
+		: public boost::noncopyable
 		{
 		public:
 			static bool SHARE_DESCRIPTORS;
 		private:
-			typedef Ptr::Map< TSessionID, Session > TSessionMap;
-			typedef Ctr::Map< string, Ptr::Ref< SDP::Container > > TDescriptorMap;
-			typedef Ptr::Map< string, SDP::Container > TLocalDescriptorMap;
+			typedef boost::ptr_map< TSessionID, Session > SessionMap;
+			typedef map< string, ref< SDP::Container > > DescriptorMap;
+			typedef boost::ptr_map< string, SDP::Container > LocalDescriptorMap;
 
 			//! unique random id
 			uint32_t _id;
@@ -74,17 +73,17 @@ namespace KGD
 			//! log name
 			const string _logName;
 			//! control socket
-			Ptr::Scoped< RTSP::Socket > _socket;
+			boost::scoped_ptr< RTSP::Socket > _socket;
 			//! last request received
-			Ptr::Scoped< Message::Request > _lastRq;
+			boost::scoped_ptr< Message::Request > _lastRq;
 			//! last response received
-			Ptr::Scoped< Message::Response > _lastResp;
+			boost::scoped_ptr< Message::Response > _lastResp;
 			//! RTSP sessions
-			TSessionMap _sessions;
+			SessionMap _sessions;
 			//! used media descriptors, shared or not
-			TDescriptorMap _descriptors;
+			DescriptorMap _descriptors;
 			//! local instanced descriptors
-			TLocalDescriptorMap _descriptorInstances;
+			LocalDescriptorMap _descriptorInstances;
 
 		public:
 			//! ctor

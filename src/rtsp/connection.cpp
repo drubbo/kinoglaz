@@ -37,8 +37,6 @@
 #include "rtsp/connection.h"
 #include "rtsp/session.h"
 #include "rtsp/method.h"
-#include "lib/utils/container.hpp"
-#include "lib/utils/map.hpp"
 #include "lib/log.h"
 #include "lib/common.h"
 
@@ -69,13 +67,13 @@ namespace KGD
 			_sessions.clear();
 
 			// release descriptors
-			SDP::Descriptions & sdpool = SDP::Descriptions::getInstance();
-			for( TDescriptorMap::Iterator it( _descriptors ); it.isValid(); it.next() )
+			SDP::Descriptions::Reference sdpool = SDP::Descriptions::getInstance();
+			BOOST_FOREACH( DescriptorMap::iterator::reference it, _descriptors )
 			{
-				Log::debug( "%s: releasing SDP description %s", getLogName(), it.key().c_str() );
-				it.val().invalidate();
+				Log::debug( "%s: releasing SDP description %s", getLogName(), it.first.c_str() );
 				// maybe they were shared, inform the pool
-				sdpool.releaseDescription( it.key() );
+				sdpool->releaseDescription( it.first );
+				it.second.invalidate();
 			}
 			// release local descriptors
 			Log::debug( "%s: releasing SDP local description", getLogName() );
@@ -137,19 +135,23 @@ namespace KGD
 				if ( SHARE_DESCRIPTORS )
 				{
 					// get mutable instance
-					SDP::Descriptions & sdpool = SDP::Descriptions::getInstance();
+					SDP::Descriptions::Reference sdpool = SDP::Descriptions::getInstance();
 					// so description is loaded if needed
-					SDP::Container & rt = sdpool.loadDescription( file );
-					_descriptors( file ) = rt;
-					return rt;
+					ref< SDP::Container > rt( sdpool->loadDescription( file ) );
+					_descriptors.insert( make_pair(file, rt) );
+					return *rt;
 				}
 				else
 				{
 					// create new instance
-					SDP::Container * s = new SDP::Container( file );
-					_descriptorInstances( file ) = s;
-					_descriptors( file ) = *s;
-					return *s;
+					auto_ptr< SDP::Container > cnt( new SDP::Container( file ) );
+					ref< SDP::Container > rt( *cnt );
+					{
+						string tmpFile( file );
+						_descriptorInstances.insert( tmpFile, cnt );
+					}
+					_descriptors.insert( make_pair(file, rt) );
+					return *rt;
 				}
 			}
 			catch( const SDP::Exception::Generic & e )
@@ -161,15 +163,17 @@ namespace KGD
 
 		const SDP::Container & Connection::getDescription( const string & file ) const throw( RTSP::Exception::ManagedError )
 		{
-			if ( _descriptors.has( file ) )
-				return _descriptors[ file ];
+			DescriptorMap::const_iterator it = _descriptors.find( file );
+			if ( it != _descriptors.end( ) )
+				return *it->second;
 			else
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}
 		SDP::Container & Connection::getDescription( const string & file ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( _descriptors.has( file ) )
-				return _descriptors( file );
+			DescriptorMap::iterator it = _descriptors.find( file );
+			if ( it != _descriptors.end( ) )
+				return *it->second;
 			else
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}
@@ -189,12 +193,12 @@ namespace KGD
 				// got request
 				catch ( Message::Request * rq )
 				{
-					_lastRq = rq;
+					_lastRq.reset( rq );
 					try
 					{
 						// get message instance
-						Ptr::Scoped< Method::Base > message =
-							Factory::ClassRegistry< Method::Base >::newInstance( rq->getMethodID() );
+						boost::scoped_ptr< Method::Base > message(
+							Factory::ClassRegistry< Method::Base >::newInstance( rq->getMethodID() ) );
 						message->setConnection( *this );
 						// reply to message performing requested actions
 						_socket->reply( *message );
@@ -214,7 +218,7 @@ namespace KGD
 				// got response
 				catch( Message::Response * resp )
 				{
-					_lastResp = resp;
+					_lastResp.reset( resp );
 				}
 			}
 
@@ -223,11 +227,11 @@ namespace KGD
 
 		Session & Connection::createSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( ! _sessions.has( sessionID ) )
+			if ( _sessions.find( sessionID ) == _sessions.end() )
 			{
-				Session *s = new Session( sessionID, *this );
-				_sessions( sessionID ) = s;
-				return *s;
+				auto_ptr< Session > s( new Session( sessionID, *this ) );
+				pair< SessionMap::iterator, bool > ins = _sessions.insert( sessionID, s );
+				return *ins.first->second;
 			}
 			else
 				throw RTSP::Exception::ManagedError( Error::Conflict );
@@ -237,9 +241,9 @@ namespace KGD
 		{
 			try
 			{
-				return _sessions( sessionID, KGD::Exception::NotFound( toString( sessionID ) ) );
+				return _sessions.at( sessionID );
 			}
-			catch( KGD::Exception::NotFound )
+			catch( boost::bad_ptr_container_operation )
 			{
 				throw RTSP::Exception::ManagedError( Error::SessionNotFound );
 			}
@@ -247,7 +251,7 @@ namespace KGD
 
 		void Connection::removeSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )
 		{
-			if ( _sessions.has( sessionID ) )
+			if ( _sessions.find( sessionID ) != _sessions.end() )
 			{
 				_socket->stopInterleaving( sessionID );
 				_sessions.erase( sessionID );

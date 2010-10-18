@@ -41,11 +41,11 @@ namespace KGD
 {
 	namespace Factory
 	{
-		map< string, void * > * GlobalMappings = 0;
+		map< string, void * > * Mappings::_factories = 0;
 
 		bool Mappings::isRegistryRegistered( const string & className ) throw( )
 		{
-			return ( GlobalMappings && GlobalMappings->find( className ) != GlobalMappings->end() );
+			return ( _factories && _factories->find( className ) != _factories->end() );
 		}
 
 
@@ -55,13 +55,13 @@ namespace KGD
 			{
 				Log::debug( "registering factory mappings for tree %s",  className.c_str() );
 
-				if ( !GlobalMappings )
+				if ( !_factories )
 				{
-					Log::debug( "creating new global registry");
-					GlobalMappings = new map< string, void * >();
+					Log::debug( "creating new factory registry");
+					_factories = new GenericMap();
 				}
 
-				(*GlobalMappings)[ className ] = mappings;
+				_factories->insert( make_pair( className, mappings ) );
 			}
 			else
 				throw Exception::InvalidState("already registered factory mappings for tree " + className );

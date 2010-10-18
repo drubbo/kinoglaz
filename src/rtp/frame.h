@@ -60,14 +60,14 @@ namespace KGD
 			{
 			protected:
 				//! reference to frame data
-				Ptr::Ref< const SDP::Frame::Base > _frame;
+				ref< const SDP::Frame::Base > _frame;
 			public:
 				//! empty ctor
 				Base();
 				//! construct from a frame description
 				Base( const SDP::Frame::Base & );
 				//! packetize at a certain rtp time, for a ssrc, and update cseq
-				virtual list< Packet* > getPackets( RTP::TTimestamp , uint32_t , TCseq & ) throw( KGD::Exception::Generic );
+				virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , uint32_t , TCseq & ) throw( KGD::Exception::Generic );
 				//! get frame time
 				double getTime() const throw( KGD::Exception::NullPointer );
 				//! get frame position in medium array

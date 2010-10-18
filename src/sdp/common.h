@@ -39,9 +39,14 @@
 
 #include "lib/exceptions.h"
 #include "lib/common.h"
-#include "config.h"
 
 #include <string>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#else
+#error "Please use platform configuration file."
+#endif
 
 using namespace std;
 

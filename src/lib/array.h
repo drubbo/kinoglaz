@@ -37,17 +37,18 @@
 #ifndef __KGD_ARRAY_H
 #define __KGD_ARRAY_H
 
+#include <memory>
 #include "lib/exceptions.h"
-#include "lib/utils/pointer.hpp"
 
 namespace KGD
 {
 	//! variable sized memory area
 	template< class T >
-	class Array :
-		public Ptr::Copyable< T >
+	class Array
 	{
 	protected:
+		//! allocated memory
+		T * _ptr;
 		//! allocated size
 		size_t _size;
 	public:
@@ -56,11 +57,27 @@ namespace KGD
 		//! create from existing data
 		Array( void const *, size_t );
 		//! copy ctor
-		Array( Array< T > const & );
+		Array( Array const & );
+		//! dtor
+		~Array() throw();
+
+		//! swap
+		void swap( Array & ) throw();
+		//! cleanup
+		void clear() throw();
+		
+		//! assign
+		Array & operator=( Array const & );
+		
 		//! returns max size
 		size_t size() const;
 		//! tells if there is some data
 		bool empty() const;
+		//! returns inner ptr
+		T * get() throw();
+		//! returns inner ptr
+		T const * get() const throw();
+
 		//! returns element at position i
 		T& operator[](size_t i) throw( KGD::Exception::OutOfBounds );
 		//! returns element at position i
@@ -93,7 +110,7 @@ namespace KGD
 		template< class S >
 		Array< T >& setArray( const Array< S > &, size_t pos ) throw( KGD::Exception::OutOfBounds );
 
-		//! extracts data from array and puts to dest; returns number of bytes copyed
+		//! extracts data from array and puts to dest; returns number of bytes copied
 		size_t copyTo( void * dest, size_t sz, size_t from = 0 ) throw( );
 
 		//! pops n bytes from beginning of array, returning them
@@ -108,7 +125,6 @@ namespace KGD
 		//! resize to a new size mantaining old data; new data is set to 0
 		Array< T > & resize( size_t ) throw();
 
-
 		//! get string as if array contains a const char *
 		string toStdString() const throw();
 		//! get bytes of this array in hex format
@@ -121,18 +137,14 @@ namespace KGD
 	typedef Array< unsigned char > ByteArray;
 
 	//! Base64 encoding / decoding facilities
-	class Base64
+	namespace Base64
 	{
-	protected:
-		static void encodeBlock( const unsigned char in[3], unsigned char out[4], size_t len ) throw();
-		static void decodeBlock( const unsigned char in[4], unsigned char out[3] ) throw();
-	public:
 		//! decode a string to array of desired type
-		template< class T > static Array< T >* decode( const string& b );
+		template< class T > auto_ptr< Array< T > > decode( const string& b );
 		//! decode an array to another
-		template< class T > static Array< T >* decode( const Array< T >& b );
+		template< class T > auto_ptr< Array< T > > decode( const Array< T >& b );
 		//! encode an array to another
-		template< class T > static Array< T >* encode( const Array< T >& b );
+		template< class T > auto_ptr< Array< T > > encode( const Array< T >& b );
 	};
 }
 

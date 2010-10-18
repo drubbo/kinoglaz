@@ -130,16 +130,6 @@ namespace KGD
 			{
 			}
 
-			const KGD::Url & Url::urlGet() const throw( RTSP::Exception::ManagedError )
-			{
-				const KGD::Url & result = _conn->getLastRequest().getUrl();
-
-				Log::message("%s: request URL: %s", _conn->getLogName(), result.toString().c_str() );
-
-				return result;
-			}
-
-
 			void Url::urlCheckValid( ) const throw( RTSP::Exception::ManagedError )
 			{
 				if ( ! fileExists( (SDP::Container::BASE_DIR + _url->file).c_str() ) )
@@ -157,7 +147,9 @@ namespace KGD
 
 			void Url::prepare() throw( RTSP::Exception::ManagedError )
 			{
-				_url = this->urlGet();
+				_url = _conn->getLastRequest().getUrl();
+				Log::message("%s: request URL: %s", _conn->getLogName(), _url->toString().c_str() );
+
 				this->urlCheckValid( );
 				this->urlCheckTrack( );
 			}
@@ -182,18 +174,10 @@ namespace KGD
 					rt.to = range.second;
 					rt.hasRange = true;
 				}
-				catch( RTSP::Exception::ManagedError )
+				catch( RTSP::Exception::ManagedError const & e )
 				{
-					// don't care
+					Log::warning( "%s: %s", _conn->getLogName(), e.what() );
 				}
-
-//				if ( rt.to == HUGE_VAL )
-//				{
-//					if ( rt.speed >= 0 )	// even HUGE_VAL
-//						rt.to = _conn->getDescription( _url->file ).getDuration();
-//					else
-//						rt.to = 0;
-//				}
 
 				Log::message( "%s: request to play %s", _conn->getLogName(), rt.toString().c_str() );
 
@@ -261,7 +245,7 @@ namespace KGD
 				_conn->getLastRequest().checkRequireHeader();
 
 				const SDP::Container & s = _conn->loadDescription( _url->file );
-				_description = s.getReply( _url );
+				_description = s.getReply( *_url );
 			}
 
 			string Describe::getReply() throw( RTSP::Exception::ManagedError )
@@ -319,7 +303,7 @@ namespace KGD
 				Session::prepare();
 				// create RTP session
 				Channel::Description cDesc = _conn->getLastRequest().getTransport();
-				_rtp = _rtsp->createSession( _url, cDesc );
+				_rtp = _rtsp->createSession( *_url, cDesc );
 			}
 
 
@@ -442,26 +426,25 @@ namespace KGD
 				if ( _url->track.empty() )
 				{
 					const RTSP::Session & rtspSess = _rtsp.get();
-					list< Ptr::Ref< const RTP::Session > > rtpSess = rtspSess.getSessions();
-					size_t i = 0, n = rtpSess.size();
-					for( Ctr::ConstIterator< list< Ptr::Ref< const RTP::Session > > > it( rtpSess ) ; it.isValid(); it.next() )
+					ref_list< const RTP::Session > rtpSessions = rtspSess.getSessions();
+					size_t i = 0, n = rtpSessions.size();
+					BOOST_FOREACH( const RTP::Session & sess, rtpSessions )
 					{
-						const RTP::Session & s = it->get();
 						reply
-							<< "url=" << s.getUrl().toString() << ";"
-							<< "seq=" << s.getStartSeq() << ";"
-							<< "rtptime=" << s.getTimeline().getRTPtime( _rplRange.from, _rplRange.time )
+							<< "url=" << sess.getUrl().toString() << ";"
+							<< "seq=" << sess.getStartSeq() << ";"
+							<< "rtptime=" << sess.getTimeline().getRTPtime( _rplRange.from, _rplRange.time )
 							<< ( i ++ < n - 1 ? "," : EOL );
 					}
 				}
 				// single
 				else
 				{
-					const RTP::Session & s = _rtsp->getSession( _url->track );
+					const RTP::Session & sess = _rtsp->getSession( _url->track );
 					reply
-						<< "url=" << s.getUrl().toString() << ";"
-						<< "seq=" << s.getStartSeq() << ";"
-						<< "rtptime=" << s.getTimeline().getRTPtime( _rplRange.from, _rplRange.time )
+						<< "url=" << sess.getUrl().toString() << ";"
+						<< "seq=" << sess.getStartSeq() << ";"
+						<< "rtptime=" << sess.getTimeline().getRTPtime( _rplRange.from, _rplRange.time )
 						<< EOL;
 				}
 				reply << EOL;

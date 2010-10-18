@@ -1,12 +1,14 @@
-AC_INIT(configure.in)
+AC_INIT([Kinoglaz Streaming Server], [0.7.0])
+AM_INIT_AUTOMAKE
 
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(kgd, 0.6.11)
+#AM_INIT_AUTOMAKE(kgd, 0.6.11)
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX
 AM_PROG_LIBTOOL
+AM_PROG_AS
 
 # log level
 AC_ARG_WITH(log_level,

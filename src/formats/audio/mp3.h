@@ -29,6 +29,10 @@
  *
  **/
 
+#ifndef __KGD_FMT_A_MP3
+#define __KGD_FMT_A_MP3
+
+
 #include "sdp/medium.h"
 #include "rtp/frame.h"
 #include "rtp/buffer.h"
@@ -114,7 +118,7 @@ namespace KGD
 					friend class Factory::Multi< Base, MP3 >;
 				public:
 					//! mp3 audio packetization
-					virtual list< Packet* > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
+					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
 				};
 			}
 		}
@@ -122,4 +126,6 @@ namespace KGD
 
 }
  
+#endif
+
 #endif

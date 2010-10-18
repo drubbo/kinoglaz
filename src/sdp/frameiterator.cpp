@@ -32,7 +32,6 @@
 
 
 #include "sdp/frameiterator.h"
-#include "lib/utils/container.hpp"
 
 namespace KGD
 {
@@ -48,7 +47,7 @@ namespace KGD
 
 				void Base::insert( Medium::Base & m, double t ) throw( KGD::Exception::OutOfBounds )
 				{
-					Ptr::Scoped< Iterator::Base > otherFrames = m.newFrameIterator();
+					boost::scoped_ptr< Iterator::Base > otherFrames( m.newFrameIterator() );
 					this->insert( *otherFrames, t );
 				}
 
@@ -58,20 +57,20 @@ namespace KGD
 				: _med( m )
 				, _pos( 0 )
 				{
-					++ _med->_itCount;
+					++ _med._itCount;
 				}
 
 				Default::Default( const Default & it ) throw()
 				: _med( it._med )
 				, _pos( 0 )
 				{
-					++ _med->_itCount;
+					++ _med._itCount;
 				}
 
 				Default::~Default( )
 				{
-					-- _med->_itCount;
-					_med->_condItReleased.notify_all();
+					-- _med._itCount;
+					_med._condItReleased.notify_all();
 				}
 
 				Default * Default::getClone() const throw()
@@ -81,25 +80,25 @@ namespace KGD
 
 				const SDP::Frame::Base & Default::at( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
-					return _med->getFrame( pos );
+					return _med.getFrame( pos );
 				}
 				const SDP::Frame::Base & Default::curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
-					return _med->getFrame( _pos );
+					return _med.getFrame( _pos );
 				}
 				const SDP::Frame::Base & Default::next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
-					return _med->getFrame( _pos ++ );
+					return _med.getFrame( _pos ++ );
 				}
 				const SDP::Frame::Base & Default::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
-					_pos = _med->getFramePos( t );
-					return _med->getFrame( _pos );
+					_pos = _med.getFramePos( t );
+					return _med.getFrame( _pos );
 				}
 
 				const SDP::Frame::Base & Default::seek( size_t p ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
-					return _med->getFrame( _pos = p );
+					return _med.getFrame( _pos = p );
 				}
 
 				size_t Default::pos( ) const throw( )
@@ -109,27 +108,27 @@ namespace KGD
 
 				size_t Default::size( ) const throw( )
 				{
-					return _med->getFrameCount();
+					return _med.getFrameCount();
 				}
 
 				double Default::duration() const throw()
 				{
-					return _med->getDuration();
+					return _med.getDuration();
 				}
 
 				void Default::insert( Iterator::Base & it, double t ) throw( KGD::Exception::OutOfBounds )
 				{
-					_med->insert( it, t );
+					_med.insert( it, t );
 				}
 
 				void Default::insert( double duration, double t ) throw( KGD::Exception::OutOfBounds )
 				{
-					_med->insert( duration, t );
+					_med.insert( duration, t );
 				}
 
 				// ***************************************************************************************************
 
-				Slice::Slice( vector< Frame::Base * > & fs, MediaType::kind t ) throw()
+/*				Slice::Slice( const Medium::FrameList & fs, MediaType::kind t ) throw()
 				: _frames( fs )
 				, _pos( 0 )
 				, _duration( fs.back()->getTime() - fs.front()->getTime() )
@@ -264,7 +263,7 @@ namespace KGD
 						(*it)->addTime( duration );
 					// restore position
 					_pos = pos;
-				}
+				}*/
 
 				// ***************************************************************************************************
 
@@ -285,7 +284,7 @@ namespace KGD
 
 				Loop::~Loop( )
 				{
-					Ctr::clear( _curFrames );
+
 				}
 
 				Loop * Loop::getClone() const throw()
@@ -351,7 +350,7 @@ namespace KGD
 					catch( KGD::Exception::OutOfBounds )
 					{
 						++ _cur;
-						Ctr::clear( _curFrames );
+
 						Log::debug("Loop: next %lu of %u", _cur, _times );
 						if ( _times == 0 || _cur < _times )
 						{

@@ -50,10 +50,9 @@ extern "C" {
 namespace KGD
 {
 
-	AbstractDaemon::AbstractDaemon( const Singleton::InstanceRef< Ini > & params ) throw( Exception::NotFound )
+	AbstractDaemon::AbstractDaemon( const Ini::Reference & params ) throw( Exception::NotFound )
 	: _ini( params )
 	, _pid_filename( (*_ini)("DAEMON", "pidfile") )
-	, _fork( true )
 	{
 
 	}
@@ -62,12 +61,12 @@ namespace KGD
 	{
 	}
 
-	bool AbstractDaemon::detach()
+	bool AbstractDaemon::detach( )
 	{
 		// umask
 		umask(0);
 		// session id
-		if (_fork && setsid() < PID_Z)
+		if ( setsid() < PID_Z )
 		{
 			cerr << "Error during setsid: " << cStrError(errno) << endl;
 			return false;
@@ -108,7 +107,6 @@ namespace KGD
 
 	bool AbstractDaemon::start( bool doFork ) throw()
 	{
-		_fork = doFork;
 		cout << endl << "Spawning " << this->getFullName() << endl << endl;
 
 		// check pid file
@@ -120,7 +118,7 @@ namespace KGD
 		}
 
 		// fork
-		if ( _fork )
+		if ( doFork )
 		{
 			cout << "Forking the daemon ..." << endl;
 			pid = fork();
@@ -136,15 +134,16 @@ namespace KGD
 
 		}
 		// active child (or self if no fork)
-		else if ( !_fork || pid == PID_Z )
+		else if ( !doFork || pid == PID_Z )
 		{
-			if ( _fork )
-				cout << "Daemon forked successfully with pid " << getpid() << endl;
+			if ( doFork )
+			{
+				cout << "Daemon forked successfully with pid " << getpid() << ", detaching" << endl;
+				if ( !AbstractDaemon::detach() )
+					return EXIT_FAILURE;
+			}
 			else
 				cout << "Daemon starting with pid " << pid << endl;
-
-			if (!AbstractDaemon::detach())
-				return EXIT_FAILURE;
 
 			// write pid
 			ofstream pid_file( _pid_filename.c_str() );
@@ -152,7 +151,7 @@ namespace KGD
 			pid_file.close();
 
 			// close standard streams
-			if ( _fork )
+			if ( doFork )
 			{
 				close(STDIN_FILENO);
 				close(STDOUT_FILENO);

@@ -29,6 +29,9 @@
  *
  **/
 
+#ifndef __KGD_FMT_A_AAC
+#define __KGD_FMT_A_AAC
+
 #include "sdp/medium.h"
 #include "rtp/frame.h"
 #include "rtp/buffer.h"
@@ -96,9 +99,11 @@ namespace KGD
 					friend class Factory::Multi< Base, AAC >;
 				public:
 					//! AAC audio packetization
-					virtual list< Packet* > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
+					virtual auto_ptr< boost::ptr_list< Packet > > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );
 				};
 			}
 		}
 	}
 }
+
+#endif

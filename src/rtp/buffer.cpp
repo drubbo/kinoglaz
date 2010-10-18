@@ -38,7 +38,6 @@
 #include "rtsp/exceptions.h"
 #include "lib/common.h"
 #include "lib/log.h"
-#include "lib/utils/container.hpp"
 
 #include <iomanip>
 
@@ -83,7 +82,7 @@ namespace KGD
 				Lock lk( _mux );
 				_medium = sdp;
 // 				_trackName = sdp.getTrackName();
-				_frameIndex = sdp.newFrameIterator();
+				_frameIndex.reset( sdp.newFrameIterator() );
 			}
 
 			Base::~Base()
@@ -95,19 +94,17 @@ namespace KGD
 			{
 				Log::debug("%s: flushing whole buffer", getLogName() );
 
-				Ctr::clear( _bufferOut );
+				_bufferOut.clear();
 			}
 
 			void Base::clear( double from )
 			{
 				Log::debug("%s: flushing buffer from %lf", getLogName(), from );
 
-				while( ! _bufferOut.empty() && _bufferOut.back()->getTime() >= from )
+				while( ! _bufferOut.empty() && _bufferOut.back().getTime() >= from )
 				{
-					RTP::Frame::Base * f = _bufferOut.back();
-					_bufferOut.pop_back();
-					Log::verbose("%s: removing frame at %lf", getLogName(), f->getTime() );
-					Ptr::clear( f );
+					Log::verbose("%s: removing frame at %lf", getLogName(), _bufferOut.back().getTime() );
+					_bufferOut.erase( _bufferOut.rbegin().base() );
 				}
 			}
 
@@ -122,7 +119,7 @@ namespace KGD
 				if ( _bufferOut.size() <= 0 )
 					return 0.0;
 				else
-					return fabs ( (_bufferOut.back()->getTime() - _bufferOut.front()->getTime()) * _scale );
+					return fabs ( (_bufferOut.back().getTime() - _bufferOut.front().getTime()) * _scale );
 			}
 
 
@@ -189,7 +186,7 @@ namespace KGD
 				{
 					_running = true;
 					_mux.unlock();
-					_th = new Thread( boost::bind ( &AVFrame::fetch, this ) );
+					_th.reset( new boost::thread( boost::bind ( &AVFrame::fetch, this ) ) );
 				}
 
 			}
@@ -220,11 +217,11 @@ namespace KGD
 			{
 				Log::message("%s: thread started", getLogName() );
 
-				Ptr::Scoped< Lock > lk;
+				boost::scoped_ptr< Lock > lk;
 
 				for(;;)
 				{
-					lk = new Lock ( _mux );
+					lk.reset( new Lock ( _mux ) );
 					// if told to stop, break loop
 					if ( ! _running )
 						break;
@@ -243,18 +240,18 @@ namespace KGD
 						// advance iterator
 						const SDP::Frame::Base & next = _frameIndex->next();
 // 						Log::verbose("%s: got frame key: %d", getLogName(), next.isKey() );
-						lk.destroy();
+						lk.reset();
 
 						try
 						{
 							Lock lkSeek( _seekMux );
-							Ptr::Scoped< RTP::Frame::Base > newFrame =
-								Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next.getPayloadType() );
+							auto_ptr< RTP::Frame::Base > newFrame(
+								Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next.getPayloadType() ) );
 							newFrame->as< RTP::Frame::AVMedia >().setFrame( next );
 
-							lk = new Lock ( _mux );
-							_bufferOut.push_back ( newFrame.release() );
-							lk.destroy();
+							lk.reset( new Lock ( _mux ) );
+							_bufferOut.push_back ( newFrame );
+							lk.reset();
 
 							if ( !this->isBufferLow() )
 								_condFull.notify_all();
@@ -268,22 +265,22 @@ namespace KGD
 					{
 						Log::warning( "%s: %s", getLogName(), e.what() );
 						_eof = true;
-						lk.destroy();
+						lk.reset();
 						_condFull.notify_all();
 					}
 
-					Thread::yield();
+					_th->yield();
 				}
 
 				_eof = true;
 
-				lk.destroy();
+				lk.reset();
 				_condFull.notify_all();
 			}
 
 			Frame::AVMedia* AVFrame::getNextFrame() throw( RTP::Eof )
 			{
-				Ptr::Scoped< Lock > lk = new Lock ( _mux );
+				boost::scoped_ptr< Lock > lk( new Lock ( _mux ) );
 
 				// let's wait some data
 				while ( this->isBufferLow() && _running && !_eof )
@@ -293,8 +290,7 @@ namespace KGD
 					throw RTP::Eof();
 				else
 				{
-					RTP::Frame::AVMedia * result = _bufferOut.front()->asPtrUnsafe< RTP::Frame::AVMedia >();
-					_bufferOut.pop_front();
+					FrameList::auto_type result = _bufferOut.pop_front();
 					// se ci sono pochi frame, facciamo ripartire il 3d di fetch
 					// ma solo se sono flusso video, oppure audio con scale buono (altrimenti dell'audio non carico niente)
 					SDP::MediaType::kind mType = _medium->getType();
@@ -302,13 +298,13 @@ namespace KGD
 							&& ( ( mType == SDP::MediaType::Video ) || ( ( mType == SDP::MediaType::Audio ) && ( _scale <= SCALE_LIMIT ) ) )
 							&& this->isBufferLow() )
 					{
-						lk.destroy();
+						lk.reset();
 						_condEmpty.notify_all();
 					}
 
 // 					Log::verbose("%s: giving out frame key: %d", getLogName(), result->isKey() );
 
-					return result;
+					return result.release()->asPtrUnsafe< RTP::Frame::AVMedia >();
 				}
 			}
 

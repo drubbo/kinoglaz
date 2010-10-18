@@ -81,7 +81,7 @@ namespace KGD
 			protected:
 				
 				Method::ID _method;
-				Ptr::Scoped< Url > _url;
+				boost::scoped_ptr< Url > _url;
 
 				void loadUrl( const string & url, const string & remoteHost ) throw();
 			public:

@@ -39,7 +39,6 @@
 #include "sdp/frameiterator.h"
 #include "sdp/frame.h"
 #include "lib/log.h"
-#include "lib/utils/container.hpp"
 #include "lib/utils/virtual.hpp"
 #include "lib/array.hpp"
 #include "rtsp/method.h"
@@ -101,13 +100,13 @@ namespace KGD
 			{
 				RLock lk( _fMux );
 
-				_itModel.destroy();
+				_itModel.reset();
 
-				Log::debug( "%s: waiting for %u iterators", getLogName(), _itCount.getValue() );
+				Log::debug( "%s: waiting for %u iterators", getLogName(), long( _itCount ) );
 				while( _itCount > 0 )
 					_condItReleased.wait( lk );
 
-				Ctr::clear( _frames );
+				_frames.clear();
 			}
 
 			Iterator::Base * Base::newFrameIterator() const throw()
@@ -117,7 +116,7 @@ namespace KGD
 
 			void Base::setFrameIteratorModel( Iterator::Base * it ) throw()
 			{
-				_itModel = it;
+				_itModel.reset( it );
 			}
 
 			double Base::getIterationDuration() const throw()
@@ -241,7 +240,7 @@ namespace KGD
 				return _frameCount;
 			}
 
-			vector< Frame::Base * > Base::getFrames( double from, double to ) const throw( )
+			Base::FrameList Base::getFrames( double from, double to ) const throw( )
 			{
 				RLock lk(_fMux);
 				size_t
@@ -272,13 +271,14 @@ namespace KGD
 					}
 				}
 
-				vector< Frame::Base * > rt;
+				// copy
+				FrameList rt;
 				rt.reserve( toPos - fromPos + 1 );
 				for( size_t i = fromPos; i <= toPos; ++i )
 				{
-					if ( _frames[i] )
+					if ( ! _frames.is_null( i ) )
 					{
-						Frame::Base * f = _frames[i]->getClone();
+						auto_ptr< Frame::Base > f( _frames[i].getClone() );
 						f->addTime( -from );
 						rt.push_back( f );
 					}
@@ -293,11 +293,10 @@ namespace KGD
 				RLock lk(_fMux);
 				if ( ! RTSP::Method::SUPPORT_SEEK
 					&& pos < _frames.size()
+					&& ! _frames.is_null( pos )
 					&& ! _itModel->hasType< Medium::Iterator::Loop >() )
 				{
-					Frame::Base * ptr = _frames[ pos ];
-					Ptr::clear( ptr );
-					_frames[ pos ] = 0;
+					_frames.replace( pos, 0 );
 				}
 			}
 
@@ -312,8 +311,8 @@ namespace KGD
 						throw KGD::Exception::OutOfBounds( pos, 0, _frames.size() );
 				}
 
-				if ( _frames[ pos ] )
-					return * _frames[ pos ];
+				if ( ! _frames.is_null( pos ) )
+					return _frames[ pos ];
 				else
 					throw KGD::Exception::NullPointer( "Frame at position " + KGD::toString( pos ) + " out of " + KGD::toString( _frames.size() ) );
 			}
@@ -335,9 +334,9 @@ namespace KGD
 					// frame time >= searched time
 					// if video frame, must be key
 					else if (
-						_frames[pos]
-						&& _frames[pos]->getTime() >= t
-						&& ( (_type == SDP::MediaType::Video && _frames[pos]->asPtrUnsafe< Frame::MediaFile >()->isKey() )
+						! _frames.is_null( pos )
+						&& _frames[pos].getTime() >= t
+						&& ( (_type == SDP::MediaType::Video && _frames[pos].asPtrUnsafe< Frame::MediaFile >()->isKey() )
 							|| _type != SDP::MediaType::Video ) )
 						return pos;
 					else
@@ -353,21 +352,21 @@ namespace KGD
 				size_t pos = this->getFramePos( start );
 				Log::debug( "%s: media insert: found insert position %lu for time %lf, shifting next frames by %lf", getLogName(), pos, start, duration );
 				// shift successive frames by new medium duration
-				TFrameList::iterator insIt = _frames.begin() + pos;
-				Log::debug( "%s: media insert: first frame to shift at time %lf (previous at %lf)", getLogName(), (*insIt)->getTime(), (*(insIt - 1))->getTime() );
+				FrameList::iterator insIt = _frames.begin() + pos;
+				Log::debug( "%s: media insert: first frame to shift at time %lf (previous at %lf)", getLogName(), insIt->getTime(), (insIt - 1)->getTime() );
 				{
-					TFrameList::iterator it = insIt, ed = _frames.end();
+					FrameList::iterator it = insIt, ed = _frames.end();
 					for( ; it != ed; ++it )
-						(*it)->addTime( duration );
+						it->addTime( duration );
 
 				}
 				// shift new frames by offset time
-				TFrameList toInsert;
+				FrameList toInsert;
 				try
 				{
 					for(;;)
 					{
-						Frame::Base * newFrame = otherFrames.next().getClone();
+						auto_ptr< Frame::Base > newFrame( otherFrames.next().getClone() );
 						newFrame->addTime( start );
 						toInsert.push_back( newFrame );
 					}
@@ -390,12 +389,12 @@ namespace KGD
 					_condMoreFrames.wait( lk );
 
 				// shift new frames by offset time
-				TFrameList toInsert;
+				FrameList toInsert;
 				try
 				{
 					for(;;)
 					{
-						Frame::Base * newFrame = otherFrames.next().getClone();
+						auto_ptr< Frame::Base > newFrame( otherFrames.next().getClone() );
 						newFrame->addTime( _duration );
 						toInsert.push_back( newFrame );
 					}
@@ -417,11 +416,11 @@ namespace KGD
 				size_t pos = this->getFramePos( start );
 				Log::debug( "%s: media insert: found insert position %lu", getLogName(), pos );
 				// shift successive frames by new medium duration
-				TFrameList::iterator insIt = _frames.begin() + pos;
+				FrameList::iterator insIt = _frames.begin() + pos;
 				{
-					TFrameList::iterator it = insIt, ed = _frames.end();
+					FrameList::iterator it = insIt, ed = _frames.end();
 					for( ; it != ed; ++it )
-						(*it)->addTime( duration );
+						it->addTime( duration );
 				}
 				_duration += duration;
 				_frameTimeShift += duration;
@@ -429,7 +428,7 @@ namespace KGD
 
 			void Base::loop( uint8_t times ) throw()
 			{
-				_itModel = new Iterator::Loop( _itModel.release(), times );
+				_itModel.reset( new Iterator::Loop( _itModel.release(), times ) );
 			}
 		}
 	}

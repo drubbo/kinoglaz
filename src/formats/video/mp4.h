@@ -29,6 +29,9 @@
  *
  **/
 
+#ifndef __KGD_FMT_V_MP4
+#define __KGD_FMT_V_MP4
+
 #include "sdp/medium.h"
 #include "rtp/frame.h"
 #include "rtp/buffer.h"
@@ -95,9 +98,11 @@ namespace KGD
 					friend class Factory::Multi< Base, MP4 >;
 				public:
 					//! mpeg4 video packetization
-					virtual list< Packet* > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw();
+					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw();
 				};
 			}
 		}
 	}
 }
+
+#endif

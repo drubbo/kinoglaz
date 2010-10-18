@@ -44,14 +44,13 @@ namespace KGD
 {
 	//! base deamon spawn class
 	class AbstractDaemon
+	: public boost::noncopyable
 	{
 	protected:
 		//! reference to parameter file
-		Singleton::InstanceRef< Ini > _ini;
+		Ini::Reference _ini;
 		//! deamon pidfile location
 		string _pid_filename;
-		//! fork flag
-		bool _fork;
 
 		//! returns pid_zero if deamon is not running, or its current pid
 		pid_t checkPidfile() const throw();
@@ -60,7 +59,7 @@ namespace KGD
 		virtual bool run() throw() = 0;
 
 		//! ctor
-		AbstractDaemon( const Singleton::InstanceRef< Ini >& params ) throw( Exception::NotFound );
+		AbstractDaemon( const Ini::Reference& params ) throw( Exception::NotFound );
 
 		//! sets umask and new run-session id, returning true if everything's ok
 		bool detach();

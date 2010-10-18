@@ -47,21 +47,20 @@ namespace KGD
 {
 	//! generic buffer
 	class Buffer
+	: public boost::noncopyable
 	{
-	protected:
+	private:
 		//! data as char
-		char *_data;
-		//! significant data
-		uint16_t _len;
-		//! allocated size
-		uint16_t _size;
+		vector< char > _data;
 	public:
+		//! build empty
 		Buffer();
+		//! destroy
 		virtual ~Buffer();
 		//! returns a pointer to begin of data
-		const char * getDataBegin() const throw();
+		const char * getDataBegin( size_t = 0 ) const throw( KGD::Exception::OutOfBounds );
 		//! returns actual buffer length
-		uint16_t getDataLength() const throw();
+		size_t getDataLength() const throw();
 		//! enqueues data
 		void enqueue( const void * s, uint16_t len ) throw( KGD::Exception::Generic );
 		//! enqueues data

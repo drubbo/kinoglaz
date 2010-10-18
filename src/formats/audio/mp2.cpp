@@ -93,14 +93,14 @@ namespace KGD
 				{
 				}
 
-				list< Packet* > MP2::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw( Exception::OutOfBounds )
+				auto_ptr< Packet::List > MP2::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw( Exception::OutOfBounds )
 				{
 					Header h;
 					h.pt = _frame->getPayloadType();
 					h.timestamp = htonl(rtp);
 					h.ssrc = htonl(ssrc);
 
-					list< Packet* > rt;
+					auto_ptr< Packet::List > rt( new Packet::List );
 
 					const ByteArray & myData = this->getData();
 
@@ -116,7 +116,7 @@ namespace KGD
 						// next payload size
 						size_t copySize = min( payloadSize, tot - packetized );
 						// alloc packet
-						Ptr::Scoped< Packet > pkt = new Packet( copySize + Header::SIZE + 4 );
+						auto_ptr< Packet > pkt( new Packet( copySize + Header::SIZE + 4 ) );
 
 						// make packet
 						h.seqNo = htons(++ seq);
@@ -130,10 +130,10 @@ namespace KGD
 
 						// advance
 						packetized += copySize;
-						rt.push_back( pkt.release() );
+						rt->push_back( pkt );
 					}
 
-					rt.back()->isLastOfSequence = true;
+					rt->back().isLastOfSequence = true;
 					return rt;
 				}
 			}

@@ -41,7 +41,6 @@
 
 #include "lib/exceptions.h"
 #include "lib/utils/singleton.hpp"
-#include "lib/utils/map.hpp"
 
 namespace KGD
 {
@@ -54,7 +53,7 @@ namespace KGD
 		class Entries
 		{
 		private:
-			Ctr::KeyValueMap _entries;
+			KeyValueMap _entries;
 			string _section;
 		public:
 			Entries();
@@ -80,12 +79,13 @@ namespace KGD
 		const Entries & operator[]( const string & section ) const throw( Exception::NotFound );
 
 		//! get already existent instance
-		static Singleton::InstanceRef< Ini > getInstance() throw( Exception::InvalidState );
+		static Reference getInstance() throw( Exception::InvalidState );
 		//! get new instance of Ini parsing fileName
-		static Singleton::InstanceRef< Ini > getInstance( const string & fileName ) throw( Exception::InvalidState, Exception::NotFound );
+		static Reference getInstance( const string & fileName ) throw( Exception::InvalidState, Exception::NotFound );
 	protected:
+		typedef map< string, Entries > SectionsMap;
 		//! section / value map
-		Ctr::Map< string, Entries > _sections;
+		SectionsMap _sections;
 		//! ini file name
 		string _fileName;
 

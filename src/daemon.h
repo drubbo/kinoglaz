@@ -50,11 +50,6 @@ namespace KGD
 		public Singleton::Class< Daemon >
 	{
 	protected:
-		//! application name
-		static const string APP_NAME;
-		//! application version
-		static const string APP_VER;
-
 		//! instance the rtsp server and start it
 		virtual bool run() throw();
 		//! construct with parameter file
@@ -62,9 +57,9 @@ namespace KGD
 		friend class Singleton::Class< Daemon >;
 	public:
 		//! daemon must not have been instanced already - first call
-		static Singleton::InstanceRef< Daemon > getInstance( const string & ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound );
+		static Daemon::Reference getInstance( const string & ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound );
 		//! daemon must have been instanced already
-		static Singleton::InstanceRef< Daemon > getInstance() throw( KGD::Exception::InvalidState );
+		static Daemon::Reference getInstance() throw( KGD::Exception::InvalidState );
 		//! reload param file and assign values to static variables here and there
 		virtual void setupParameters() throw( KGD::Exception::NotFound );
 		//! compose name with app name and version

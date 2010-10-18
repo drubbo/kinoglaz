@@ -39,7 +39,7 @@ namespace KGD
 {
 	namespace Safe
 	{
-
+/*
 		template< class T >
 		Number< T >::Number( const Number< T > & i )
 		: _val( i.getValue() )
@@ -140,7 +140,7 @@ namespace KGD
 			Lock lk( _mux );
 			return _val;
 		}
-
+*/
 	}
 }
 

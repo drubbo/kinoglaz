@@ -39,8 +39,7 @@
 
 #include "lib/common.h"
 #include "lib/exceptions.h"
-#include "lib/utils/map.hpp"
-#include "lib/utils/pointer.hpp"
+#include "lib/utils/ref.hpp"
 #include "rtsp/common.h"
 #include <map>
 #include <string>
@@ -64,7 +63,7 @@ namespace KGD
 				//! static map to keep all definitions
 				static Mutex _allMux;
 				//! all definitions as reference
-				static Ptr::Scoped< Ctr::Map< TCode, Ptr::Ref< Definition > > > _all;
+				static boost::scoped_ptr< map< TCode, ref< const Definition > > > _all;
 				//! error code
 				TCode _code;
 				//! error description
@@ -80,7 +79,7 @@ namespace KGD
 				bool isError() const throw();
 
 				//! looks up for a definition responding to passed code
-				static Definition & getDefinition( const TCode ) throw( KGD::Exception::NotFound );
+				static const Definition & getDefinition( const TCode ) throw( KGD::Exception::NotFound );
 			};
 
 			//! code for success

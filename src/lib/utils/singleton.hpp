@@ -43,115 +43,53 @@ namespace KGD
 {
 	namespace Singleton
 	{
-		template< typename T >
-		InstanceRef< T >::InstanceRef( )
-		{
-			RLock lk( _mux );
-			++ _count;
-		}
-
-		template< typename T >
-		InstanceRef< T >::InstanceRef( const InstanceRef< T >& )
-		{
-			RLock lk( _mux );
-			++ this->_count;
-		}
-
-		template< typename T >
-		InstanceRef< T >::~InstanceRef( )
-		{
-			RLock lk( this->_mux );
-			if ( (-- this->_count) <= 0 )
-				T::destroyInstance();
-		}
-
-		template< typename T > T * InstanceRef< T >::operator->()
-		{
-			if ( ! T::_instance )
-				throw runtime_error( "dereferencing NULL ptr" );
-			return T::_instance;
-		}
-		template< typename T > const T * InstanceRef< T >::operator->() const
-		{
-			if ( ! T::_instance )
-				throw runtime_error( "dereferencing NULL ptr" );
-			return T::_instance;
-		}
-
-		template< typename T > T & InstanceRef< T >::operator*()
-		{
-			if ( ! T::_instance )
-				throw runtime_error( "dereferencing NULL ptr" );
-			return *T::_instance;
-		}
-		template< typename T > const T & InstanceRef< T >::operator*() const
-		{
-			if ( ! T::_instance )
-				throw runtime_error( "dereferencing NULL ptr" );
-			return *T::_instance;
-		}
-
-
-		template< typename T >
+		template< class T >
 		Class< T >::Class()
 		{
 		}
 
-		template< typename T >
-		void Class< T >::destroyInstance()
+		template< class T >
+		typename Class< T >::Reference Class< T >::newInstanceRef()
 		{
-			RLock lk( _mux );
-			if ( _instance )
-				Ptr::clear< T >( _instance );
+			return Reference( *_instance );
 		}
 
-		template< typename T >
-		InstanceRef< T > Class< T >::newInstanceRef()
+		template< class T >
+		void Class< T >::lock()
 		{
-			return InstanceRef< T >();
+			_instance.lock();
+		}
+		template< class T >
+		void Class< T >::unlock()
+		{
+			_instance.unlock();
+		}
+		template< class T >
+		RMutex & Class< T >::mux()
+		{
+			return _instance.mux();
 		}
 
-		template< typename T >
-		InstanceRef< T > Class< T >::getInstance()
+
+		template< class T >
+		typename Class< T >::Reference Class< T >::getInstance()
 		{
-			RLock lk( _mux );
-			if ( !_instance )
-				_instance = new T;
+			typename Instance::LockerType lk( _instance );
+			if ( !*_instance )
+				(*_instance).reset( new T );
 
 			return newInstanceRef();
 		}
 
-
-		template< typename T >
-		Persistent< T >::Persistent()
-		{
-		}
-
 		template< class T >
-		void Persistent< T >::destroyInstance()
+		void Class< T >::destroyInstance()
 		{
-			_instance.destroy();
+			BOOST_ASSERT( (*_instance).unique() );
+			(*_instance).reset();
 		}
 
-		template< typename T >
-		T& Persistent< T >::getInstance()
-		{
-			RLock lk( _mux );
 
-			if ( !_instance )
-				_instance = new T;
-
-			return *_instance;
-		}
-
-		template< typename T > RMutex InstanceRef< T >::_mux;
-		template< typename T > long InstanceRef< T >::_count = 0;
-		template< typename T > RMutex Class< T >::_mux;
-		template< typename T > T* Class< T >::_instance = 0;
-
-
-		template< typename T > RMutex Persistent< T >::_mux;
-		template< typename T > Ptr::Scoped< T > Persistent< T >::_instance = 0;
+		template< class T > typename Class< T >::Instance Class< T >::_instance;
 	}
 }
 

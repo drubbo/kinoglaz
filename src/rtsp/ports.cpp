@@ -140,22 +140,22 @@ namespace KGD
 
 			TPort Udp::getOne() throw( KGD::Exception::NotFound )
 			{
-				RLock lk( _mux );
+				RLock lk( Udp::mux() );
 				return Pool::getOne();
 			}
 			TPortPair Udp::getPair() throw( KGD::Exception::NotFound )
 			{
-				RLock lk( _mux );
+				RLock lk( Udp::mux() );
 				return Pool::getPair();
 			}
 			void Udp::release( TPort p )
 			{
-				RLock lk( _mux );
+				RLock lk( Udp::mux() );
 				Pool::release( p );
 			}
 			void Udp::release( const TPortPair p )
 			{
-				RLock lk( _mux );
+				RLock lk( Udp::mux() );
 				Pool::release( p );
 			}
 

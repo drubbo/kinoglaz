@@ -36,6 +36,7 @@
 #include <list>
 
 #include "lib/exceptions.h"
+#include <stdint.h>
 
 namespace KGD
 {
@@ -50,12 +51,12 @@ namespace KGD
 		//! returns file name
 		const string& getFileName() const throw();
 		//! get number of loops
-		const ushort & getLoops() const throw();
+		const uint16_t & getLoops() const throw();
 		//! get ordered list of media containers to play
 		const list< string > & getMediaList() const throw();
 	protected:
 		//! numer of loops; 0 means infinte
-		ushort _loops;
+		uint16_t _loops;
 		//! media containers
 		list< string > _media;
 		//! ini file name

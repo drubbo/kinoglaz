@@ -100,14 +100,14 @@ namespace KGD
 				{
 				}
 
-				list< Packet* > MP4::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw()
+				auto_ptr< Packet::List > MP4::getPackets( RTP::TTimestamp rtp, TSSrc ssrc, TCseq & seq ) throw()
 				{
 					Header h;
 					h.pt = _frame->getPayloadType();
 					h.timestamp = htonl(rtp);
 					h.ssrc = htonl(ssrc);
 
-					list< Packet* > rt;
+					auto_ptr< Packet::List > rt( new Packet::List );
 
 					const ByteArray & myData = this->getData();
 
@@ -120,7 +120,7 @@ namespace KGD
 						// next payload size
 						size_t copySize = min( payloadSize, tot - packetized );
 						// alloc packet
-						Ptr::Scoped< Packet > pkt = new Packet( copySize + Header::SIZE );
+						auto_ptr< Packet > pkt( new Packet( copySize + Header::SIZE ) );
 						// make packet
 						h.seqNo = htons(++ seq);
 						h.marker = (packetized + copySize >= tot ? 1 : 0 );
@@ -129,10 +129,10 @@ namespace KGD
 							.set( &payload[packetized], copySize, Header::SIZE );
 						// advance
 						packetized += copySize;
-						rt.push_back( pkt.release() );
+						rt->push_back( pkt );
 					}
 
-					rt.back()->isLastOfSequence = true;
+					rt->back().isLastOfSequence = true;
 					return rt;
 				}
 			}

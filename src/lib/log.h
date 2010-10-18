@@ -46,20 +46,19 @@ using namespace std;
 namespace KGD
 {
 	//! static log facility class
-	class Log
+	namespace Log
 	{
-	public:
-		static void error( const char *fmt, ... ) throw();
-		static void error( Exception::Generic const &e ) throw();
-		static void warning( const char *fmt, ... ) throw();
-		static void warning( Exception::Generic const &e ) throw();
-		static void message( const char *fmt, ... ) throw();
+		void error( const char *fmt, ... ) throw();
+		void error( Exception::Generic const &e ) throw();
+		void warning( const char *fmt, ... ) throw();
+		void warning( Exception::Generic const &e ) throw();
+		void message( const char *fmt, ... ) throw();
 		//! log RTSP sending reply
-		static void reply( const string & s ) throw();
+		void reply( const string & s ) throw();
 		//! log RTSP received request
-		static void request( const string & s ) throw();
-		static void debug( const char* fmt, ... ) throw();
-		static void verbose( const char* fmt, ... ) throw();
+		void request( const string & s ) throw();
+		void debug( const char* fmt, ... ) throw();
+		void verbose( const char* fmt, ... ) throw();
 	};
 }
 

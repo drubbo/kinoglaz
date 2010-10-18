@@ -35,9 +35,7 @@
 
 
 #include "rtsp/interleave.h"
-#include "lib/utils/container.hpp"
 #include "lib/array.hpp"
-#include <rtp/frame.h>
 #include "daemon.h"
 
 namespace KGD
@@ -47,16 +45,17 @@ namespace KGD
 		Interleave::Interleave( TPort local,
 								TPort remote,
 								TSessionID ssid,
-								const Ptr::Shared< KGD::Socket::Tcp > & s,
+								TcpTunnel & s,
 								Socket & sock )
 		: _channel( local )
 		, _remote( remote )
 		, _ssid( ssid )
 		, _sock( s )
-		, _rtsp( sock )
+		, _rtspSocket( sock )
 		, _running( true )
 		, _logName( sock.getLogName() + string( " CHANNEL $" ) + toString( local ) )
 		{
+			Log::debug("%s: created", getLogName() );
 		}
 
 		Interleave::~Interleave( )
@@ -64,11 +63,11 @@ namespace KGD
 			Log::debug("%s: shutting down", getLogName() );
 			this->stop();
 			Log::debug("%s: stopped", getLogName() );
-			_rtsp->release( _channel );
+			_rtspSocket.release( _channel );
 			Log::debug("%s: released", getLogName() );
 			{
 				Lock lk( _recvMux );
-				Ctr::clear( _recv );
+				_recv.clear();
 			}
 			Log::debug("%s: cleared", getLogName() );
 		}
@@ -124,36 +123,18 @@ namespace KGD
 				.set( htons( sz ), 2 )
 				.set( data, sz, 4 );
 
-			_sock.lock();
-			try
 			{
+				TcpTunnel::LockerType lk( _sock );
 				// not counting header bytes
-				size_t rt = _sock->writeAll( envelope ) - 4;
-				_sock.unlock();
-				return rt;
-			}
-			catch( KGD::Exception::Generic )
-			{
-				_sock.unlock();
-				throw;
+				return (*_sock)->writeAll( envelope ) - 4;
 			}
 		}
 
 		size_t Interleave::writeLast( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			_sock.lock();
-			try
-			{
-				_sock->setLastPacket( true );
-				size_t rt = this->writeSome( data, sz );
-				_sock.unlock();
-				return rt;
-			}
-			catch( ... )
-			{
-				_sock.unlock();
-				throw;
-			}
+			TcpTunnel::LockerType lk( _sock );
+			(*_sock)->setLastPacket( true );
+			return this->writeSome( data, sz );
 		}
 
 		size_t Interleave::readSome( void * data, size_t sz ) throw( KGD::Socket::Exception )
@@ -169,13 +150,12 @@ namespace KGD
 				else if ( ! _recv.empty() )
 				{
 					Log::debug( "%s: socket has data", getLogName() );
-					ByteArray * buf = _recv.front();
-					size_t rt = buf->copyTo( data, sz );
-					if ( rt >= buf->size() )
-					{
-						Ptr::clear( buf );
+					ByteArray & buf = _recv.front();
+					size_t rt = buf.copyTo( data, sz );
+					if ( rt >= buf.size() )
 						_recv.pop_front();
-					}
+					else
+						buf.chopFront( rt );
 					return rt;
 				}
 				else
@@ -198,10 +178,10 @@ namespace KGD
 		// ******************************************************************************************************************
 
 		Socket::Socket( KGD::Socket::Tcp * sk, const string & parentLogName )
-		: _sock( sk )
-		, _cseq( 0 )
+		: _cseq( 0 )
 		, _logName( parentLogName + " SOCKET" )
 		{
+			(*_sock).reset( sk );
 		}
 
 		Socket::~Socket()
@@ -221,16 +201,17 @@ namespace KGD
 		{
 			Lock lk( _muxPorts );
 			// stop all interleaved channels
-			for( TChannelMap::Iterator it( _iChans ); it.isValid(); it.next() )
-				it.val()->stop();
+			BOOST_FOREACH( ChannelMap::iterator::reference ch, _iChans )
+				ch.second->stop();
 		}
 
 		void Socket::stopInterleaving( const TSessionID & ssid ) throw()
 		{
 			Lock lk( _muxPorts );
-			for( TChannelMap::Iterator it( _iChans ); it.isValid(); it.next() )
-				if ( it.val()->getSessionID() == ssid )
-					it.val()->stop();
+			BOOST_FOREACH( ChannelMap::iterator::reference ch, _iChans )
+				// more interleaves can be on a single session
+				if ( ch.second->getSessionID() == ssid )
+					ch.second->stop();					
 		}
 
 		const char * Socket::getLogName() const throw()
@@ -240,28 +221,28 @@ namespace KGD
 
 		Channel::Description Socket::getDescription() const
 		{
-			return _sock->getDescription();
+			return (*_sock)->getDescription();
 		}
 
 		void Socket::release( TPort p )
 		{
-			_muxPorts.lock();
-
-			Log::debug( "%s: releasing interleaved channel %", getLogName(), p );
-			if ( _iChans.has( p ) )
+			bool empty = false;
 			{
-				_iChans.erase( p );
-				_iPorts.release( p );
+				Lock lk( _muxPorts );
+
+				Log::debug( "%s: releasing interleaved channel %", getLogName(), p );
+				if ( _iChans.find( p ) != _iChans.end() )
+				{
+					_iChans.erase( p );
+					_iPorts.release( p );
+				}
+				else
+					Log::debug( "%s: %d interleaved not found", getLogName(), p );
+
+				Log::debug( "%s: %d interleaved channels remaining", getLogName(), _iChans.size() );
+
+				empty = _iChans.empty();
 			}
-			else
-				Log::debug( "%s: %d interleaved not found", getLogName(), p );
-
-			Log::debug( "%s: %d interleaved channels remaining", getLogName(), _iChans.size() );
-
-
-			bool empty = _iChans.empty();
-
-			_muxPorts.unlock();
 
 			if ( empty )
 				_condNoInterleave.notify_all();
@@ -270,32 +251,53 @@ namespace KGD
 		TPort Socket::addInterleave( TPort remote, const TSessionID & ssid ) throw( KGD::Exception::NotFound )
 		{
 			Lock lk(_muxPorts);
+
 			TPort local = _iPorts.getOne();
-			Interleave * rt = new Interleave( local, remote, ssid, _sock, *this );
-			_iChans( local ) = *rt;
+			Interleave * intlv = new Interleave( local, remote, ssid, _sock, *this );
+			ref< Interleave > ref( *intlv );
+
+			_iChans.insert( make_pair( local, ref ) );
+
 			Log::debug( "%s: added interleave %d", getLogName(), local );
+
 			return local;
 		}
 
 		TPortPair Socket::addInterleavePair( const TPortPair & remote, const TSessionID & ssid ) throw( KGD::Exception::NotFound )
 		{
 			Lock lk(_muxPorts);
+
 			TPortPair local = _iPorts.getPair();
 			Interleave * a = new Interleave( local.first, remote.first, ssid, _sock, *this );
 			Interleave * b = new Interleave( local.second, remote.second, ssid, _sock, *this );
-			_iChans( local.first ) = *a;
-			_iChans( local.second ) = *b;
+			ref< Interleave > aRef( *a ), bRef( *b );
+
+			_iChans.insert( make_pair( local.first, aRef ) );
+			_iChans.insert( make_pair( local.second, bRef ) );
+
 			Log::debug( "%s: added interleave %d - %d", getLogName(), local.first, local.second );
+
 			return local;
 		}
 
-		Interleave * Socket::getInterleave( TPort p ) throw( KGD::Exception::NotFound )
+		boost::shared_ptr< Interleave > Socket::getInterleave( TPort p ) throw( KGD::Exception::NotFound )
 		{
 			Lock lk(_muxPorts);
-			if ( _iChans.has( p ) )
-				return _iChans( p ).getPtr();
-			else
+			ChannelMap::iterator it = _iChans.find( p );
+			if ( it == _iChans.end( ) )
 				throw KGD::Exception::NotFound("interleaved channel " + toString( p ));
+			else
+				return boost::shared_ptr< Interleave >( it->second.getPtr() );
+		}
+
+		Interleave & Socket::getInterleaveRef( TPort p ) throw( KGD::Exception::NotFound )
+		{
+			Lock lk(_muxPorts);
+			ChannelMap::iterator it = _iChans.find( p );
+			if ( it == _iChans.end( ) )
+				throw KGD::Exception::NotFound("interleaved channel " + toString( p ));
+			else
+				return *it->second;
 		}
 
 		void Socket::listen() throw( Message::Request *, Message::Response *, KGD::Exception::Generic )
@@ -304,7 +306,7 @@ namespace KGD
 			for(;;)
 			{
 				// read bytes from underlying socket
-				size_t receivedBytes = _sock->Channel::In::readSome( receiveBuffer );
+				size_t receivedBytes = (*_sock)->Channel::In::readSome( receiveBuffer );
 
 				// put in parser buffer
 				_inBuf.enqueue( receiveBuffer.get(), receivedBytes );
@@ -315,20 +317,20 @@ namespace KGD
 					// try if a request
 					try
 					{
-						Message::Request * rq = _inBuf.getNextRequest( msgSz, _sock->getRemoteHost() );
+						auto_ptr< Message::Request > rq( _inBuf.getNextRequest( msgSz, (*_sock)->getRemoteHost() ) );
 						_cseq = rq->getCseq();
 
 						Log::message( "%s: request: %s", getLogName(), Method::name[ rq->getMethodID() ].c_str() );
 						Log::request( rq->get() );
 
-						throw rq;
+						throw rq.release();
 					}
 					catch( KGD::Exception::NotFound )
 					{
 						// try if a response
 						try
 						{
-							Ptr::Scoped< Message::Response > resp = _inBuf.getNextResponse( msgSz );
+							auto_ptr< Message::Response > resp = _inBuf.getNextResponse( msgSz );
 							if ( resp->getCseq() != _cseq )
 								throw RTSP::Exception::CSeq();
 
@@ -339,9 +341,8 @@ namespace KGD
 							// try interleaved
 							try
 							{
-								pair< TPort, RTP::Packet * > intlv = _inBuf.getNextInterleave( msgSz );
-								Ptr::Scoped< RTP::Packet > pkt = intlv.second;
-								this->getInterleave( intlv.first )->pushToRead( pkt->data );
+								pair< TPort, boost::shared_ptr< RTP::Packet > > intlv( _inBuf.getNextInterleave( msgSz ) );
+								this->getInterleaveRef( intlv.first ).pushToRead( intlv.second->data );
 
 							}
 							catch( KGD::Exception::NotFound )
@@ -373,45 +374,25 @@ namespace KGD
 
 		string Socket::getLocalHost() const
 		{
-			return _sock->getLocalHost();
+			return (*_sock)->getLocalHost();
 		}
 
 		string Socket::getRemoteHost() const
 		{
-			return _sock->getRemoteHost();
+			return (*_sock)->getRemoteHost();
 		}
 
 		size_t Socket::writeSome( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			_sock.lock();
-			try
-			{
-				size_t rt = _sock->writeAll( data, sz );
-				_sock.unlock();
-				return rt;
-			}
-			catch( ... )
-			{
-				_sock.unlock();
-				throw;
-			}
+			TcpTunnel::LockerType lk( _sock );
+			return (*_sock)->writeAll( data, sz );
 		}
 
 		size_t Socket::writeLast( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			_sock.lock();
-			try
-			{
-				_sock->setLastPacket( true );
-				size_t rt = this->writeSome( data, sz );
-				_sock.unlock();
-				return rt;
-			}
-			catch( ... )
-			{
-				_sock.unlock();
-				throw;
-			}
+			TcpTunnel::LockerType lk( _sock );
+			(*_sock)->setLastPacket( true );
+			return this->writeSome( data, sz );
 		}
 
 		void Socket::reply( const uint16_t code, const string & msg ) throw( KGD::Socket::Exception )

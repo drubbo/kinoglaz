@@ -530,7 +530,7 @@ namespace KGD
 		{
 		}
 
-		Tcp* TcpServer::accept() throw( Socket::Exception )
+		auto_ptr< Tcp > TcpServer::accept() throw( Socket::Exception )
 		{
 			int newsockfd;
 			sockaddr_in peerAddress;
@@ -539,7 +539,7 @@ namespace KGD
 			if ((newsockfd = ::accept(_fileDescriptor, (sockaddr *) &peerAddress, &sz)) <= 0)
 				throw Socket::Exception( "accept" );
 			else
-				return new Tcp( newsockfd, &peerAddress );
+				return auto_ptr< Tcp >( new Tcp( newsockfd, &peerAddress ) );
 		}
 
 	}

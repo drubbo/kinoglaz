@@ -40,7 +40,6 @@
 #include "lib/clock.h"
 #include "rtsp/session.h"
 #include "rtcp/rtcp.h"
-#include "lib/utils/container.hpp"
 #include "rtsp/ports.h"
 
 #ifdef HAVE_CONFIG_H
@@ -55,8 +54,8 @@ namespace KGD
 		Session::Session
 		( const Url & url,
 		  SDP::Medium::Base & sdp,
-		  Channel::Out * rtp,
-		  Channel::Bi * rtcp,
+		  const boost::shared_ptr< Channel::Out > rtp,
+		  const boost::shared_ptr< Channel::Bi > rtcp,
 		  const string & parentLogName,
 		  RTSP::UserAgent::type agent
 		)
@@ -81,8 +80,8 @@ namespace KGD
 
 			_time->setRate( sdp.getRate() );
 
-			_RTCPsender = new RTCP::Sender( *this, _RTCPsock );
-			_RTCPreceiver = new RTCP::Receiver( *this, _RTCPsock );
+			_RTCPsender.reset( new RTCP::Sender( *this, _RTCPsock ) );
+			_RTCPreceiver.reset( new RTCP::Receiver( *this, _RTCPsock ) );
 
 			this->seqRestart();
 		}
@@ -97,7 +96,7 @@ namespace KGD
 				rtcpDesc = _RTCPsock->getDescription();
 			if ( rtpDesc.type == Channel::Owned && rtcpDesc.type == Channel::Owned )
 			{
-				RTSP::Port::Udp::getInstance().release( TPortPair( rtpDesc.ports.first, rtcpDesc.ports.first ) );
+				RTSP::Port::Udp::getInstance()->release( TPortPair( rtpDesc.ports.first, rtcpDesc.ports.first ) );
 				Log::debug( "%s: releasing port pair (%u, %u)", getLogName(), rtpDesc.ports.first, rtcpDesc.ports.first );
 			}
 			else if ( rtpDesc.type == Channel::Owned || rtcpDesc.type == Channel::Owned )
@@ -127,12 +126,12 @@ namespace KGD
 			return *_medium;
 		}
 
-		double Session::fetchNextFrame( Ptr::Scoped< Lock > & lk) throw( RTP::Eof )
+		double Session::fetchNextFrame( boost::scoped_ptr< Lock > & lk) throw( RTP::Eof )
 		{
 
 			try
 			{
-				Ptr::Scoped< RTP::Frame::Base > tmp;
+				auto_ptr< RTP::Frame::Base > tmp;
 
 				if ( _seeked )
 				{
@@ -144,11 +143,11 @@ namespace KGD
 						fTime = HUGE_VAL,
 						sendWorse = HUGE_VAL;
 
-					lk.destroy();
+					lk.reset();
 
 					for(;;)
 					{
-						tmp = _frameBuf->getNextFrame();
+						tmp.reset( _frameBuf->getNextFrame() );
 						fTime = tmp->getTime();
 						double sendIn = (fTime - now) / spd;
 
@@ -166,34 +165,34 @@ namespace KGD
 						else
 							break;
 					}
-					lk = new Lock( _mux );
+					lk.reset( new Lock( _mux ) );
 					_seeked = false;
 				}
 				else
 				{
-					lk.destroy();
-					tmp = _frameBuf->getNextFrame();
-					lk = new Lock( _mux );
+					lk.reset();
+					tmp.reset( _frameBuf->getNextFrame() );
+					lk.reset( new Lock( _mux ) );
 				}
 
 				// release sent frame
 				if ( _frameNext )
 					_medium->releaseFrame( _frameNext->getMediumPos() );
 				// update frame to send
-				_frameNext = tmp.release();
+				_frameNext.reset( tmp.release() );
 
 				return _frameNext->getTime();
 			}
 			catch( ... )
 			{
-				_frameNext.destroy();
+				_frameNext.reset();
 				throw;
 			}
 		}
 
 		void Session::loop()
 		{
-			Ptr::Scoped< Lock > lk = new Lock(_mux);
+			boost::scoped_ptr< Lock > lk( new Lock(_mux) );
 			Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
 
 			try
@@ -231,9 +230,9 @@ namespace KGD
 							// don't sleep if nothing to wait for
 							if ( _frameNext )
 							{
-								lk.destroy();
+								lk.reset();
 								KGD::Clock::sleepNano( slp );
-								lk = new Lock(_mux);
+								lk.reset( new Lock ( _mux ) );
 
 								now = _time->getPresentationTime();
 								spd = _time->getSpeed();
@@ -267,7 +266,7 @@ namespace KGD
 						Log::message( "%s: go pause", getLogName() );
 						_condPaused.notify_all();
 						if ( !lk )
-							lk = new Lock(_mux);
+							lk.reset( new Lock ( _mux ) );
 						_condUnPause.wait(*lk);
 					}
 				}
@@ -283,7 +282,7 @@ namespace KGD
 			_stopped = true;
 			_paused  = false;
 
-			lk.destroy();
+			lk.reset();
 
 			Log::debug( "%s: loop terminated", getLogName() );
 		}
@@ -292,15 +291,13 @@ namespace KGD
 		{
 			if ( _frameNext )
 			{
-				list< Packet * > pkts;
 				try
 				{
 					RTP::TTimestamp rtp = _time->getRTPtime( _frameNext->getTime() );
-					pkts = _frameNext->getPackets( rtp, _ssrc, _seqCur );
+					auto_ptr< Packet::List > pkts = _frameNext->getPackets( rtp, _ssrc, _seqCur );
 
-					for( Ctr::ConstIterator< list< Packet * > > it( pkts ); it.isValid(); it.next() )
+					BOOST_FOREACH( Packet & pkt, *pkts )
 					{
-						Packet & pkt = **it;
 						*_RTPsock << pkt;
 						_RTCPsender->registerPacketSent( pkt.data.size() );
 					}
@@ -308,14 +305,12 @@ namespace KGD
 				}
 				catch( KGD::Socket::Exception )
 				{
-					Ctr::clear( pkts );
 					throw;
 				}
 				catch( const Exception::Generic & e )
 				{
 					Log::error( "%s: %s", getLogName(), e.what() );
 				}
-				Ctr::clear( pkts );
 			}
 		}
 

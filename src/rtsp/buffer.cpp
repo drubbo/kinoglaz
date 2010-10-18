@@ -62,7 +62,7 @@ namespace KGD
 		{
 			boost::regex rxSearch( EOL + Header::ContentLength + ": (\\d+)" + EOL );
 			boost::match_results< string::const_iterator > match;
-			const string data( _data );
+			const string data( this->getDataBegin() );
 			if (boost::regex_search( data.begin() , data.end(), match, rxSearch))
 				return fromString< size_t >( match.str(1) );
 			else
@@ -72,27 +72,29 @@ namespace KGD
 		size_t InputBuffer::getNextPacketLength() const throw( )
 		{
 			size_t sz = 0;
+			size_t len = this->getDataLength();
+			const char * data = this->getDataBegin();
 			// interleave
-			if ( _data[0] == '$' )
+			if ( data[0] == '$' )
 			{
 				// $cZS
-				if ( _len >= 4 )
+				if ( len >= 4 )
 				{
 					uint16_t payload = 0;
-					memcpy( &payload, &_data[2], 2 );
+					memcpy( &payload, &data[2], 2 );
 					payload = ntohs( payload );
-					if ( payload + 4 <= _len )
-						sz = payload + 4;
+					if ( payload + 4u <= this->getDataLength() )
+						sz = payload + 4u;
 				}
 			}
 			// RTSP message
-			else if ( (sz = string( _data ).find( EOL + EOL )) != string::npos )
+			else if ( (sz = string( data ).find( EOL + EOL )) != string::npos )
 			{
 				sz += 2 * EOL.size() + this->getContentLength( );
 			}
 
 			// incomplete
-			if ( sz > _len )
+			if ( sz > len )
 				return 0;
 			else
 				return sz;
@@ -100,11 +102,11 @@ namespace KGD
 
 		// ***********************************************************************************************************************************
 
-		Message::Request * InputBuffer::getNextRequest( size_t pktLen, const string & remoteHost ) throw( RTSP::Exception::ManagedError, KGD::Exception::NotFound )
+		auto_ptr< Message::Request > InputBuffer::getNextRequest( size_t pktLen, const string & remoteHost ) throw( RTSP::Exception::ManagedError, KGD::Exception::NotFound )
 		{
 			if ( pktLen )
 			{
-				Message::Request * rt = new Message::Request( _data, pktLen, remoteHost );
+				auto_ptr< Message::Request > rt( new Message::Request( this->getDataBegin(), pktLen, remoteHost ) );
 				this->dequeue( pktLen );
 				return rt;
 			}
@@ -112,11 +114,11 @@ namespace KGD
 				throw KGD::Exception::NotFound( "request" );
 		}
 
-		Message::Response * InputBuffer::getNextResponse( size_t pktLen ) throw( RTSP::Exception::CSeq, KGD::Exception::NotFound )
+		auto_ptr< Message::Response > InputBuffer::getNextResponse( size_t pktLen ) throw( RTSP::Exception::CSeq, KGD::Exception::NotFound )
 		{
 			if ( pktLen )
 			{
-				Message::Response * rt = new Message::Response( _data, pktLen );
+				auto_ptr< Message::Response > rt( new Message::Response( this->getDataBegin(), pktLen ) );
 				this->dequeue( pktLen );
 				return rt;
 			}
@@ -124,15 +126,18 @@ namespace KGD
 				throw KGD::Exception::NotFound( "response" );
 		}
 
-		pair< TPort, RTP::Packet * > InputBuffer::getNextInterleave( size_t pktLen ) throw( KGD::Exception::NotFound )
+		pair< TPort, boost::shared_ptr< RTP::Packet > > InputBuffer::getNextInterleave( size_t pktLen ) throw( KGD::Exception::NotFound )
 		{
-			if ( pktLen && _data[0] == '$')
+			const char * data = this->getDataBegin();
+			if ( pktLen && data[0] == '$')
 			{
-				TPort chan = _data[1];
+				BOOST_ASSERT( pktLen >= 4 );
+				pair< TPort, boost::shared_ptr< RTP::Packet > > rt;
+				rt.first = data[1];
 // 				Log::debug("RTSP: Got interleaved on channel %d", chan);
-				RTP::Packet * pkt = new RTP::Packet( &_data[4], pktLen - 4);
+				rt.second.reset( new RTP::Packet( &data[4], pktLen - 4) );
 				this->dequeue( pktLen );
-				return make_pair( chan, pkt );
+				return rt;
 			}
 			else
 				throw KGD::Exception::NotFound( "interleave packet" );			

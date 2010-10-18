@@ -65,11 +65,11 @@ namespace KGD
 			//! returns next packet' length, or 0 if incomplete
 			size_t getNextPacketLength() const throw( );
 			//! returns next request
-			Message::Request * getNextRequest( size_t pktLen, const string & remoteHost ) throw( RTSP::Exception::ManagedError, KGD::Exception::NotFound );
+			auto_ptr< Message::Request > getNextRequest( size_t pktLen, const string & remoteHost ) throw( RTSP::Exception::ManagedError, KGD::Exception::NotFound );
 			//! returns next response code
-			Message::Response * getNextResponse( size_t pktLen ) throw( RTSP::Exception::CSeq, KGD::Exception::NotFound );
+			auto_ptr< Message::Response > getNextResponse( size_t pktLen ) throw( RTSP::Exception::CSeq, KGD::Exception::NotFound );
 			//! returns next interleaved packet
-			pair< TPort, RTP::Packet * > getNextInterleave( size_t pktLen ) throw( KGD::Exception::NotFound );
+			pair< TPort, boost::shared_ptr< RTP::Packet > > getNextInterleave( size_t pktLen ) throw( KGD::Exception::NotFound );
 		};
 	}
 }

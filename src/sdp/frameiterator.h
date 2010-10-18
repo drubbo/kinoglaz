@@ -44,7 +44,8 @@ namespace KGD
 			namespace Iterator
 			{
 				class Base
-				: public Virtual
+				: public boost::noncopyable
+				, public Virtual
 				{
 				public:
 					virtual ~Base();
@@ -80,7 +81,7 @@ namespace KGD
 				{
 				protected:
 					//! medium whose frames we're iterating over
-					Ptr::Ref< Medium::Base > _med;
+					Medium::Base & _med;
 					//! current position in the frame vector
 					size_t _pos;
 
@@ -115,14 +116,14 @@ namespace KGD
 					//! inserts a void space
 					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
 				};
-
+/*
 				//! Iterator over a detached frame set
 				class Slice
 				: public Base
 				{
 				protected:
 					//! frames we're iterating over
-					vector< Frame::Base * > _frames;
+					boost::ptr_vector< Frame::Base > _frames;
 					//! current position in the frame vector
 					size_t _pos;
 					//! time extension of frame vector
@@ -160,20 +161,18 @@ namespace KGD
 					//! inserts a void space
 					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
 				};
-
+*/
 				//! Loops another iterator
 				class Loop
 				: public Base
 				{
 				protected:
 					//! iterator we're looping
-					Ptr::Scoped< Iterator::Base > _it;
+					boost::scoped_ptr< Iterator::Base > _it;
 					//! number of iterations to do ( 0 = oo )
 					uint8_t _times;
 					//! current iteration
 					size_t _cur;
-					//! current displaced frame
-					mutable list< Frame::Base * > _curFrames;
 
 					//! copy another iterator
 					Loop( const Loop & ) throw();

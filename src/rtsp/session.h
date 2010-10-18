@@ -40,16 +40,18 @@
 #include "lib/urlencode.h"
 #include "rtsp/common.h"
 #include "lib/socket.h"
-#include "lib/utils/pointer.hpp"
-#include "lib/utils/map.hpp"
 #include "lib/exceptions.h"
 #include "rtsp/error.h"
 #include "sdp/sdp.h"
 
-#include "config.h"
-
 #include <vector>
 #include <string>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#else
+#error "Please use platform configuration file."
+#endif
 
 using namespace std;
 
@@ -66,15 +68,16 @@ namespace KGD
 
 		//! RTSP session
 		class Session
+		: public boost::noncopyable
 		{
 		private:
-			typedef Ptr::Map< string, RTP::Session > TSessionMap;
+			typedef boost::ptr_map< string, RTP::Session > SessionMap;
 			//! RTSP session id
 			TSessionID _id;
 			//! RTP sessions
-			TSessionMap _sessions;
+			SessionMap _sessions;
 			//! Originating request
-			Ptr::Ref< Connection > _conn;
+			Connection & _conn;
 			//! registers if a play has been ever issued
 			bool _playIssued;
 			//! log identifier
@@ -89,9 +92,9 @@ namespace KGD
 			//! creates a new RTP session returning it
 			RTP::Session & createSession( const Url & url, const Channel::Description & remote ) throw( RTSP::Exception::ManagedError );
 			//! returns RTP session list
-			list< Ptr::Ref< RTP::Session > > getSessions() throw();
+			ref_list< RTP::Session > getSessions() throw();
 			//! returns RTP session list
-			list< Ptr::Ref< const RTP::Session > > getSessions() const throw();
+			ref_list< const RTP::Session > getSessions() const throw();
 			//! returns the RTP session relative to the track specified
 			RTP::Session & getSession( const string & track ) throw( RTSP::Exception::ManagedError );
 			//! returns the RTP session relative to the track specified
@@ -102,9 +105,9 @@ namespace KGD
 			//! returns this session' ID
 			const TSessionID & getID() const throw();
 			//! returns this session' originating Connection
-			Connection & getConnection() throw( KGD::Exception::NullPointer );
+			Connection & getConnection() throw( );
 			//! returns this session' originating Connection
-			const Connection & getConnection() const throw( KGD::Exception::NullPointer );
+			const Connection & getConnection() const throw( );
 
 			//! adds another media in the current running sessions at specified media time (oo = asap)
 			void insertMedia( SDP::Container & media, double curMediaTime = HUGE_VAL ) throw( KGD::Exception::OutOfBounds );

@@ -55,23 +55,22 @@ namespace KGD
 		static const size_t pSizeRR = sizeof( ReceiverReport::Payload );
 		static const size_t pSizeSDES = sizeof( SourceDescription::Payload );
 
-		Receiver::Receiver( RTP::Session & s, const Ptr::Shared< Channel::Bi > & chan )
+		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
 		: _sock( chan )
-		, _running( false )
-		, _paused( false )
 		, _logName( s.getLogName() + string(" RTCP Receiver") )
 		{
-
+			_status[ Status::RUNNING ] = false;
+			_status[ Status::PAUSED ] = false;
 		}
 
 		Receiver::~Receiver()
 		{
 			this->stop();
-			if ( _th /*&& _running */)
+			if ( _th )
 			{
 				Log::debug( "%s: waiting thread join", getLogName() );
 				_th->join();
-				_th.destroy();
+				_th.reset();
 			}
 			Log::debug( "%s: destroyed", getLogName() );
 		}
@@ -83,13 +82,14 @@ namespace KGD
 
 		void Receiver::updateStats( const ReceiverReport::Payload & pRR )
 		{
-			RLock lk( _muxStats );
-			_stats.fractLost = pRR.fractLost;
-			_stats.pktLost = ntohl(pRR.pktLost);
-			_stats.highestSeqNo = ntohl(pRR.highestSeqNo);
-			_stats.jitter = ntohl( pRR.jitter );
-			_stats.lastSR = ntohl( pRR.lastSR );
-			_stats.delaySinceLastSR = ntohl( pRR.delaySinceLastSR );
+			Stats::LockerType lk( _stats );
+
+			(*_stats).fractLost = pRR.fractLost;
+			(*_stats).pktLost = ntohl(pRR.pktLost);
+			(*_stats).highestSeqNo = ntohl(pRR.highestSeqNo);
+			(*_stats).jitter = ntohl( pRR.jitter );
+			(*_stats).lastSR = ntohl( pRR.lastSR );
+			(*_stats).delaySinceLastSR = ntohl( pRR.delaySinceLastSR );
 
 // 			_stats.log( "Receiver" );
 		}
@@ -111,19 +111,22 @@ namespace KGD
 			data += hSizeSR; pos += hSizeSR;
 
 			// get payload(s)
-			list< Ptr::Ref< const ReceiverReport::Payload > > reports;
+			list< const ReceiverReport::Payload * > reports;
 			for (size_t i = 0; i < h.count; ++i)
 			{
 				if ( size - pos < pSizeSR ) return false;
-				reports.push_back( reinterpret_cast< const ReceiverReport::Payload & >( *data ) );
+				reports.push_back( reinterpret_cast< const ReceiverReport::Payload * >( data ) );
 				data += pSizeSR; pos += pSizeSR;
 			}
 			// packet complete, update stats
-			_stats.SRcount ++;
-			_stats.pktCount   = ntohl(hSR.pktCount);
-			_stats.octetCount = ntohl(hSR.octetCount);
-			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
-				this->updateStats( *it );
+			{
+				Stats::LockerType lk( _stats );
+				(*_stats).SRcount ++;
+				(*_stats).pktCount   = ntohl(hSR.pktCount);
+				(*_stats).octetCount = ntohl(hSR.octetCount);
+			}
+			BOOST_FOREACH( const ReceiverReport::Payload * rpt, reports )
+				this->updateStats( *rpt );
 
 			return true;
 		}
@@ -143,17 +146,21 @@ namespace KGD
 			data += hSizeRR; pos += hSizeRR;
 
 			// get payload(s)
-			list< Ptr::Ref< const ReceiverReport::Payload > > reports;
+			list< const ReceiverReport::Payload * > reports;
 			for (size_t i = 0; i < h.count; ++i)
 			{
 				if ( size - pos < pSizeRR ) return false;
-				reports.push_back( reinterpret_cast< const ReceiverReport::Payload & >( *data ) );
+				reports.push_back( reinterpret_cast< const ReceiverReport::Payload * >( data ) );
 				data += pSizeRR; pos += pSizeRR;
 			}
 			// packet complete, update stats
-			_stats.RRcount ++;
-			for( Ctr::ConstIterator< list< Ptr::Ref< const ReceiverReport::Payload > > > it( reports ); it.isValid(); it.next() )
-				this->updateStats( *it );
+			{
+				Stats::LockerType lk( _stats );
+				(*_stats).RRcount ++;
+			}
+			
+			BOOST_FOREACH( const ReceiverReport::Payload * rpt, reports )
+				this->updateStats( *rpt );
 
 			return true;
 		}
@@ -224,7 +231,10 @@ namespace KGD
 				}
 
 				// update stats
-				_stats.destSsrc = ntohs( hSD.ssrc );
+				{
+					Stats::LockerType lk( _stats );
+					(*_stats).destSsrc = ntohs( hSD.ssrc );
+				}
 			}
 			return true;
 		}
@@ -235,15 +245,13 @@ namespace KGD
 			_buffer.enqueue( buffer, len );
 			char const * data = _buffer.getDataBegin();
 			size_t i = 0;
-			while (
-				_buffer.getDataLength() > 1
-				&& i < _buffer.getDataLength() - 2
-			)
+			// while we have at least four bytes
+			while ( i + 3u < _buffer.getDataLength() )
 			{
-				bool (Receiver::* fPtr) ( char const * const, size_t )  = 0;
+				bool (Receiver::* fPtr) ( char const *, size_t )  = 0;
 				PacketType::code type = PacketType::code(uint8_t(data[i + 1 ]));
 				size_t size = (ntohs(*((short *) &(data[i + 2]))) + 1) * 4;
-
+				// if we have received the whole packet
 				if ( i + size <= _buffer.getDataLength() )
 				{
 					switch (type)
@@ -267,7 +275,9 @@ namespace KGD
 						i += size;
 						break;
 					default:
+						Log::warning( "%s: unknown packet type %u", getLogName(), type );
 						++ i;
+						continue;
 					}
 					if ( fPtr )
 					{
@@ -277,8 +287,11 @@ namespace KGD
 							++i;
 					}
 				}
+				else
+					break;
 			}
 
+			Log::debug( "%s: dequeuing %u bytes", getLogName(), i );
 			_buffer.dequeue(i);
 		}
 
@@ -290,16 +303,17 @@ namespace KGD
 
 			try
 			{
-				while( _running )
+				Status::type::LockerType lk( _status );
+
+				while( _status[ Status::RUNNING ] )
 				{
-					while( _paused )
+					while( _status[ Status::PAUSED ] )
 					{
 						Log::message( "%s: paused", getLogName() );
-						Lock lk( _muxPause );
-						_condUnPause.wait( lk );
+						_condUnPause.wait( lk.getLock() );
 					}
 
-					if ( _running )
+					if ( _status[ Status::RUNNING ] )
 					{
 						try
 						{
@@ -324,8 +338,8 @@ namespace KGD
 				Log::error( "%s: %s", getLogName(), e.what() );
 			}
 
-			_running = false;
-			_paused = false;
+			_status[ Status::RUNNING ] = false;
+			_status[ Status::PAUSED ] = false;
 			Log::debug( "%s: stopped", getLogName() );
 
 			this->getStats().log( "Receiver" );
@@ -334,36 +348,40 @@ namespace KGD
 
 		void Receiver::start()
 		{
-			if ( !_running )
+			Status::type::LockerType lk( _status );
+			if ( !_status[ Status::RUNNING ] )
 			{
-				_running = true;
-				_th = new Thread(boost::bind(&Receiver::recvLoop,this));
+				_status[ Status::RUNNING ] = true;
+				_th.reset( new boost::thread(boost::bind(&Receiver::recvLoop,this)) );
 			}
-			else if ( _paused )
+			else if ( _status[ Status::PAUSED ] )
 				this->unpause();
 		}
 
 		void Receiver::pause()
 		{
-			_paused = true;
+			Status::type::LockerType lk( _status );
+			_status[ Status::PAUSED ] = true;
 		}
 
 		void Receiver::unpause()
 		{
-			_paused = false;
+			Status::type::LockerType lk( _status );
+			_status[ Status::PAUSED ] = false;
 			_condUnPause.notify_all();
 		}
 
 		void Receiver::stop()
 		{
-			_running = false;
-			if ( _paused )
+			Status::type::LockerType lk( _status );
+			_status[ Status::RUNNING ] = false;
+			if ( _status[ Status::PAUSED ] )
 				this->unpause();
 		}
 		Stat Receiver::getStats() const throw()
 		{
-			RLock lk( _muxStats );
-			return _stats;
+			Stats::LockerType lk( _stats );
+			return *_stats;
 		}
 
 
