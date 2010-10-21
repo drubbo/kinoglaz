@@ -51,49 +51,69 @@ namespace KGD
 
 	namespace RTP
 	{
+		Session::Pause::Pause()
+		: asleep(2)
+		, sync(false)
+		{
+		}
+
+		Session::Rtcp::Rtcp( const boost::shared_ptr< Channel::Bi > s )
+		: sock( s )
+		{
+		}
+
+		void Session::Rtcp::start( Session & s )
+		{
+			sender.reset( new RTCP::Sender( s, sock ));
+			receiver.reset( new RTCP::Receiver( s, sock ));
+		}
+
 		Session::Session
-		( const Url & url,
+		( RTSP::Session & parent, const Url & url,
 		  SDP::Medium::Base & sdp,
 		  const boost::shared_ptr< Channel::Out > rtp,
 		  const boost::shared_ptr< Channel::Bi > rtcp,
-		  const string & parentLogName,
 		  RTSP::UserAgent::type agent
 		)
-		: _time( Factory::ClassRegistry< Timeline::Medium >::newInstance( agent ) )
-		, _paused( false )
-		, _stopped( true )
-		, _playing( false )
-		, _seeked( false )
+		: _rtsp( parent )
 		, _url( url )
 		, _medium( sdp )
-		, _RTPsock( rtp )
-		, _RTCPsock( rtcp )
-		, _frameBuf( Factory::ClassRegistry< Buffer::Base >::newInstance( sdp.getPayloadType() ) )
+		, _sock( rtp )
+		, _rtcp( rtcp )
+		, _th( 2 )
 		, _timeEnd( HUGE_VAL )
 		, _seqStart(0)
 		, _seqCur(0)
 		, _ssrc( TSSrc(random()) )
-		, _logName( parentLogName + " PT " + toString( sdp.getPayloadType() ) )
+		, _logName( parent.getLogName() + string(" PT ") + toString( sdp.getPayloadType() ) )
 		{
-			_frameBuf->setMediumDescriptor( sdp );
-			_frameBuf->setParentLogName( _logName );
+			_status.bag[ Status::PAUSED ] = false;
+			_status.bag[ Status::STOPPED ] = true;
+			_status.bag[ Status::SEEKED ] = false;
 
-			_time->setRate( sdp.getRate() );
+			_frame.time.reset( Factory::ClassRegistry< Timeline::Medium >::newInstance( agent ) );
+			_frame.buf.reset( Factory::ClassRegistry< Buffer::Base >::newInstance( sdp.getPayloadType() ) );
+			
+			_frame.buf->setMediumDescriptor( sdp );
+			_frame.buf->setParentLogName( _logName );
 
-			_RTCPsender.reset( new RTCP::Sender( *this, _RTCPsock ) );
-			_RTCPreceiver.reset( new RTCP::Receiver( *this, _RTCPsock ) );
+			_frame.time->setRate( sdp.getRate() );
+
+			_rtcp.start( *this );
 
 			this->seqRestart();
 		}
 
 		Session::~Session()
 		{
+			Log::debug( "%s: destroying", getLogName() );
+			
 			this->teardown( RTSP::PlayRequest() );
 
 			// release UDP ports if needed
 			Channel::Description
-				rtpDesc = _RTPsock->getDescription(),
-				rtcpDesc = _RTCPsock->getDescription();
+				rtpDesc = _sock->getDescription(),
+				rtcpDesc = _rtcp.sock->getDescription();
 			if ( rtpDesc.type == Channel::Owned && rtcpDesc.type == Channel::Owned )
 			{
 				RTSP::Port::Udp::getInstance()->release( TPortPair( rtpDesc.ports.first, rtcpDesc.ports.first ) );
@@ -114,7 +134,8 @@ namespace KGD
 
 		bool Session::isPlaying() const throw()
 		{
-			return _playing;
+			RLock lk( _th );
+			return !_status.bag[ Status::STOPPED ] && !_status.bag[ Status::PAUSED ] ;
 		}
 
 		const SDP::Medium::Base & Session::getDescription() const
@@ -126,181 +147,196 @@ namespace KGD
 			return *_medium;
 		}
 
-		double Session::fetchNextFrame( Lock & lk) throw( RTP::Eof )
+		double Session::fetchNextFrame( RLock & lk) throw( RTP::Eof )
 		{
 
 			try
 			{
 				auto_ptr< RTP::Frame::Base > tmp;
 
-				if ( _seeked )
+				if ( _status.bag[ Status::SEEKED ] )
 				{
 					Log::debug( "%s: seeked, skip unordered frames", getLogName() );
 
 					double
-						now = _time->getPresentationTime(),
-						spd = _time->getSpeed(),
+						now = _frame.time->getPresentationTime(),
+						spd = _frame.time->getSpeed(),
 						fTime = HUGE_VAL,
 						sendWorse = HUGE_VAL;
 
-					lk.unlock();
-
-					for(;;)
 					{
-						tmp.reset( _frameBuf->getNextFrame() );
-						fTime = tmp->getTime();
-						double sendIn = (fTime - now) / spd;
-
-						if ( sendIn > 1 )
+						Safe::UnRLock ulk( lk );
+						for(;;)
 						{
-							if ( sendIn > sendWorse )
-								break;
-							else
+							tmp.reset( _frame.buf->getNextFrame() );
+							fTime = tmp->getTime();
+							double sendIn = (fTime - now) / spd;
+
+							if ( sendIn > 1 )
 							{
-								Log::debug( "%s: skip strange frame at %lf to send in %lf", getLogName(), fTime, sendIn );
-								now = _time->getPresentationTime();
-								sendWorse = sendIn;
+								if ( sendIn > sendWorse )
+									break;
+								else
+								{
+									Log::debug( "%s: skip far future frame at %lf to send in %lf", getLogName(), fTime, sendIn );
+									now = _frame.time->getPresentationTime();
+									sendWorse = sendIn;
+								}
 							}
+							else
+								break;
 						}
-						else
-							break;
 					}
-					lk.lock( );
-					_seeked = false;
+
+					_status.bag[ Status::SEEKED ] = false;
 				}
 				else
 				{
-					lk.unlock();
-					tmp.reset( _frameBuf->getNextFrame() );
-					lk.lock();
+					Safe::UnRLock ulk( lk );
+					tmp.reset( _frame.buf->getNextFrame() );
 				}
 
 				// release sent frame
-				if ( _frameNext )
-					_medium->releaseFrame( _frameNext->getMediumPos() );
+				if ( _frame.next )
+					_medium->releaseFrame( _frame.next->getMediumPos() );
 				// update frame to send
-				_frameNext.reset( tmp.release() );
+				_frame.next.reset( tmp.release() );
 
-				return _frameNext->getTime();
+				return _frame.next->getTime();
 			}
-			catch( ... )
+			catch( KGD::Exception::Generic const & e )
 			{
-				_frameNext.reset();
+				Log::error( "%s: &s", getLogName(), e.what() );
+				_frame.next.reset();
+
 				throw;
 			}
 		}
 
 		void Session::loop()
 		{
-			Lock lk( _mux );
-			Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
-
-			try
 			{
-				uint64_t slp = 0;
-				double now = 0, spd = 0;
-				double ft = this->fetchNextFrame( lk ) ;
+				RLock lk( _th );
+				Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
 
-// 				Log::verbose("%s: loop got frame at %lf s", getLogName(), ft );
-
-				while (!_stopped)
+				try
 				{
-					Log::debug("%s: main loop entered", getLogName() );
-					try
+					uint64_t slp = 0;
+					double now = 0, spd = 0;
+					double ft = this->fetchNextFrame( lk ) ;
+
+	// 				Log::verbose("%s: loop got frame at %lf s", getLogName(), ft );
+
+					while (!_status.bag[ Status::STOPPED ])
 					{
-						// exit loop if stopped, paused, or stream time has ended
-						do
+						Log::debug("%s: main loop entered", getLogName() );
+						while( _status.bag[ Status::PAUSED ] )
 						{
-							// calc sleep while holding last fetched frame
+							Log::message( "%s: go pause", getLogName() );
+							_frame.rate.stop();
+							_frame.time->pause( Clock::getSec() );
+							// signal "going to pause"
+							if ( _pause.sync )
 							{
-								Lock fLk( _frameMux );
-								// send frames while their time is before now
-								do
+								Safe::UnRLock ulk( lk );
+								_pause.asleep.wait();
+							}
+							// wait wakeup
+							_pause.wakeup.wait( lk );
+						}
+
+						try
+						{
+							// exit loop if stopped, paused, or stream time has ended
+							do
+							{
+								// calc sleep while holding last fetched frame
 								{
-									this->sendNextFrame( );
-									ft = this->fetchNextFrame( lk );
+									// send frames while their time is before now
+									do
+									{
+										this->sendNextFrame( );
+										ft = this->fetchNextFrame( lk );
 
-									now = _time->getPresentationTime();
-									spd = _time->getSpeed();
+										now = _frame.time->getPresentationTime();
+										spd = _frame.time->getSpeed();
+									}
+									while ( ( ft - now ) * sign( spd ) <= 0.0 );
+									// this will always be positive
+									slp = Clock::secToNano( ( ft - now ) / spd );
 								}
-								while ( ( ft - now ) * sign( spd ) <= 0.0 );
-								// this will always be positive
-								slp = Clock::secToNano( ( ft - now ) / spd );
+								// don't sleep if nothing to wait for
+								if ( _frame.next )
+								{
+									{
+										Safe::UnRLock ulk( lk );
+										KGD::Clock::sleepNano( slp );
+									}
+									now = _frame.time->getPresentationTime();
+									spd = _frame.time->getSpeed();
+								}
 							}
-							// don't sleep if nothing to wait for
-							if ( _frameNext )
-							{
-								lk.unlock();
-								KGD::Clock::sleepNano( slp );
-								lk.lock();
-
-								now = _time->getPresentationTime();
-								spd = _time->getSpeed();
-							}
+							while( !( _status.bag[ Status::STOPPED ] || _status.bag[ Status::PAUSED ] || ( _timeEnd - now ) * sign( spd ) <= 0.0 ) );
 						}
-						while( !( _stopped || _paused || ( _timeEnd - now ) * sign( spd ) <= 0.0 ) );
-					}
-					catch ( RTP::Eof )
-					{
-						Log::message("%s: reached EOF", getLogName() );
-					}
-					catch ( KGD::Socket::Exception )
-					{
-						throw;
-					}
-					catch ( KGD::Exception::Generic const & e)
-					{
-						Log::error( "%s: %s", getLogName(), e.what() );
-					}
-					// reached EOF or told to pause
-					if ( !_stopped )
-					{
-						if ( !_paused )
+						catch ( KGD::Socket::Exception const & e )
 						{
-							Log::message( "%s: self pausing", getLogName() );
-							_paused = true;
-							_fRate.stop();
-							_time->pause( Clock::getSec() );
+							throw;
 						}
-
-						Log::message( "%s: go pause", getLogName() );
-						_condPaused.notify_all();
-						lk.try_lock();
-						_condUnPause.wait( lk );
+						catch ( RTP::Eof )
+						{
+							Log::message("%s: reached EOF", getLogName() );
+						}
+						catch ( KGD::Exception::Generic const & e)
+						{
+							Log::error( "%s: %s", getLogName(), e.what() );
+						}
+						// reached EOF or told to pause
+						if ( !_status.bag[ Status::STOPPED ] )
+						{
+							if ( !_status.bag[ Status::PAUSED ] )
+							{
+								Log::message( "%s: self pausing", getLogName() );
+								_status.bag[ Status::PAUSED ] = true;
+								_pause.sync = false;
+							}
+						}
 					}
 				}
+				catch ( const KGD::Exception::Generic & e)
+				{
+					Log::error( "%s: %s", getLogName(), e.what() );
+				}
+				Log::debug( "%s: loop exited", getLogName() );
+
+				Log::debug( "%s: stopping rtcp sender", getLogName() );
+				_rtcp.sender->stop();
+				Log::debug( "%s: stopping buffer", getLogName() );
+				_frame.buf->stop();
+
+				_status.bag[ Status::STOPPED ] = true;
+				_status.bag[ Status::PAUSED ]  = false;
 			}
-			catch ( const KGD::Exception::Generic & e)
-			{
-				Log::error( "%s: %s", getLogName(), e.what() );
-			}
-			Log::debug( "%s: loop exited", getLogName() );
-
-			_RTCPsender->stop();
-
-			_stopped = true;
-			_paused  = false;
-
-			lk.unlock();
 
 			Log::debug( "%s: loop terminated", getLogName() );
+
+			_th.wait();
 		}
 
 		void Session::sendNextFrame( ) throw( KGD::Socket::Exception )
 		{
-			if ( _frameNext )
+			if ( _frame.next )
 			{
 				try
 				{
-					RTP::TTimestamp rtp = _time->getRTPtime( _frameNext->getTime() );
-					auto_ptr< Packet::List > pkts = _frameNext->getPackets( rtp, _ssrc, _seqCur );
+					RTP::TTimestamp rtp = _frame.time->getRTPtime( _frame.next->getTime() );
+					auto_ptr< Packet::List > pkts = _frame.next->getPackets( rtp, _ssrc, _seqCur );
 
 					BOOST_FOREACH( Packet & pkt, *pkts )
 					{
-						*_RTPsock << pkt;
-						_RTCPsender->registerPacketSent( pkt.data.size() );
+						*_sock << pkt;
+						_rtcp.sender->registerPacketSent( pkt.data.size() );
 					}
-					_fRate.tick();
+					_frame.rate.tick();
 				}
 				catch( KGD::Socket::Exception )
 				{
@@ -335,11 +371,11 @@ namespace KGD
 
 		Channel::Description Session::RTPgetDescription() const
 		{
-			return _RTPsock->getDescription();
+			return _sock->getDescription();
 		}
 		Channel::Description Session::RTCPgetDescription() const
 		{
-			return _RTCPsock->getDescription();
+			return _rtcp.sock->getDescription();
 		}
 
 	}

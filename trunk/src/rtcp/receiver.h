@@ -62,6 +62,8 @@ namespace KGD
 		private:
 			//! communication channel
 			boost::shared_ptr< Channel::Bi > _sock;
+
+			Barrier _syncLoopEnd;
 			//! receive thread
 			Thread _th;
 

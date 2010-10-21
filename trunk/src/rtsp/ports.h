@@ -64,9 +64,11 @@ namespace KGD
 				set< TPort > _free;
 				//! set of used ports
 				set< TPort > _used;
-			public:
+
 				//! build with a given availability range
 				Pool( TPort, TPort );
+
+			public:
 				//! get a single port
 				virtual TPort getOne() throw( KGD::Exception::NotFound );
 				//! get a port pair (even the first, odd the second)
@@ -82,6 +84,7 @@ namespace KGD
 			//! interleaved channels pool, one per RTSP socket; range 0-255
 			class Interleave
 			: public Pool
+			, public boost::noncopyable
 			{
 			public:
 				//! build with default interleave range

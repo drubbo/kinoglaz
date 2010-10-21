@@ -115,8 +115,16 @@ namespace KGD
 				Log::debug( "KGD: serve: %s", e.what() );
 			}
 
-			Log::debug( "KGD: calling remove of %lu", conn->getID() );
-			this->remove( *conn );
+			if ( _running )
+			{
+				Log::debug( "KGD: calling remove of %lu", conn->getID() );
+				this->remove( *conn );
+			}
+			else
+			{
+				Log::warning( "KGD: server is not running, destruction in progress" );
+				boost::this_thread::yield();
+			}
 		}
 
 		void Server::handle( auto_ptr< KGD::Socket::Tcp > channel )
@@ -126,6 +134,7 @@ namespace KGD
 			if ( _maxConnections != 0 && _conns.size() >= _maxConnections )
 				throw RTSP::Exception::Generic( "handle", "KGD: CONN limit already reached" );
 
+// 			channel->setReadTimeout( 1 );
 			// creo il gestore della richiesta
 			auto_ptr< Connection > conn( new Connection( channel.release() ) );
 			Connection * cPtr = conn.get();
@@ -138,28 +147,27 @@ namespace KGD
 		void Server::remove( Connection & conn ) throw( KGD::Exception::NotFound )
 		{
 			RLock lk( Server::mux() );
+			uint32_t connID = conn.getID();
 
-			Log::debug( "KGD: removing connection %lu", conn.getID() );
+			Log::debug( "KGD: removing connection %lu", connID );
 
-			if ( !_running )
+			ConnectionList::iterator it = find_if( _conns.begin(), _conns.end(), boost::bind( &Connection::getID, _1 ) == connID );
+// 			for( ConnectionList::iterator it = _conns.begin(); it != _conns.end(); ++it )
+			if ( it == _conns.end() )
 			{
-				Log::warning( "KGD: server is not running" );
-				return;
+				Log::error("KGD: no connection %lu found", conn.getID() );
+				throw KGD::Exception::NotFound( "KGD: CONN to remove " + toString( conn.getID() ) );
 			}
-
-
-			for( ConnectionList::iterator it = _conns.begin(); it != _conns.end(); ++it )
+			else
 			{
-				if ( it->getID() == conn.getID() )
-				{
+/*				if ( it->getID() == conn.getID() )
+				{*/
 					_conns.erase( it );
 					Log::message("KGD: CONN removed, %d remaining", _conns.size());
-					return;
-				}
+/*					return;
+				}*/
 			}
 
-			Log::error("KGD: no connection %lu found", conn.getID() );
-			throw KGD::Exception::NotFound( "KGD: CONN to remove " + toString( conn.getID() ) );
 		}
 
 		void Server::run()

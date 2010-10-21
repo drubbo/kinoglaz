@@ -57,6 +57,7 @@ namespace KGD
 
 		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
 		: _sock( chan )
+		, _syncLoopEnd( 2 )
 		, _logName( s.getLogName() + string(" RTCP Receiver") )
 		{
 			_status[ Status::RUNNING ] = false;
@@ -66,12 +67,12 @@ namespace KGD
 		Receiver::~Receiver()
 		{
 			this->stop();
-			if ( _th )
+/*			if ( _th )
 			{
 				Log::debug( "%s: waiting thread join", getLogName() );
 				_th->join();
 				_th.reset();
-			}
+			}*/
 			Log::debug( "%s: destroyed", getLogName() );
 		}
 
@@ -301,7 +302,6 @@ namespace KGD
 			Log::debug( "%s: started", getLogName() );
 			CharArray buffer( 1024 );
 
-			try
 			{
 				Status::type::LockerType lk( _status );
 
@@ -319,43 +319,51 @@ namespace KGD
 						{
 							ssize_t read = 0;
 							Log::debug( "%s waiting message", getLogName() );
-							if ( ( read = _sock->readSome( buffer ) ) > 0 )
+							{
+								Status::type::UnLockerType ulk( lk );
+								read = _sock->readSome( buffer ) ;
+							}
+							if ( read > 0 )
 								this->push( buffer.get(), read );
+							else
+								Log::warning( "%s: no data read", getLogName() );
+							
 						}
 						catch( const Socket::Exception & e )
 						{
-							if ( e.getErrcode() != EAGAIN )
-							{
-								Log::error( "%s: %s, stopping", getLogName(), e.what() );
-								this->stop();
-							}
+							Log::error( "%s: %s, stopping", getLogName(), e.what() );
+							_status[ Status::RUNNING ] = false;
 						}
 					}
 				}
-			}
-			catch( const KGD::Socket::Exception & e )
-			{
-				Log::error( "%s: %s", getLogName(), e.what() );
+
+				Log::debug( "%s: loop terminated", getLogName() );
+
+				_status[ Status::RUNNING ] = false;
+				_status[ Status::PAUSED ] = false;
+
+				this->getStats().log( "Receiver" );
 			}
 
-			_status[ Status::RUNNING ] = false;
-			_status[ Status::PAUSED ] = false;
-			Log::debug( "%s: stopped", getLogName() );
-
-			this->getStats().log( "Receiver" );
+			_syncLoopEnd.wait();
 		}
 
 
 		void Receiver::start()
 		{
-			Status::type::LockerType lk( _status );
+			_status.lock();
 			if ( !_status[ Status::RUNNING ] )
 			{
 				_status[ Status::RUNNING ] = true;
+				_status.unlock();
 				_th.reset( new boost::thread(boost::bind(&Receiver::recvLoop,this)) );
 			}
 			else if ( _status[ Status::PAUSED ] )
-				this->unpause();
+			{
+				_status[ Status::PAUSED ] = false;
+				_status.unlock();
+				_condUnPause.notify_all();
+			}
 		}
 
 		void Receiver::pause()
@@ -366,17 +374,33 @@ namespace KGD
 
 		void Receiver::unpause()
 		{
-			Status::type::LockerType lk( _status );
-			_status[ Status::PAUSED ] = false;
+			{
+				Status::type::LockerType lk( _status );
+				_status[ Status::PAUSED ] = false;
+			}
 			_condUnPause.notify_all();
 		}
 
 		void Receiver::stop()
 		{
-			Status::type::LockerType lk( _status );
-			_status[ Status::RUNNING ] = false;
-			if ( _status[ Status::PAUSED ] )
-				this->unpause();
+			_status.lock();
+			if ( _status[ Status::RUNNING ] )
+			{
+				_status[ Status::RUNNING ] = false;
+				if ( _status[ Status::PAUSED ] )
+				{
+					_status[ Status::PAUSED ] = false;
+					_status.unlock();
+					_condUnPause.notify_all();
+				}
+				else
+					_status.unlock();
+			}
+			if ( _th )
+			{
+				_syncLoopEnd.wait();
+				_th.reset();
+			}
 		}
 		Stat Receiver::getStats() const throw()
 		{

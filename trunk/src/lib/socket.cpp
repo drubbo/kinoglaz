@@ -135,27 +135,23 @@ namespace KGD
 
 		Abstract::~Abstract() throw()
 		{
-			try
-			{
-				this->close();
-			}
-			catch ( Socket::Exception const& e)
-			{
-				Log::error( e );
-			}
-
-// 			Log::debug( "Socket destroyed" );
+			Log::debug( "a socket is being destroyed");
+			this->close();
 		}
 
-		void Abstract::close() throw( Socket::Exception )
+		void Abstract::close() throw( )
 		{
+			Log::debug( "a socket is closing");
+			
 			if (_fileDescriptor > -1)
 			{
-	//             ::shutdown(_fileDescriptor, SHUT_RD)
+// 				::shutdown(_fileDescriptor, SHUT_RD)
 				if ( ::close(_fileDescriptor) < 0 )
 				{
-					throw Socket::Exception( "close" );
+					Log::error( Socket::Exception( "close" ) );
 				}
+				else
+					_fileDescriptor = -1;
 			}
 		}
 
@@ -372,19 +368,13 @@ namespace KGD
 			return buffer;
 		}
 
-		void Writer::close() throw( Socket::Exception )
+		void Writer::close() throw( )
 		{
 			_connected = false;
 			memset(&_remote, 0, sizeof(sockaddr_in));
 
-			if (_fileDescriptor > -1)
-			{
-	//           if ( ::shutdown(_fileDescriptor, SHUT_RDWR) < 0 ) {
-				if ( ::close(_fileDescriptor) < 0 )
-				{
-					throw Socket::Exception( "shutdown" );
-				}
-			}
+// 			SHUT_RDWR
+			Abstract::close();
 		}
 
 		size_t Writer::writeSome( void const * data, size_t len ) throw( Socket::Exception )

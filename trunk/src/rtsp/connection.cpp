@@ -62,9 +62,9 @@ namespace KGD
 		{
 			Log::debug("%s: shutting down", getLogName() );
 
-			_socket->stopInterleaving();
-
 			_sessions.clear();
+
+			_socket.reset();
 
 			// release descriptors
 			SDP::Descriptions::Reference sdpool = SDP::Descriptions::getInstance();
@@ -221,8 +221,6 @@ namespace KGD
 					_lastResp.reset( resp );
 				}
 			}
-
-			Log::debug( "%s: listen loop end", getLogName() );
 		}
 
 		Session & Connection::createSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )

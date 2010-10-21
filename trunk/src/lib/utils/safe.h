@@ -46,6 +46,20 @@ namespace KGD
 	//! Thread-safe utilities
 	namespace Safe
 	{
+
+		template< class boost_lock >
+		class BoostUnlocker
+		: public boost::noncopyable
+		{
+			boost_lock & _lk;
+		public:
+			BoostUnlocker( boost_lock & l ) : _lk( l ) { l.unlock(); }
+			~BoostUnlocker() { _lk.lock(); }
+		};
+
+		typedef BoostUnlocker< Lock > UnLock;
+		typedef BoostUnlocker< RLock > UnRLock;
+		
 		//! Locker for any MutexLockable
 		template< class L >
 		class Locker
@@ -81,6 +95,9 @@ namespace KGD
 			typedef M MutexType;
 			typedef L LockType;
 
+			typedef Locker< L > LockerType;
+			typedef UnLocker< L > UnLockerType;
+
 			void lock() const;
 			void unlock() const;
 			M & mux() const;
@@ -94,8 +111,6 @@ namespace KGD
 		private:
 			bitset< N > _bits;
 		public:
-			typedef Locker< L > LockerType;
-			typedef UnLocker< L > UnLockerType;
 
 			bool operator[]( size_t pos ) const;
 			typename bitset< N >::reference operator[]( size_t pos );
@@ -109,8 +124,6 @@ namespace KGD
 		private:
 			bool _bit;
 		public:
-			typedef Locker< L > LockerType;
-			typedef UnLocker< L > UnLockerType;
 
 			Flag( bool b );
 
@@ -129,9 +142,7 @@ namespace KGD
 		protected:
 			T _obj;
 		public:
-			typedef Locker< L > LockerType;
-			typedef UnLocker< L > UnLockerType;
-
+			
 			T& operator*();
 			T const & operator*() const;
 		};

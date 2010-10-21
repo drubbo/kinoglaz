@@ -72,6 +72,8 @@ namespace KGD
 			typedef Safe::Lockable< boost::ptr_list< ByteArray > > InputBuffer;
 			//! receive buffer
 			InputBuffer _recv;
+			//! read timeout
+			double _rdTimeout;
 			//! receive data ready
 			Condition _condNotEmpty;
 			//! running flag
@@ -93,6 +95,10 @@ namespace KGD
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! read from buffer
 			virtual size_t readSome( void *, size_t ) throw( KGD::Socket::Exception );
+			//! is write blocking
+			virtual bool isWriteBlock( ) const throw();
+			//! set read timeout
+			virtual void setReadTimeout( const double sec ) throw( );
 			//! get description
 			virtual Channel::Description getDescription() const;
 			//! push to buffer
@@ -153,15 +159,18 @@ namespace KGD
 			boost::shared_ptr< Interleave > getInterleave( TPort p ) throw( KGD::Exception::NotFound );
 			//! listen for incoming messages
 			void listen() throw( Message::Request *, Message::Response *, KGD::Exception::Generic );
-			//! stop all interleaved channels
+			//! closes socket and begins shutdown of all interleaved channels
+// 			void stop() throw();
+			//! begins shutdown of all interleaved channels
 			void stopInterleaving() throw();
-			//! stop interleaved channels for a specific RTSP session
+			//! begins shutdown of all interleaved channels for a specific RTSP session
 			void stopInterleaving( const TSessionID & ) throw();
 			//! write to socket
 			virtual size_t writeSome( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! write to socket
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
-
+			//! is write blocking
+			virtual bool isWriteBlock( ) const throw();
 
 			//! reply an error
 			void reply( const Error::Definition & error ) throw( KGD::Socket::Exception );

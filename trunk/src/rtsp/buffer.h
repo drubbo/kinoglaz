@@ -54,8 +54,8 @@ namespace KGD
 	{
 
 		//! Input RTSP buffer, with methods to inspect request
-		class InputBuffer :
-			public KGD::Buffer
+		class InputBuffer
+		: public KGD::Buffer
 		{
 		protected:
 			size_t getContentLength( ) const throw( );

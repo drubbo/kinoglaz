@@ -73,7 +73,8 @@ namespace KGD
 			boost::shared_ptr< Channel::Bi > _sock;
 
 			//! sync barrier with RTP session
-			Barrier _sync;
+			Barrier _syncRTP;
+			Barrier _syncLoopEnd;
 			//! send thread
 			Thread _th;
 			//! un-pause condition
