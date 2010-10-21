@@ -84,6 +84,12 @@
   supp-seek=< bool >
       if 0 all plays will be announced as live streams; default to 1
 
+  [RTCP]
+  send-every=< double >
+      send a report every those seconds
+  poll-every=< double >
+      wait for a report every those seconds; this time will increase 
+      to adapt to sender rate
 
   [RTP]
   buf-full=< double >

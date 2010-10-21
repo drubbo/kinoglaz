@@ -3,6 +3,20 @@
                         Kinoglaz Streaming Server
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+22/10/2010      Boosted everything (I missed to tag previous version :/)
+
+                Massive use of FOREACH, bind, smart ptrs and ptr containers
+                Got rid of Ptr and Ctr; reviewed the ref< T > and introduced
+                ref containers
+                Added smarter structs for lockables and threads
+                Better threads termination handling
+                RTCP sender and receiver refactor, adaptive read timeout, ini
+                parameters
+                RTP session & buffer locking refactor
+                Interleave enhanced in exception dealing
+                Spurious bugs removed
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 07/10/2010      Removed a deadlock issue in RTCP receiver
 
                 Unloading sent frames from memory when appliable
