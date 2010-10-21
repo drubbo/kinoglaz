@@ -151,6 +151,8 @@ namespace KGD
 
 				//! ctor
 				Session();
+				//! dtor - unlocks RTSP session if any
+				~Session();
 			public:
 				//! loads session ID and session object
 				virtual void prepare() throw( RTSP::Exception::ManagedError );

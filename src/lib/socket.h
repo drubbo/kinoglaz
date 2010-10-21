@@ -88,6 +88,9 @@ namespace KGD
 			template< class T >
 			size_t writeLast( const Array< T > & ) throw( KGD::Exception::Generic );
 
+			//! is write a blocking operation ?
+			virtual bool isWriteBlock() const = 0;
+
 			//! an Out channel can describe itself
 			virtual Description getDescription() const = 0;
 		};
@@ -103,6 +106,9 @@ namespace KGD
 			//! read a byte array
 			template< class T >
 			size_t readSome( Array< T > & ) throw( KGD::Exception::Generic );
+
+			//! sets read timeout in seconds
+			virtual void setReadTimeout( const double sec ) throw( KGD::Exception::Generic ) = 0;
 
 			//! an In channel can describe itself
 			virtual Description getDescription() const = 0;
@@ -183,9 +189,6 @@ namespace KGD
 			//! opens a new socket potentially bound to a local address
 			Abstract( const Type::type t, const TPort bindPort, const string& bindIP) throw( Socket::Exception );
 
-			//! closes the socket
-			virtual void close() throw( Socket::Exception );
-
 			//! converts a port / ip to a sockaddr_in structure; ip = "*" means "INADDR_ANY"
 			sockaddr_in getAddress(const TPort port, const string& hostName ) const throw( Socket::Exception );
 
@@ -195,6 +198,8 @@ namespace KGD
 		public:
 			//! dtor, closes the socket
 			virtual ~Abstract() throw();
+			//! closes the socket
+			virtual void close() throw( );
 
 			//! returns local bind port
 			TPort getLocalPort() const throw();
@@ -262,15 +267,14 @@ namespace KGD
 			//! ctor
 			Writer() throw();
 
-			//! closes the socket, both ways
-			virtual void close() throw( Socket::Exception );
-
 			//! connects to an end-point
 			void connectTo( const sockaddr_in * const addr ) throw( Socket::Exception );
 
 		public:
 			//! dtor
 			virtual ~Writer() throw();
+			//! closes the socket, both ways
+			virtual void close() throw( );
 
 			//! connects to an end-point
 			void connectTo( const TPort port, const string & host = "127.0.0.1" ) throw( Socket::Exception );
@@ -298,7 +302,7 @@ namespace KGD
 			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)
 			void setWriteBlock( bool = false );
 			//! tells if the socket is in write-blocking mode
-			bool isWriteBlock( ) const;
+			virtual bool isWriteBlock( ) const;
 			//! sets "last packet of sequence" flag
 			virtual void setLastPacket( bool = true );
 			//! tells if next packet will be last in sequence

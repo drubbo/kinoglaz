@@ -207,6 +207,13 @@ namespace KGD
 
 				_sessionID = this->getSessionID();
 				_rtsp = this->getSession();
+				_rtsp->lock();
+			}
+
+			Session::~Session()
+			{
+				if ( _rtsp )
+					_rtsp->unlock();
 			}
 
 			// ****************************************************************************************************************
@@ -537,7 +544,11 @@ namespace KGD
 			void Teardown::execute() throw( RTSP::Exception::ManagedError )
 			{
 				if ( _url->track.empty() )
+				{
+					_rtsp->unlock();
+					_rtsp.invalidate();
 					_conn->removeSession( _sessionID );
+				}
 				else
 					_rtsp->removeSession( _url->track );
 			}

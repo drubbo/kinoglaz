@@ -52,6 +52,7 @@ namespace KGD
 		, _ssid( ssid )
 		, _sock( s )
 		, _rtspSocket( sock )
+		, _rdTimeout( -1 )
 		, _running( true )
 		, _logName( sock.getLogName() + string( " CHANNEL $" ) + toString( local ) )
 		{
@@ -82,6 +83,11 @@ namespace KGD
 			return _logName.c_str();
 		}
 
+		void Interleave::setReadTimeout( double t ) throw()
+		{
+			_rdTimeout = t;
+		}
+
 		void Interleave::pushToRead( const ByteArray & data ) throw( )
 		{
 			this->pushToRead( data.get(), data.size() );
@@ -110,7 +116,7 @@ namespace KGD
 			}
 			else
 			{
-				Log::debug( "%s: reader queue not running", getLogName() );
+				Log::debug( "%s: channel already stopped", getLogName() );
 				_recv.unlock();
 			}
 		}
@@ -126,29 +132,35 @@ namespace KGD
 
 			{
 				TcpTunnel::LockerType lk( _sock );
-				// not counting header bytes
-				return (*_sock)->writeAll( envelope ) - 4;
+				if ( _running )
+				{
+					// not counting header bytes
+					return (*_sock)->writeAll( envelope ) - 4;
+				}
+				else
+					throw KGD::Socket::Exception( "writeSome", "connection shut down" );
 			}
 		}
 
 		size_t Interleave::writeLast( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
 			TcpTunnel::LockerType lk( _sock );
-			(*_sock)->setLastPacket( true );
-			return this->writeSome( data, sz );
+			if ( _running )
+			{
+				(*_sock)->setLastPacket( true );
+				return this->writeSome( data, sz );
+			}
+			else
+				throw KGD::Socket::Exception( "writeLast", "connection shut down" );
 		}
 
 		size_t Interleave::readSome( void * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
 			InputBuffer::LockerType lk( _recv );
-			for(;;)
+			while( _running )
 			{
-				if ( !_running )
-				{
-					Log::debug( "%s: socket has stopped", getLogName() );
-					throw KGD::Socket::Exception( "readSome", "connection shut down" );
-				}
-				else if ( ! (*_recv).empty() )
+				// have data
+				if ( ! (*_recv).empty() )
 				{
 					Log::debug( "%s: socket has data", getLogName() );
 					ByteArray & buf = (*_recv).front();
@@ -159,12 +171,34 @@ namespace KGD
 						buf.chopFront( rt );
 					return rt;
 				}
+				// read is not blocking
+				else if ( _rdTimeout == 0 )
+					return 0;
+				// read is blocking or timed blocking
 				else
 				{
 					Log::debug( "%s: waiting interleaved data", getLogName() );
-					_condNotEmpty.wait( lk.getLock() );
+					// blocking, wait until data arrives
+					if ( _rdTimeout < 0 )
+						_condNotEmpty.wait( lk.getLock() );
+					// timed, wait at most timeout
+					else
+					{
+						if ( ! _condNotEmpty.timed_wait( lk.getLock(), Clock::boostDeltaSec( _rdTimeout ) ) )
+							// time expired
+							return 0;
+					}
+						
 				}
 			}
+
+			Log::debug( "%s: socket has stopped", getLogName() );
+			throw KGD::Socket::Exception( "readSome", "connection shut down" );
+		}
+
+		bool Interleave::isWriteBlock( ) const throw()
+		{
+			return (*_sock)->isWriteBlock();
 		}
 
 		Channel::Description Interleave::getDescription() const
@@ -183,19 +217,27 @@ namespace KGD
 		, _logName( parentLogName + " SOCKET" )
 		{
 			(*_sock).reset( sk );
+/*			// we want non-blocking operations
+			(*_sock)->setWriteBlock( false );*/
 		}
 
 		Socket::~Socket()
 		{
 			Log::debug("%s: socket shutting down", getLogName());
+
 			this->stopInterleaving();
 			{
-				// wait termination
 				Lock lk( _muxPorts );
 				if ( ! _iChans.empty() )
 					_condNoInterleave.wait( lk );
 			}
-			Log::debug("%s: released and closed", getLogName());
+			Log::debug("%s: released", getLogName());
+
+			{
+				TcpTunnel::LockerType lk( _sock );
+				(*_sock)->close();				
+			}
+			Log::debug("%s: closed", getLogName());
 		}
 
 		void Socket::stopInterleaving() throw()
@@ -370,6 +412,7 @@ namespace KGD
 
 				}
 			}
+			Log::message( "%s: connection loop terminated", getLogName() );
 		}
 
 
@@ -394,6 +437,11 @@ namespace KGD
 			TcpTunnel::LockerType lk( _sock );
 			(*_sock)->setLastPacket( true );
 			return this->writeSome( data, sz );
+		}
+
+		bool Socket::isWriteBlock( ) const throw()
+		{
+			return (*_sock)->isWriteBlock();
 		}
 
 		void Socket::reply( const uint16_t code, const string & msg ) throw( KGD::Socket::Exception )

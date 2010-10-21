@@ -44,6 +44,8 @@ extern "C" {
 #include <inttypes.h>
 }
 
+#include <boost/date_time.hpp>
+
 using namespace std;
 
 namespace KGD
@@ -56,6 +58,9 @@ namespace KGD
 		//! factor to get nano from seconds
 		const uint64_t SEC_2_NSEC = 1000000000u;
 
+		//! boost absolute time relative to current
+		boost::posix_time::ptime boostDeltaSec( double sec ) throw();
+		
 		//! returns current time in sec and fills given structure
 		double getSec( timespec *now ) throw();
 		//! returns current time in sec 

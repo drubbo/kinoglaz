@@ -61,6 +61,7 @@ namespace KGD
 
 		Session::~Session()
 		{
+			LockerType lk( *this );
 			_sessions.clear();
 		}
 
@@ -126,6 +127,7 @@ namespace KGD
 
 					rtpChan = rtsp.getInterleave( local.first );
 					rtcpChan = rtsp.getInterleave( local.second );
+					rtcpChan->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 				}
 
 				// get description
@@ -133,7 +135,7 @@ namespace KGD
 				SDP::Medium::Base & med = _conn.getDescription( url.file ).getMedium( mediumIndex );
 
 				// create session
-				auto_ptr< RTP::Session > s( new RTP::Session( url, med, rtpChan, rtcpChan, getLogName(), _conn.getUserAgent() ) );
+				auto_ptr< RTP::Session > s( new RTP::Session( *this, url, med, rtpChan, rtcpChan, _conn.getUserAgent() ) );
 				RTP::Session * sPtr = s.get();
 				{
 					string tmpTrack( url.track );
@@ -340,6 +342,7 @@ namespace KGD
 
 		void Session::removeSession( const string & track ) throw( RTSP::Exception::ManagedError )
 		{
+			Log::debug( "%s: removing RTP session %s", getLogName(), track.c_str() );
 			if ( ! _sessions.erase( track ) )
 				throw RTSP::Exception::ManagedError( Error::NotFound );
 		}

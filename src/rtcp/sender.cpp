@@ -59,8 +59,9 @@ namespace KGD
 			}
 			catch( Socket::Exception const & e )
 			{
-				if (e.getErrcode() != EAGAIN )
-					throw;
+				Log::message( "Socket error during RTCP Sender packet send: %s", e.what() );
+// 				if ( s.isWriteBlock() || ( e.getErrcode() != EAGAIN && e.getErrcode() != EWOULDBLOCK ) )
+				throw;
 			}
 		}
 
@@ -75,26 +76,20 @@ namespace KGD
 		Sender::Sender( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
 		: _rtp(s)
 		, _sock(sock)
-		, _sync( 2 )
+		, _syncRTP( 2 )
+		, _syncLoopEnd( 2 )
 		, _logName( s.getLogName() + string(" RTCP Sender") )
 		{
 			Status::type::LockerType lk( _status );
 			_status[ Status::RUNNING ] = false;
 			_status[ Status::PAUSED ] = false;
 			_status[ Status::SYNC_WITH_RTP ] = false;
+// 			_status[ Status::DESTROY ] = false;
 		}
 
 		Sender::~Sender()
 		{
 			this->stop();
-
-			if ( _th )
-			{
-				Log::message( "%s: waiting thread", getLogName() );
-				_th->join();
-				_th.reset();
-			}
-
 			Log::message( "%s: destroyed", getLogName() );
 		}
 
@@ -112,7 +107,7 @@ namespace KGD
 
 		void Sender::wait()
 		{
-			_sync.wait();
+			_syncRTP.wait();
 		}
 
 		void Sender::releaseRTP()
@@ -124,7 +119,7 @@ namespace KGD
 				Log::debug( "%s: release barrier", getLogName() );
 				{
 					Status::type::UnLockerType ulk( lk );
-					_sync.wait();
+					_syncRTP.wait();
 				}
 				_status[ Status::SYNC_WITH_RTP ] = false;
 			}
@@ -132,84 +127,91 @@ namespace KGD
 
 		void Sender::sendLoop()
 		{
-			Log::debug( "%s: started", getLogName() );
+			Log::debug( "%s: loop started", getLogName() );
 
-			try
 			{
 				Status::type::LockerType lk( _status );
-				while( _status[ Status::RUNNING ] )
+
+				try
 				{
-					while ( _status[ Status::PAUSED ] )
-						_condUnPause.wait( lk.getLock() );
-
-					if ( _status[ Status::RUNNING ] )
+					while( _status[ Status::RUNNING ] )
 					{
-						// send SR and SDES
-						*_sock << enqueueReport().enqueueDescription();
-						// give RTP way if needed
-						this->releaseRTP();
+						while ( _status[ Status::PAUSED ] )
+							_condUnPause.wait( lk.getLock() );
 
+						if ( _status[ Status::RUNNING ] )
 						{
-							Status::type::UnLockerType ulk( lk );
-							try
+							// send SR and SDES
+							*_sock << enqueueReport().enqueueDescription();
+							// give RTP way if needed
+							this->releaseRTP();
+
+							// sleep
 							{
-								_th->sleep( boost::get_system_time() + boost::posix_time::seconds( SR_INTERVAL ) );
-								Log::debug("%s has sleeped enough", getLogName());
+								Status::type::UnLockerType ulk( lk );
+								try
+								{
+									_th->sleep( Clock::boostDeltaSec( SR_INTERVAL ) );
+									Log::debug("%s has sleeped enough", getLogName());
+								}
+								catch( boost::thread_interrupted )
+								{
+									Log::debug("%s was awakened", getLogName());
+								}
 							}
-							catch( boost::thread_interrupted )
-							{
-								Log::debug("%s was awakened", getLogName());
-							}
+							Log::debug("%s was awakened !!", getLogName());
 						}
 					}
+
+					// send BYE
+					*_sock << enqueueReport().enqueueBye();
+					Log::debug( "%s: sent BYE", getLogName() );
+				}
+				catch( const KGD::Socket::Exception & e )
+				{
+					Log::error( "%s: socket error: %s", getLogName(), e.what() );
 				}
 
-				*_sock << enqueueReport().enqueueBye();
-				Log::debug( "%s: sent BYE", getLogName() );
+				{
+					Status::type::UnLockerType ulk( lk );
+					this->releaseRTP();
+				}
+
+				_status[ Status::RUNNING ] = false;
+				_status[ Status::PAUSED ] = false;
+
+				Log::debug( "%s: loop terminated", getLogName() );
+
+				this->getStats().log( "Sender" );
 			}
-			catch( const KGD::Socket::Exception & e )
-			{
-				Log::error( "%s: socket error: %s", getLogName(), e.what() );
-			}
 
-			this->releaseRTP();
-
-			_status[ Status::RUNNING ] = false;
-			_status[ Status::PAUSED ] = false;
-			
-			Log::debug( "%s: stopped", getLogName() );
-
-			this->getStats().log( "Sender" );
+			_syncLoopEnd.wait();
 		}
 
 		void Sender::start()
 		{
-			Status::type::LockerType lk( _status );
+			_status.lock();
 
 			_status[ Status::SYNC_WITH_RTP ] = true;
 
 			if ( !_status[ Status::RUNNING ] )
 			{
-				{
-					SafeStats::LockerType lk( _stats );
-					(*_stats).RRcount = 0;
-					(*_stats).SRcount = 0;
-				}
-
 				_status[ Status::RUNNING ] = true;
+				_status.unlock();
 				_th.reset( new boost::thread(boost::bind(&Sender::sendLoop,this)) );
 			}
 			else if ( _status[ Status::PAUSED ] )
-				this->unpause();
+			{
+				_status[ Status::PAUSED ] = false;
+				_status.unlock();
+				_condUnPause.notify_all();
+			}
 		}
 
 		void Sender::pause()
 		{
 			Status::type::LockerType lk( _status );
-			if ( !_status[ Status::PAUSED ] )
-			{
-				_status[ Status::PAUSED ] = true;
-			}
+			_status[ Status::PAUSED ] = true;
 		}
 
 		void Sender::unpause()
@@ -247,20 +249,36 @@ namespace KGD
 					_th->interrupt();
 				}
 			}
+			if ( _th )
+			{
+				_syncLoopEnd.wait();
+				_th.reset();
+			}
 		}
 
 		void Sender::restart()
 		{
 			Log::debug( "%s: restarting", getLogName() );
 
-			Status::type::LockerType lk( _status );
-
+			_status.lock();
 			_status[ Status::SYNC_WITH_RTP ] = true;
 
+			{
+				SafeStats::LockerType lk( _stats );
+				(*_stats).RRcount = 0;
+				(*_stats).SRcount = 0;
+			}
+
 			if ( _status[ Status::RUNNING ] )
+			{
+				_status.unlock();
 				this->unpause();
+			}
 			else
+			{
+				_status.unlock();
 				this->start();
+			}				
 		}
 
 		Sender& Sender::enqueueReport()

@@ -55,8 +55,8 @@ namespace KGD
 		namespace Message
 		{
 			//! RTSP message parser
-			class Parser :
-				public CharArray
+			class Parser
+			: public CharArray
 			{
 			protected:
 				TCseq _cseq;
@@ -75,8 +75,8 @@ namespace KGD
 			};
 
 			//! RTSP request message
-			class Request :
-				public Parser
+			class Request
+			: public Parser
 			{
 			protected:
 				
@@ -113,8 +113,8 @@ namespace KGD
 			};
 
 			//! RTSP response message
-			class Response :
-				public Parser
+			class Response
+			: public Parser
 			{
 			protected:
 				//! error code

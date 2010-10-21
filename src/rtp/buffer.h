@@ -63,6 +63,7 @@ namespace KGD
 			//! Base class for RTP pre-buffers
 			class Base
 			: virtual public Factory::Base
+			, public boost::noncopyable
 			{
 			public:
 				//! Dimensione massima in secondi del buffer

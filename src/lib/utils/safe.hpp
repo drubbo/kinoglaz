@@ -92,14 +92,14 @@ namespace KGD
 		template< class M, class L >
 		Flag< M, L >::operator bool() const
 		{
-			LockerType lk( *this );
+			Locker< L > lk( *this );
 			return _bit;
 		}
 
 		template< class M, class L >
 		Flag< M, L >& Flag< M, L >::operator=( bool b )
 		{
-			LockerType lk( *this );
+			Locker< L > lk( *this );
 			_bit = b;
 			return *this;
 		}

@@ -70,8 +70,9 @@ namespace KGD
 			}
 			catch ( const Socket::Exception & e )
 			{
-				if ( e.getErrcode() != EAGAIN )
-					throw;
+				Log::message( "Socket error during RTP packet send: %s", e.what() );
+// 				if ( s.isWriteBlock() || ( e.getErrcode() != EAGAIN && e.getErrcode() != EWOULDBLOCK ) )
+				throw;
 			}
 		}
 
