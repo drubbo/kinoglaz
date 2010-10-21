@@ -206,7 +206,7 @@ namespace KGD
 			}
 			catch( KGD::Exception::Generic const & e )
 			{
-				Log::error( "%s: &s", getLogName(), e.what() );
+				Log::error( "%s: %s", getLogName(), e.what() );
 				_frame.next.reset();
 
 				throw;

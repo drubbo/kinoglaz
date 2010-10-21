@@ -75,6 +75,8 @@ namespace KGD
 			: public boost::noncopyable
 			, virtual public Factory::Base
 			{
+			public:
+				typedef boost::ptr_vector< boost::nullable< Frame::Base > > FrameList;
 				friend class SDP::Container;
 			protected:
 				//! file name
@@ -101,24 +103,32 @@ namespace KGD
 				//! extra informations
 				ByteArray _extraData;
 
-				//! frame list mutex
-				mutable RMutex _fMux;
-				//! number of frames; -1 means no effective value has been determined
-				int64_t _frameCount;
+				//! frame stuff
+				struct FrameData
+				: public Safe::LockableBase< RMutex >
+				{
+					FrameData( int64_t );
+					//! number of frames; -1 means no effective value has been determined
+					int64_t count;
+					//! frame list
+					FrameList list;
+					//! condition for iterators to wait for more frames
+					mutable Condition available;
+				} _frame;
 
-				typedef boost::ptr_vector< boost::nullable< Frame::Base > > FrameList;
-				//! frame list
-				FrameList _frames;
+				//! iterator stuff
+				struct It
+				: public Safe::LockableBase< RMutex >
+				{
+					It( );
+					//! number of instanced iterators
+					mutable boost::detail::atomic_count count;
+					//! frame iterator model
+					auto_ptr< Iterator::Base > model;
+					//! condition for dtor to wait for no more iterator instances
+					Condition released;
+				} _it;
 
-				//! number of instanced iterators
-				mutable boost::detail::atomic_count _itCount;
-				//! frame iterator model
-				auto_ptr< Iterator::Base > _itModel;
-
-				//! condition for dtor to wait for no more iterator instances
-				mutable Condition _condItReleased;
-				//! condition for iterators to wait for more frames
-				mutable Condition _condMoreFrames;
 
 				//! log identifier
 				string _logName;
@@ -199,6 +209,9 @@ namespace KGD
 				//! loop current frames a number of times ( 0 = infinite )
 				void loop( uint8_t = 0 ) throw();
 
+			private:
+				//! release iterator
+				void releaseIterator() throw();
 				friend class Iterator::Default;
 			};
 		}

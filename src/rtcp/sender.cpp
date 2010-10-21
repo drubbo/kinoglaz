@@ -64,7 +64,7 @@ namespace KGD
 				}
 				else
 				{
-					Log::error( "%s: %s, closing socket", e.what() );
+					Log::error( "%s: %s, closing socket", rtcp.getLogName(), e.what() );
 					s.close();
 					throw;
 				}

@@ -75,7 +75,7 @@ namespace KGD
 
 				void MP3::finalizeFrameCount() throw()
 				{
-					RLock lk( _fMux );
+					FrameData::Lock lk( _frame );
 
 					this->addADU();
 
@@ -94,7 +94,7 @@ namespace KGD
 
 				void MP3::addFrame( Frame::MediaFile * f ) throw()
 				{
-					RLock lk( _fMux );
+					FrameData::Lock lk( _frame );
 					
 					// calc side info start
 					size_t sideInfoStart = 4;

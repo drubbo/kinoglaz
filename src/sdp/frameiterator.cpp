@@ -57,20 +57,17 @@ namespace KGD
 				: _med( m )
 				, _pos( 0 )
 				{
-					++ _med._itCount;
 				}
 
 				Default::Default( const Default & it ) throw()
 				: _med( it._med )
 				, _pos( 0 )
 				{
-					++ _med._itCount;
 				}
 
 				Default::~Default( )
 				{
-					-- _med._itCount;
-					_med._condItReleased.notify_all();
+					_med.releaseIterator();
 				}
 
 				Default * Default::getClone() const throw()
