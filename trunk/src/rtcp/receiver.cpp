@@ -58,7 +58,9 @@ namespace KGD
 		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
 		: Thread( s, chan )
 		, _logName( s.getLogName() + string(" RTCP Receiver") )
+		, _poll( POLL_INTERVAL )
 		{
+			_sock->setReadTimeout( _poll );
 		}
 
 		Receiver::~Receiver()
@@ -88,7 +90,7 @@ namespace KGD
 
 		bool Receiver::handleSenderReport( char const * data, size_t size )
 		{
-			Log::verbose( "%s: SR", getLogName() );
+			Log::debug( "%s: SR", getLogName() );
 
 			size_t pos = 0;
 
@@ -125,7 +127,7 @@ namespace KGD
 
 		bool Receiver::handleReceiverReport( char const * data, size_t size )
 		{
-			Log::verbose( "%s: RR", getLogName() );
+			Log::debug( "%s: RR", getLogName() );
 			size_t pos = 0;
 
 			// get common header data
@@ -159,7 +161,7 @@ namespace KGD
 
 		bool Receiver::handleSourceDescription( char const * data, size_t size )
 		{
-			Log::verbose( "%s: SDES", getLogName() );
+			Log::debug( "%s: SDES", getLogName() );
 			size_t pos = 0;
 
 			// get common header data
@@ -287,6 +289,12 @@ namespace KGD
 			_buffer.dequeue(i);
 		}
 
+		void Receiver::waitMore() throw()
+		{
+			Log::warning( "%s: increment read timeout", getLogName() );
+			_poll *= 1.2;
+			_sock->setReadTimeout( _poll );
+		}
 
 		void Receiver::run()
 		{
@@ -322,15 +330,22 @@ namespace KGD
 						}
 						catch( const Socket::Exception & e )
 						{
-							Log::error( "%s: %s, stopping", getLogName(), e.what() );
-							_flags.bag[ Status::RUNNING ] = false;
+							if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+							{
+								Log::warning( "%s: %s", getLogName(), e.what() );
+								this->waitMore();
+							}
+							else
+							{
+								Log::error( "%s: %s, stopping", getLogName(), e.what() );
+								_flags.bag[ Status::RUNNING ] = false;
+							}
 						}
 					}
 				}
 
 				Log::debug( "%s: loop terminated", getLogName() );
 
-				_flags.bag[ Status::RUNNING ] = false;
 				_flags.bag[ Status::PAUSED ] = false;
 
 				this->getStats().log( "Receiver" );

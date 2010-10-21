@@ -113,7 +113,6 @@ namespace KGD
 
 					rtp->setWriteTimeout( 1.0 );
 					rtcp->setWriteTimeout( 1.0 );
-					rtcp->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 					rtcp->setReadBlock( true );
 
 					rtpChan = rtp;
@@ -127,7 +126,6 @@ namespace KGD
 
 					rtpChan = rtsp.getInterleave( local.first );
 					rtcpChan = rtsp.getInterleave( local.second );
-					rtcpChan->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 				}
 
 				// get description

@@ -65,10 +65,14 @@ namespace KGD
 
 			//! log identifier
 			const string _logName;
-
+			//! poll interval / socket adaptive read timeout
+			double _poll;
 
 			//! main loop
 			virtual void run();
+
+			//! increase read timeout
+			void waitMore() throw();
 			//! update stats from received packets
 			void updateStats( const ReceiverReport::Payload & );
 

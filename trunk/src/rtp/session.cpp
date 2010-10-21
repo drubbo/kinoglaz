@@ -306,19 +306,18 @@ namespace KGD
 				{
 					Log::error( "%s: %s", getLogName(), e.what() );
 				}
-				Log::debug( "%s: main loop exited", getLogName() );
+				Log::verbose( "%s: main loop exited", getLogName() );
+
+				_status.bag[ Status::STOPPED ] = true;
+				_status.bag[ Status::PAUSED ]  = false;
 
 				Log::debug( "%s: stopping rtcp sender", getLogName() );
 				_rtcp.sender->stop();
 				Log::debug( "%s: stopping buffer", getLogName() );
 				_frame.buf->stop();
-
-				_status.bag[ Status::STOPPED ] = true;
-				_status.bag[ Status::PAUSED ]  = false;
 			}
 
-			Log::debug( "%s: thread loop terminated", getLogName() );
-
+			Log::debug( "%s: thread loop term sync", getLogName() );
 			_th.wait();
 		}
 

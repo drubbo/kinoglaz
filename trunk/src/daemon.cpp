@@ -52,6 +52,8 @@
 #else
 #error "Please use platform configuration file."
 #endif
+#include "rtcp/sender.h"
+#include "rtcp/receiver.h"
 
 namespace KGD
 {
@@ -101,6 +103,9 @@ namespace KGD
 		RTSP::Connection::SHARE_DESCRIPTORS = ( "1" == (*_ini)( "SDP", "share-descriptors", "0" ) );
 
 		RTSP::Method::SUPPORT_SEEK = ( "1" == (*_ini)( "RTSP", "supp-seek", "1" ) );
+
+		RTCP::Sender::SR_INTERVAL = fromString< double >( (*_ini)( "RTCP", "send-every", "5.0" ) );
+		RTCP::Receiver::POLL_INTERVAL = fromString< double >( (*_ini)( "RTCP", "poll-every", "5.0" ) );
 
 		ostringstream s;
 		s << "KGD: Parameters: Buffer [" << RTP::Buffer::Base::SIZE_LOW << "-" << RTP::Buffer::Base::SIZE_FULL
