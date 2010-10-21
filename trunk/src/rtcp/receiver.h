@@ -57,44 +57,18 @@ namespace KGD
 	{
 		//! RTCP receiver - receives client stats
 		class Receiver
-		: public boost::noncopyable
+		: public RTCP::Thread
 		{
 		private:
-			//! communication channel
-			boost::shared_ptr< Channel::Bi > _sock;
-
-			Barrier _syncLoopEnd;
-			//! receive thread
-			Thread _th;
-
-			//! status flags declaration
-			struct Status
-			{
-				//! thread safe flag set
-				typedef Safe::FlagSet< 2 > type;
-				//! status identifiers 
-				enum flag
-				{
-					RUNNING,
-					PAUSED
-				};
-			};
-			//! receiver status flags
-			Status::type _status;
-
-			//! un-pause condition
-			Condition _condUnPause;
 			//! data buffer
 			Buffer _buffer;
-			//! receive stats
-			SafeStats _stats;
 
 			//! log identifier
 			const string _logName;
 
 
 			//! main loop
-			void recvLoop();
+			virtual void run();
 			//! update stats from received packets
 			void updateStats( const ReceiverReport::Payload & );
 
@@ -106,11 +80,6 @@ namespace KGD
 			bool handleSourceDescription( char const * const data, size_t size );
 			//! adds received data to local buffer
 			void push( char const * const buffer, ssize_t len );
-
-			//! pauses main loop
-			void pause();
-			//! unpauses main loop
-			void unpause();
 		public:
 			//! ctor
 			Receiver( RTP::Session &, const boost::shared_ptr< Channel::Bi > & );
@@ -118,12 +87,6 @@ namespace KGD
 			~Receiver();
 			//! log identifier
 			const char * getLogName() const throw();
-			//! returns receiver stats
-			Stat getStats() const throw();
-			//! starts receiver
-			void start();
-			//! stops receiver
-			void stop();
 
 			//! maximum time waiting data
 			static double POLL_INTERVAL;

@@ -38,14 +38,20 @@
 #define __KGD_RTCP_STATS_H
 
 #include "lib/common.h"
+#include "lib/socket.h"
 #include "lib/utils/safe.hpp"
 
 namespace KGD
 {
+	namespace RTP
+	{
+		class Session;
+	}
+
 	namespace RTCP
 	{
 		//! RTCP stats
-		struct Stat
+		struct Stats
 		{
 			uint RRcount;
 			uint SRcount;
@@ -59,12 +65,65 @@ namespace KGD
 			uint lastSR;
 			uint delaySinceLastSR;
 
-			Stat();
+			Stats();
 			void log( const string & lbl ) const;
 		};
 
-		typedef Safe::Lockable< Stat > SafeStats;
+		//! stats with own lock
+		typedef Safe::Lockable< Stats > SafeStats;
 
+		//! base RTCP thread (sender, receiver)
+		class Thread
+		: public boost::noncopyable
+		{
+		protected:
+			//! ref to rtp session
+			RTP::Session & _rtp;
+			//! socket abstraction
+			boost::shared_ptr< Channel::Bi > _sock;
+
+			typedef Safe::Thread< Mutex > OwnThread;
+			//! thread
+			OwnThread _th;
+
+			//! pause sync
+			Condition _wakeup;
+			
+			//! status flags
+			struct Status
+			{
+				enum Flags { RUNNING, PAUSED };
+				bitset< 2 > bag;
+			} _flags;
+
+			//! stats
+			SafeStats _stats;
+
+			
+			//! thread loop to implement
+			virtual void run() = 0;
+
+			//! pause the loop
+			void pause();
+			//! restart the loop
+			void unpause();
+
+			virtual void _start() {};
+
+
+			Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock );
+
+		public:
+			//! start the thread
+			void start();
+			//! stop the thread
+			void stop();
+
+			//! return sender stats
+			Stats getStats() const throw();
+		};
+
+		
 	}
 }
 

@@ -204,18 +204,18 @@ namespace KGD
 
 			AVFrame::~AVFrame()
 			{
-				Log::message("%s: shutting down", getLogName() );
+				Log::debug("%s: shutting down", getLogName() );
 				this->stop();
 				if ( _th )
 				{
-					Log::message("%s: joining thread", getLogName() );
+					Log::debug("%s: joining thread", getLogName() );
 					_th->join();
 				}
 			}
 
 			void AVFrame::fetch()
 			{
-				Log::message("%s: thread started", getLogName() );
+				Log::debug("%s: thread started", getLogName() );
 
 				boost::scoped_ptr< Lock > lk;
 

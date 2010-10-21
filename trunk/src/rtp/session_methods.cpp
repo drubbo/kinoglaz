@@ -45,7 +45,7 @@ namespace KGD
 	{
 		RTSP::PlayRequest Session::play( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
 		{
-			RLock lk(_th);
+			OwnThread::Lock lk(_th);
 
 			RTSP::PlayRequest ret;
 
@@ -66,7 +66,7 @@ namespace KGD
 
 		void Session::play() throw()
 		{
-			RLock lk( _th );
+			OwnThread::Lock lk( _th );
 
 			// video, o audio a meno di 1x, faccio partire
 			if (_medium->getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0)
@@ -74,7 +74,7 @@ namespace KGD
 				_rtcp.sender->restart();
 				_frame.rate.start();
 
-				Log::message( "%s: waiting RTCP sender", getLogName() );
+				Log::debug( "%s: waiting RTCP sender", getLogName() );
 				_rtcp.sender->wait();
 
 				Log::message( "%s: start play", getLogName() );
@@ -104,7 +104,7 @@ namespace KGD
 			_frame.time->seek( ret.time, ret.from, ret.speed );
 			_frame.buf->seek( ret.from, ret.speed );
 
-			_th.set( new boost::thread(boost::bind(&RTP::Session::loop, this)) );
+			_th.reset( new boost::thread(boost::bind(&RTP::Session::loop, this)) );
 			_rtcp.receiver->start();
 
 			return ret;
@@ -162,7 +162,7 @@ namespace KGD
 
 		void Session::pause( const RTSP::PlayRequest & rq ) throw()
 		{
-			RLock lk( _th );
+			OwnThread::Lock lk( _th );
 
 			if ( _status.bag[ Status::STOPPED ] )
 			{
@@ -184,16 +184,16 @@ namespace KGD
 
 				_pause.sync = true;
 				{
-					Safe::UnRLock ulk( lk );
+					OwnThread::UnLock ulk( lk );
 					_pause.asleep.wait();
 				}
-				Log::message( "%s: effectively paused", getLogName() );
+				Log::debug( "%s: effectively paused", getLogName() );
 			}
 		}
 
 		void Session::unpause( const RTSP::PlayRequest & rq ) throw()
 		{
-			RLock lk( _th );
+			OwnThread::Lock lk( _th );
 
 			if ( _status.bag[ Status::PAUSED ] )
 			{
@@ -202,7 +202,7 @@ namespace KGD
 					_rtcp.sender->restart();
 					_frame.rate.start();
 
-					Log::message( "%s: waiting RTCP sender", getLogName() );
+					Log::debug( "%s: waiting RTCP sender", getLogName() );
 					_rtcp.sender->wait();
 
 					Log::message( "%s: unpause", getLogName() );
@@ -224,17 +224,17 @@ namespace KGD
 		void Session::teardown( const RTSP::PlayRequest & rq ) throw()
 		{
 			Log::debug( "%s: tearing down", getLogName() );
-			RLock lk(_th);
+			OwnThread::Lock lk(_th);
 
 			if ( !_status.bag[ Status::STOPPED ] )
 			{
 				_status.bag[ Status::STOPPED ] = true;
 				if ( _status.bag[ Status::PAUSED ] )
 				{
-					Log::debug( "%s: awaking paused send loop", getLogName() );
+					Log::verbose( "%s: awaking paused send loop", getLogName() );
 					_status.bag[ Status::PAUSED ] = false;
 					{
-						Safe::UnRLock ulk( lk );
+						OwnThread::UnLock ulk( lk );
 						_pause.wakeup.notify_all();
 					}
 				}
@@ -242,9 +242,9 @@ namespace KGD
 			if ( _th )
 			{
 				Log::debug( "%s: waiting loop termination", getLogName() );
-				Safe::UnRLock ulk( lk );
+				OwnThread::UnLock ulk( lk );
 				_th.wait();
-				_th.unset();
+				_th.reset();
 				Log::debug( "%s: loop joined terminate", getLogName() );
 			}
 

@@ -134,7 +134,7 @@ namespace KGD
 				BOOST_ASSERT( pktLen >= 4 );
 				pair< TPort, boost::shared_ptr< RTP::Packet > > rt;
 				rt.first = data[1];
-// 				Log::debug("RTSP: Got interleaved on channel %d", chan);
+// 				Log::verbose("RTSP: Got interleaved on channel %d", chan);
 				rt.second.reset( new RTP::Packet( &data[4], pktLen - 4) );
 				this->dequeue( pktLen );
 				return rt;

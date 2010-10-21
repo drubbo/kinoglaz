@@ -74,7 +74,7 @@ namespace KGD
 		template< class T >
 		typename Class< T >::Reference Class< T >::getInstance()
 		{
-			typename Instance::LockerType lk( _instance );
+			typename Instance::Lock lk( _instance );
 			if ( !*_instance )
 				(*_instance).reset( new T );
 

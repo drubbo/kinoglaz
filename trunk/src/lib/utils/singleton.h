@@ -55,6 +55,8 @@ namespace KGD
 		{
 		public:
 			typedef boost::shared_ptr< T > Reference;
+			typedef KGD::RMutex Mutex;
+			typedef KGD::RLock Lock;
 		private:
 			//! the class implementing singleton pattern must not be copyable
 			Class( const Class< T > & );

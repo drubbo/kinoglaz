@@ -91,31 +91,6 @@ namespace KGD
 	//! synchronization source identifier type
 	typedef uint32_t TSSrc;
 
-	//! thread with term barrier
-	template< class MutexType >
-	class SyncThread
-	: public MutexType
-	{
-		Thread _th;
-		Barrier _term;
-	public:
-		SyncThread( unsigned int count )
-		: _term( count )
-		{
-		}
-
-		void wait() { _term.wait(); }
-		boost::thread * operator->() { return _th.operator->(); }
-		boost::thread const * operator->() const { return _th.operator->(); }
-		boost::thread & operator*() { return *_th; }
-		boost::thread const & operator*() const { return *_th; }
-		operator bool() const { return bool( _th ); }
-		operator MutexType &() { return *this; }
-		operator MutexType const &() const { return *this; }
-		void unset() { _th.reset(); }
-		void set( boost::thread * t ) { _th.reset( t ); }
-	};
-	
 	//! common string -> string map
 	typedef map< string, string > KeyValueMap;
 	//! common string -> string pair

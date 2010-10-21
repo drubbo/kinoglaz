@@ -61,7 +61,7 @@ namespace KGD
 			{
 			private:
 				//! static map to keep all definitions
-				static Mutex _allMux;
+// 				static Mutex _allMux;
 				//! all definitions as reference
 				static boost::scoped_ptr< map< TCode, ref< const Definition > > > _all;
 				//! error code

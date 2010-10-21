@@ -38,7 +38,7 @@
 #define _USS_SAFE_VARS_H
 
 #include "lib/common.h"
-#include <boost/detail/atomic_count.hpp>
+#include "lib/utils/safe_base.h"
 #include <bitset>
 
 namespace KGD
@@ -46,80 +46,23 @@ namespace KGD
 	//! Thread-safe utilities
 	namespace Safe
 	{
-
-		template< class boost_lock >
-		class BoostUnlocker
-		: public boost::noncopyable
-		{
-			boost_lock & _lk;
-		public:
-			BoostUnlocker( boost_lock & l ) : _lk( l ) { l.unlock(); }
-			~BoostUnlocker() { _lk.lock(); }
-		};
-
-		typedef BoostUnlocker< Lock > UnLock;
-		typedef BoostUnlocker< RLock > UnRLock;
-		
-		//! Locker for any MutexLockable
-		template< class L >
-		class Locker
-		: public boost::noncopyable
-		{
-			boost::scoped_ptr< L > _lk;
-		public:
-			template< class Lk >
-			Locker( Lk const & l );
-
-			L & getLock();
-		};
-
-		//! Temporarily unlocks a previous acquired lock
-		template< class L >
-		class UnLocker
-		: public boost::noncopyable
-		{
-			Locker< L > & _lk;
-		public:
-			UnLocker( Locker< L > & l );
-			~UnLocker( );
-		};
-
-		//! Mutex-based lockable class
-		template< class M = RMutex, class L = RLock >
-		class MutexLockable
-		: public boost::noncopyable
-		{
-		private:
-			mutable M _mux;
-		public:
-			typedef M MutexType;
-			typedef L LockType;
-
-			typedef Locker< L > LockerType;
-			typedef UnLocker< L > UnLockerType;
-
-			void lock() const;
-			void unlock() const;
-			M & mux() const;
-		};
-
 		//! Lockable flag set
-		template< size_t N, class M = RMutex, class L = RLock >
+		template< size_t N, class M = RMutex >
 		class FlagSet
-		: public MutexLockable< M, L >
+		: public LockableBase< M >
 		{
 		private:
 			bitset< N > _bits;
 		public:
 
-			bool operator[]( size_t pos ) const;
-			typename bitset< N >::reference operator[]( size_t pos );
+			bool operator[]( size_t pos ) const							{ return _bits[pos]; }
+			typename bitset< N >::reference operator[]( size_t pos )	{ return _bits[pos]; }
 		};
 
-		//! Lockable single flag
-		template< class M = RMutex, class L = RLock >
+		//! Lockable flag
+		template< class M = Mutex >
 		class Flag
-		: public MutexLockable< M, L >
+		: private LockableBase< M >
 		{
 		private:
 			bool _bit;
@@ -131,21 +74,22 @@ namespace KGD
 			Flag& operator=( bool b );
 		};
 
-		//! Lockable single flag typedef sugar
-		typedef Flag<> Bool;
-
-		//! Generic lockable
-		template< class T, class M = RMutex, class L = RLock >
-		class Lockable
-		: public MutexLockable< M, L >
+		//! Lockable thread with term barrier
+		template< class M = RMutex >
+		class Thread
+		: public LockableBase< M >
+		, public ThreadBarrier
 		{
-		protected:
-			T _obj;
 		public:
-			
-			T& operator*();
-			T const & operator*() const;
+			Thread( unsigned int count = 2 ) 			: ThreadBarrier( count ) { }
 		};
+
+		//! thread-safe boolean
+		typedef Flag<> Bool;
+		//! unlocker for unique lock
+		typedef Unlocker< KGD::Lock > UnLock;
+		//! unlocker for recursive lock
+		typedef Unlocker< KGD::RLock > UnRLock;
 	}
 }
 

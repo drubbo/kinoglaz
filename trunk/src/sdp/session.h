@@ -89,7 +89,7 @@ namespace KGD
 			MediaMap _media;
 
 			//! load frame thread
-			Thread _th;
+			Safe::ThreadBarrier _th;
 			//! is load frame thread running ?
 			Safe::Bool _running;
 
@@ -109,6 +109,8 @@ namespace KGD
 			//! returns time in NTP format
 			static double getNtpTime( const time_t & t ) throw();
 
+			//! stop the thread
+			void stop();
 		public:
 			//! loads file metadata
 			Container( const string & fileName ) throw( SDP::Exception::Generic );

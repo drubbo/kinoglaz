@@ -47,7 +47,7 @@ namespace KGD
 
 	Ini::Reference Ini::getInstance() throw( Exception::InvalidState )
 	{
-		Instance::LockerType lk( _instance );
+		Instance::Lock lk( _instance );
 		if ( *_instance )
 			return newInstanceRef();
 		else
@@ -56,7 +56,7 @@ namespace KGD
 
 	Ini::Reference Ini::getInstance( const string & fileName ) throw( Exception::InvalidState, Exception::NotFound )
 	{
-		Instance::LockerType lk( _instance );
+		Instance::Lock lk( _instance );
 		if ( *_instance )
 		{
 			if ( (*_instance)->_fileName != fileName )

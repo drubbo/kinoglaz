@@ -52,15 +52,13 @@ namespace KGD
 		{
 			try
 			{
-// 				Log::message("RTCP %d sending data", s.getDescription().ports.first );
 				ssize_t wrote = s.writeSome( b.getDataBegin(), b.getDataLength() );
 				b.dequeue( wrote );
 				break;
 			}
 			catch( Socket::Exception const & e )
 			{
-				Log::message( "Socket error during RTCP Sender packet send: %s", e.what() );
-// 				if ( s.isWriteBlock() || ( e.getErrcode() != EAGAIN && e.getErrcode() != EWOULDBLOCK ) )
+				Log::error( "Socket error during RTCP Sender packet send: %s", e.what() );
 				throw;
 			}
 		}
@@ -73,24 +71,41 @@ namespace KGD
 
 		long Sender::SR_INTERVAL = 5;
 
+		Sender::RTPSync::RTPSync()
+		: _doSync( false )
+		, _sync( 2 )
+		{
+		};
+
+		Sender::RTPSync& Sender::RTPSync::operator=( bool b )
+		{
+			_doSync = b;
+			return *this;
+		}
+
+		Sender::RTPSync::operator bool() const
+		{
+			return _doSync;
+		}
+
+		void Sender::RTPSync::wait()
+		{
+			_sync.wait();
+		}
+
+
+		
+		
 		Sender::Sender( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
-		: _rtp(s)
-		, _sock(sock)
-		, _syncRTP( 2 )
-		, _syncLoopEnd( 2 )
+		: Thread( s, sock )
 		, _logName( s.getLogName() + string(" RTCP Sender") )
 		{
-			Status::type::LockerType lk( _status );
-			_status[ Status::RUNNING ] = false;
-			_status[ Status::PAUSED ] = false;
-			_status[ Status::SYNC_WITH_RTP ] = false;
-// 			_status[ Status::DESTROY ] = false;
 		}
 
 		Sender::~Sender()
 		{
 			this->stop();
-			Log::message( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroyed", getLogName() );
 		}
 
 		const char * Sender::getLogName() const throw()
@@ -100,7 +115,7 @@ namespace KGD
 
 		void Sender::registerPacketSent( size_t sz ) throw()
 		{
-			SafeStats::LockerType lk( _stats );
+			SafeStats::Lock lk( _stats );
 			(*_stats).pktCount ++;
 			(*_stats).octetCount += sz;
 		}
@@ -110,56 +125,58 @@ namespace KGD
 			_syncRTP.wait();
 		}
 
-		void Sender::releaseRTP()
+		void Sender::_start()
 		{
-			Status::type::LockerType lk( _status );
+			_syncRTP = true;
+		}
 
-			if ( _status[ Status::SYNC_WITH_RTP ] )
+		void Sender::releaseRTP( OwnThread::Lock & lk )
+		{
+			if ( _syncRTP )
 			{
-				Log::debug( "%s: release barrier", getLogName() );
+				Log::verbose( "%s: release barrier", getLogName() );
 				{
-					Status::type::UnLockerType ulk( lk );
+					OwnThread::UnLock ulk( lk );
 					_syncRTP.wait();
 				}
-				_status[ Status::SYNC_WITH_RTP ] = false;
+				_syncRTP = false;
 			}
 		}
 
-		void Sender::sendLoop()
+		void Sender::run()
 		{
 			Log::debug( "%s: loop started", getLogName() );
 
 			{
-				Status::type::LockerType lk( _status );
+				OwnThread::Lock lk( _th );
 
 				try
 				{
-					while( _status[ Status::RUNNING ] )
+					while( _flags.bag[ Status::RUNNING ] )
 					{
-						while ( _status[ Status::PAUSED ] )
-							_condUnPause.wait( lk.getLock() );
+						while ( _flags.bag[ Status::PAUSED ] )
+							_wakeup.wait( lk );
 
-						if ( _status[ Status::RUNNING ] )
+						if ( _flags.bag[ Status::RUNNING ] )
 						{
 							// send SR and SDES
 							*_sock << enqueueReport().enqueueDescription();
 							// give RTP way if needed
-							this->releaseRTP();
+							this->releaseRTP( lk );
 
 							// sleep
 							{
-								Status::type::UnLockerType ulk( lk );
+								OwnThread::UnLock ulk( lk );
 								try
 								{
 									_th->sleep( Clock::boostDeltaSec( SR_INTERVAL ) );
-									Log::debug("%s has sleeped enough", getLogName());
+									Log::verbose("%s has sleeped enough", getLogName());
 								}
 								catch( boost::thread_interrupted )
 								{
-									Log::debug("%s was awakened", getLogName());
+									Log::verbose("%s was awakened", getLogName());
 								}
 							}
-							Log::debug("%s was awakened !!", getLogName());
 						}
 					}
 
@@ -172,111 +189,40 @@ namespace KGD
 					Log::error( "%s: socket error: %s", getLogName(), e.what() );
 				}
 
-				{
-					Status::type::UnLockerType ulk( lk );
-					this->releaseRTP();
-				}
+				this->releaseRTP( lk );
 
-				_status[ Status::RUNNING ] = false;
-				_status[ Status::PAUSED ] = false;
+				_flags.bag[ Status::RUNNING ] = false;
+				_flags.bag[ Status::PAUSED ] = false;
 
 				Log::debug( "%s: loop terminated", getLogName() );
 
-				this->getStats().log( "Sender" );
+				RTCP::Thread::getStats().log( "Sender" );
 			}
 
-			_syncLoopEnd.wait();
-		}
-
-		void Sender::start()
-		{
-			_status.lock();
-
-			_status[ Status::SYNC_WITH_RTP ] = true;
-
-			if ( !_status[ Status::RUNNING ] )
-			{
-				_status[ Status::RUNNING ] = true;
-				_status.unlock();
-				_th.reset( new boost::thread(boost::bind(&Sender::sendLoop,this)) );
-			}
-			else if ( _status[ Status::PAUSED ] )
-			{
-				_status[ Status::PAUSED ] = false;
-				_status.unlock();
-				_condUnPause.notify_all();
-			}
-		}
-
-		void Sender::pause()
-		{
-			Status::type::LockerType lk( _status );
-			_status[ Status::PAUSED ] = true;
-		}
-
-		void Sender::unpause()
-		{
-			_status.lock();
-			if ( _status[ Status::PAUSED ] )
-			{
-				_status[ Status::PAUSED ] = false;
-				_status.unlock();
-				_condUnPause.notify_all();
-			}
-			else if ( _status[ Status::RUNNING ] )
-			{
-				_status.unlock();
-				_th->interrupt();
-			}
-		}
-
-		void Sender::stop()
-		{
-			_status.lock();
-			if ( _status[ Status::RUNNING ] )
-			{
-				_status[ Status::RUNNING ] = false;
-
-				if ( _status[ Status::PAUSED ] )
-				{
-					_status[ Status::PAUSED ] = false;
-					_status.unlock();
-					_condUnPause.notify_all();
-				}
-				else
-				{
-					_status.unlock();
-					_th->interrupt();
-				}
-			}
-			if ( _th )
-			{
-				_syncLoopEnd.wait();
-				_th.reset();
-			}
+			_th.wait();
 		}
 
 		void Sender::restart()
 		{
 			Log::debug( "%s: restarting", getLogName() );
 
-			_status.lock();
-			_status[ Status::SYNC_WITH_RTP ] = true;
+			_th.lock();
+			_syncRTP = true;
 
 			{
-				SafeStats::LockerType lk( _stats );
+				SafeStats::Lock lk( _stats );
 				(*_stats).RRcount = 0;
 				(*_stats).SRcount = 0;
 			}
 
-			if ( _status[ Status::RUNNING ] )
+			if ( _flags.bag[ Status::RUNNING ] )
 			{
-				_status.unlock();
+				_th.unlock();
 				this->unpause();
 			}
 			else
 			{
-				_status.unlock();
+				_th.unlock();
 				this->start();
 			}				
 		}
@@ -299,11 +245,11 @@ namespace KGD
 				h.NTPtimestampL = htonl( Clock::nanoToSec(uint64_t(timeNTP.tv_nsec) << 32) );
 				h.RTPtimestamp  = htonl( timeRTP );
 
-				Log::message( "%s: building sr time %lf presentation time %lf %lu", getLogName(), curTime, presTime, timeRTP );
+				Log::debug( "%s: building SR: time %lf presentation time %lf %lu", getLogName(), curTime, presTime, timeRTP );
 			}
 
 			{
-				SafeStats::LockerType lk( _stats );
+				SafeStats::Lock lk( _stats );
 				++ (*_stats).SRcount;
 				h.pktCount   = htonl( (*_stats).pktCount );
 				h.octetCount = htonl( (*_stats).octetCount );
@@ -373,12 +319,6 @@ namespace KGD
 			_buffer.enqueue(reason);
 
 			return *this;
-		}
-
-		Stat Sender::getStats() const throw()
-		{
-			SafeStats::LockerType lk( _stats );
-			return *_stats;
 		}
 
 	}

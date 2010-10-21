@@ -61,7 +61,7 @@ namespace KGD
 
 		Session::~Session()
 		{
-			LockerType lk( *this );
+			Session::Lock lk( *this );
 			_sessions.clear();
 		}
 
