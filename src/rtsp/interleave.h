@@ -106,7 +106,7 @@ namespace KGD
 			//! push to buffer
 			void pushToRead( const ByteArray & ) throw( );
 			//! stops using the underlying socket
-			void stop( ) throw( );
+			void close( ) throw( );
 		};
 
 		//! the RTSP socket abstraction. 
@@ -186,6 +186,8 @@ namespace KGD
 
 			//! get description
 			virtual Channel::Description getDescription() const;
+			//! close
+			virtual void close() throw();
 		};
 	}
 }

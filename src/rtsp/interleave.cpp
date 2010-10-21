@@ -62,7 +62,7 @@ namespace KGD
 		Interleave::~Interleave( )
 		{
 			Log::debug("%s: shutting down", getLogName() );
-			this->stop();
+			this->close();
 			Log::debug("%s: stopped", getLogName() );
 			_rtspSocket.release( _channel );
 			Log::debug("%s: released", getLogName() );
@@ -102,7 +102,7 @@ namespace KGD
 
 			_condNotEmpty.notify_all();
 		}
-		void Interleave::stop() throw()
+		void Interleave::close() throw()
 		{
 			Log::debug("%s: stopping", getLogName() );
 
@@ -193,7 +193,7 @@ namespace KGD
 					}
 					catch( boost::thread_interrupted )
 					{
-						Log::debug( "%s: thread was interrupted waiting data" );
+						Log::debug( "%s: thread was interrupted waiting data", getLogName() );
 						return 0;
 					}
 				}
@@ -224,25 +224,28 @@ namespace KGD
 		, _logName( parentLogName + " SOCKET" )
 		{
 			(*_sock).reset( sk );
-/*			// we want non-blocking operations
-			(*_sock)->setWriteBlock( false );*/
 		}
 
 		Socket::~Socket()
 		{
 			Log::debug("%s: socket shutting down", getLogName());
+			this->close();
+			Log::verbose("%s: destroyed", getLogName());
+		}
 
+		void Socket::close() throw()
+		{
 			this->stopInterleaving();
 			{
 				Lock lk( _muxPorts );
 				if ( ! _iChans.empty() )
 					_condNoInterleave.wait( lk );
 			}
-			Log::debug("%s: released", getLogName());
+			Log::debug("%s: no more interleaves", getLogName());
 
 			{
 				TcpTunnel::Lock lk( _sock );
-				(*_sock)->close();				
+				(*_sock)->close();
 			}
 			Log::debug("%s: closed", getLogName());
 		}
@@ -252,7 +255,7 @@ namespace KGD
 			Lock lk( _muxPorts );
 			// stop all interleaved channels
 			BOOST_FOREACH( ChannelMap::iterator::reference ch, _iChans )
-				ch.second->stop();
+				ch.second->close();
 		}
 
 		void Socket::stopInterleaving( const TSessionID & ssid ) throw()
@@ -261,7 +264,7 @@ namespace KGD
 			BOOST_FOREACH( ChannelMap::iterator::reference ch, _iChans )
 				// more interleaves can be on a single session
 				if ( ch.second->getSessionID() == ssid )
-					ch.second->stop();					
+					ch.second->close();					
 		}
 
 		const char * Socket::getLogName() const throw()

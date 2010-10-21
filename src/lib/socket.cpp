@@ -473,7 +473,7 @@ namespace KGD
 		// ****************************************************************************************************************
 
 		Tcp::Tcp( const TPort bindPort, const string & bindIP ) throw( Socket::Exception )
-		: Abstract( Type::TCP, bindPort, bindIP )
+		: Socket::Abstract( Type::TCP, bindPort, bindIP )
 		{
 		}
 
@@ -483,7 +483,7 @@ namespace KGD
 
 
 		Tcp::Tcp( const int fileDescriptor, sockaddr_in const * const peerAddress ) throw( Socket::Exception )
-		: Abstract( fileDescriptor )
+		: Socket::Abstract( fileDescriptor )
 		{
 			memcpy(&_remote, peerAddress, sizeof(sockaddr_in));
 			_connected = true;
@@ -493,7 +493,7 @@ namespace KGD
 		// ****************************************************************************************************************
 
 		Udp::Udp( const TPort bindPort, const string & bindIP ) throw( Socket::Exception )
-		: Abstract( Type::UDP, bindPort, bindIP )
+		: Socket::Abstract( Type::UDP, bindPort, bindIP )
 		{ }
 
 		Udp::~Udp() throw()
@@ -503,7 +503,7 @@ namespace KGD
 		// ****************************************************************************************************************
 
 		TcpServer::TcpServer( const TPort bindPort, const int queue, const string & bindIP ) throw( Socket::Exception )
-		: Abstract( Type::TCP, bindPort, bindIP )
+		: Socket::Abstract( Type::TCP, bindPort, bindIP )
 		{
 			if ( !_bound )
 			{

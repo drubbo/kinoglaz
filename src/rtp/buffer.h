@@ -78,20 +78,26 @@ namespace KGD
 			protected:
 				//! medium descriptor
 				ref< SDP::Medium::Base > _medium;
-				//! frame iterator
-				boost::scoped_ptr< SDP::Medium::Iterator::Base > _frameIndex;
+
+				class Frame
+				: public Safe::LockableBase< RMutex >
+				{
+				public:
+					typedef boost::scoped_ptr< SDP::Medium::Iterator::Base > Index;
+					typedef boost::ptr_list< RTP::Frame::Base > List;
+					//! frame iterator
+					Index idx;
+					//! out frame buffer
+					struct Buffer
+					{
+						List data;
+						Condition full;
+						Condition empty;
+					} buf;
+				} _frame;
+				
 				//! speed
 				double _scale;  
-
-				//! mutex to out buffer
-				mutable Mutex _mux;
-				//! data available in out buffer
-				Condition _condFull;
-				//! data requested in out buffer
-				Condition _condEmpty;
-				typedef boost::ptr_list< RTP::Frame::Base > FrameList;
-				//! out frame buffer
-				FrameList _bufferOut;
 
 				//! log identifier
 				string _logName;
@@ -146,8 +152,9 @@ namespace KGD
 			: public Base
 			{
 			private:
+				typedef Safe::ThreadBarrier OwnThread;
 				//! fetch thread
-				Thread _th;
+				OwnThread _th;
 				//! running status indicator
 				bool _running;
 				//! mutex to cleanly seek
