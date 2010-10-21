@@ -56,24 +56,15 @@ namespace KGD
 		static const size_t pSizeSDES = sizeof( SourceDescription::Payload );
 
 		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
-		: _sock( chan )
-		, _syncLoopEnd( 2 )
+		: Thread( s, chan )
 		, _logName( s.getLogName() + string(" RTCP Receiver") )
 		{
-			_status[ Status::RUNNING ] = false;
-			_status[ Status::PAUSED ] = false;
 		}
 
 		Receiver::~Receiver()
 		{
 			this->stop();
-/*			if ( _th )
-			{
-				Log::debug( "%s: waiting thread join", getLogName() );
-				_th->join();
-				_th.reset();
-			}*/
-			Log::debug( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroyed", getLogName() );
 		}
 
 		const char * Receiver::getLogName() const throw()
@@ -83,7 +74,7 @@ namespace KGD
 
 		void Receiver::updateStats( const ReceiverReport::Payload & pRR )
 		{
-			SafeStats::LockerType lk( _stats );
+			SafeStats::Lock lk( _stats );
 
 			(*_stats).fractLost = pRR.fractLost;
 			(*_stats).pktLost = ntohl(pRR.pktLost);
@@ -121,7 +112,7 @@ namespace KGD
 			}
 			// packet complete, update stats
 			{
-				SafeStats::LockerType lk( _stats );
+				SafeStats::Lock lk( _stats );
 				(*_stats).SRcount ++;
 				(*_stats).pktCount   = ntohl(hSR.pktCount);
 				(*_stats).octetCount = ntohl(hSR.octetCount);
@@ -156,7 +147,7 @@ namespace KGD
 			}
 			// packet complete, update stats
 			{
-				SafeStats::LockerType lk( _stats );
+				SafeStats::Lock lk( _stats );
 				(*_stats).RRcount ++;
 			}
 			
@@ -233,7 +224,7 @@ namespace KGD
 
 				// update stats
 				{
-					SafeStats::LockerType lk( _stats );
+					SafeStats::Lock lk( _stats );
 					(*_stats).destSsrc = ntohs( hSD.ssrc );
 				}
 			}
@@ -292,35 +283,35 @@ namespace KGD
 					break;
 			}
 
-			Log::debug( "%s: dequeuing %u bytes", getLogName(), i );
+			Log::verbose( "%s: dequeuing %u bytes", getLogName(), i );
 			_buffer.dequeue(i);
 		}
 
 
-		void Receiver::recvLoop()
+		void Receiver::run()
 		{
 			Log::debug( "%s: started", getLogName() );
 			CharArray buffer( 1024 );
 
 			{
-				Status::type::LockerType lk( _status );
+				OwnThread::Lock lk( _th );
 
-				while( _status[ Status::RUNNING ] )
+				while( _flags.bag[ Status::RUNNING ] )
 				{
-					while( _status[ Status::PAUSED ] )
+					while( _flags.bag[ Status::PAUSED ] )
 					{
 						Log::message( "%s: paused", getLogName() );
-						_condUnPause.wait( lk.getLock() );
+						_wakeup.wait( lk );
 					}
 
-					if ( _status[ Status::RUNNING ] )
+					if ( _flags.bag[ Status::RUNNING ] )
 					{
 						try
 						{
 							ssize_t read = 0;
-							Log::debug( "%s waiting message", getLogName() );
+							Log::verbose( "%s waiting message", getLogName() );
 							{
-								Status::type::UnLockerType ulk( lk );
+								OwnThread::UnLock ulk( lk );
 								read = _sock->readSome( buffer ) ;
 							}
 							if ( read > 0 )
@@ -332,82 +323,21 @@ namespace KGD
 						catch( const Socket::Exception & e )
 						{
 							Log::error( "%s: %s, stopping", getLogName(), e.what() );
-							_status[ Status::RUNNING ] = false;
+							_flags.bag[ Status::RUNNING ] = false;
 						}
 					}
 				}
 
 				Log::debug( "%s: loop terminated", getLogName() );
 
-				_status[ Status::RUNNING ] = false;
-				_status[ Status::PAUSED ] = false;
+				_flags.bag[ Status::RUNNING ] = false;
+				_flags.bag[ Status::PAUSED ] = false;
 
 				this->getStats().log( "Receiver" );
 			}
 
-			_syncLoopEnd.wait();
+			_th.wait();
 		}
-
-
-		void Receiver::start()
-		{
-			_status.lock();
-			if ( !_status[ Status::RUNNING ] )
-			{
-				_status[ Status::RUNNING ] = true;
-				_status.unlock();
-				_th.reset( new boost::thread(boost::bind(&Receiver::recvLoop,this)) );
-			}
-			else if ( _status[ Status::PAUSED ] )
-			{
-				_status[ Status::PAUSED ] = false;
-				_status.unlock();
-				_condUnPause.notify_all();
-			}
-		}
-
-		void Receiver::pause()
-		{
-			Status::type::LockerType lk( _status );
-			_status[ Status::PAUSED ] = true;
-		}
-
-		void Receiver::unpause()
-		{
-			{
-				Status::type::LockerType lk( _status );
-				_status[ Status::PAUSED ] = false;
-			}
-			_condUnPause.notify_all();
-		}
-
-		void Receiver::stop()
-		{
-			_status.lock();
-			if ( _status[ Status::RUNNING ] )
-			{
-				_status[ Status::RUNNING ] = false;
-				if ( _status[ Status::PAUSED ] )
-				{
-					_status[ Status::PAUSED ] = false;
-					_status.unlock();
-					_condUnPause.notify_all();
-				}
-				else
-					_status.unlock();
-			}
-			if ( _th )
-			{
-				_syncLoopEnd.wait();
-				_th.reset();
-			}
-		}
-		Stat Receiver::getStats() const throw()
-		{
-			SafeStats::LockerType lk( _stats );
-			return *_stats;
-		}
-
 
 	}
 }

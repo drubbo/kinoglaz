@@ -106,7 +106,7 @@ namespace KGD
 
 		Session::~Session()
 		{
-			Log::debug( "%s: destroying", getLogName() );
+			Log::verbose( "%s: destroying", getLogName() );
 			
 			this->teardown( RTSP::PlayRequest() );
 
@@ -124,7 +124,7 @@ namespace KGD
 				Log::error( "%s: RTP and RTCP channel not of same type !?!", getLogName() );
 			}
 
-			Log::debug( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroyed", getLogName() );
 		}
 
 		const char * Session::getLogName() const throw()
@@ -134,7 +134,7 @@ namespace KGD
 
 		bool Session::isPlaying() const throw()
 		{
-			RLock lk( _th );
+			OwnThread::Lock lk( _th );
 			return !_status.bag[ Status::STOPPED ] && !_status.bag[ Status::PAUSED ] ;
 		}
 
@@ -147,7 +147,7 @@ namespace KGD
 			return *_medium;
 		}
 
-		double Session::fetchNextFrame( RLock & lk) throw( RTP::Eof )
+		double Session::fetchNextFrame( OwnThread::Lock & lk) throw( RTP::Eof )
 		{
 
 			try
@@ -165,7 +165,7 @@ namespace KGD
 						sendWorse = HUGE_VAL;
 
 					{
-						Safe::UnRLock ulk( lk );
+						OwnThread::UnLock ulk( lk );
 						for(;;)
 						{
 							tmp.reset( _frame.buf->getNextFrame() );
@@ -192,7 +192,7 @@ namespace KGD
 				}
 				else
 				{
-					Safe::UnRLock ulk( lk );
+					OwnThread::UnLock ulk( lk );
 					tmp.reset( _frame.buf->getNextFrame() );
 				}
 
@@ -216,7 +216,7 @@ namespace KGD
 		void Session::loop()
 		{
 			{
-				RLock lk( _th );
+				OwnThread::Lock lk( _th );
 				Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
 
 				try
@@ -229,16 +229,16 @@ namespace KGD
 
 					while (!_status.bag[ Status::STOPPED ])
 					{
-						Log::debug("%s: main loop entered", getLogName() );
+						Log::verbose("%s: main loop entered", getLogName() );
 						while( _status.bag[ Status::PAUSED ] )
 						{
-							Log::message( "%s: go pause", getLogName() );
+							Log::debug( "%s: go pause", getLogName() );
 							_frame.rate.stop();
 							_frame.time->pause( Clock::getSec() );
 							// signal "going to pause"
 							if ( _pause.sync )
 							{
-								Safe::UnRLock ulk( lk );
+								OwnThread::UnLock ulk( lk );
 								_pause.asleep.wait();
 							}
 							// wait wakeup
@@ -269,7 +269,7 @@ namespace KGD
 								if ( _frame.next )
 								{
 									{
-										Safe::UnRLock ulk( lk );
+										OwnThread::UnLock ulk( lk );
 										KGD::Clock::sleepNano( slp );
 									}
 									now = _frame.time->getPresentationTime();
@@ -306,7 +306,7 @@ namespace KGD
 				{
 					Log::error( "%s: %s", getLogName(), e.what() );
 				}
-				Log::debug( "%s: loop exited", getLogName() );
+				Log::debug( "%s: main loop exited", getLogName() );
 
 				Log::debug( "%s: stopping rtcp sender", getLogName() );
 				_rtcp.sender->stop();
@@ -317,7 +317,7 @@ namespace KGD
 				_status.bag[ Status::PAUSED ]  = false;
 			}
 
-			Log::debug( "%s: loop terminated", getLogName() );
+			Log::debug( "%s: thread loop terminated", getLogName() );
 
 			_th.wait();
 		}

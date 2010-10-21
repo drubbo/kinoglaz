@@ -141,10 +141,10 @@ namespace KGD
 
 		void Abstract::close() throw( )
 		{
-			Log::debug( "a socket is closing");
-			
 			if (_fileDescriptor > -1)
 			{
+				Log::debug( "a socket is closing");
+
 // 				::shutdown(_fileDescriptor, SHUT_RD)
 				if ( ::close(_fileDescriptor) < 0 )
 				{

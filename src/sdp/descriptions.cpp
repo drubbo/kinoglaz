@@ -65,7 +65,7 @@ namespace KGD
 
 		SDP::Container & Descriptions::loadDescription( const string & file ) throw( SDP::Exception::Generic )
 		{
-			RLock lk( Descriptions::mux() );
+			Descriptions::Lock lk( Descriptions::mux() );
 			Log::debug("SDP Pool: loading description for %s", file.c_str() );
 			try
 			{
@@ -90,8 +90,8 @@ namespace KGD
 
 		SDP::Container & Descriptions::getDescription( const string & file ) throw( KGD::Exception::NotFound )
 		{
-			RLock lk( Descriptions::mux() );
-			Log::debug("SDP Pool: getting description for %s", file.c_str() );
+			Descriptions::Lock lk( Descriptions::mux() );
+			Log::verbose("SDP Pool: getting description for %s", file.c_str() );
 			ContainerMap::iterator it = _descriptions.find( file );
 			if ( it == _descriptions.end() )
 				throw KGD::Exception::NotFound( "SDP description for " + file );
@@ -101,7 +101,7 @@ namespace KGD
 
 		void Descriptions::releaseDescription( const string & file ) throw( )
 		{
-			RLock lk( Descriptions::mux() );
+			Descriptions::Lock lk( Descriptions::mux() );
 			ContainerMap::iterator it = _descriptions.find( file );
 			if ( it == _descriptions.end() )
 				Log::debug( "SDP Pool: releasing unmanaged description for %s", file.c_str() );

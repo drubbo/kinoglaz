@@ -88,8 +88,10 @@ namespace KGD
 				void start( Session & s );
 			} _rtcp;
 
+			//! send thread type
+			typedef Safe::Thread< Mutex > OwnThread;
 			//! send thread
-			mutable SyncThread< RMutex > _th;
+			OwnThread _th;
 
 			//! status flags
 			struct Status
@@ -142,7 +144,7 @@ namespace KGD
 			RTSP::PlayRequest doSeekScale( const RTSP::PlayRequest & ) throw( KGD::Exception::OutOfBounds );
 
 			//! retrieves next frame from frame buffer
-			double fetchNextFrame( RLock & ) throw( RTP::Eof );
+			double fetchNextFrame( OwnThread::Lock & ) throw( RTP::Eof );
 
 			//! packetized and sends a frame on the RTP socket, marking the frame with the specified time on media timeline
 			void sendNextFrame( ) throw( KGD::Socket::Exception );

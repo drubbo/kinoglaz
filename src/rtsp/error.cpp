@@ -45,12 +45,12 @@ namespace KGD
 		namespace Error
 		{
 			boost::scoped_ptr< map< TCode, ref< const Definition > > > Definition::_all( new map< TCode, ref< const Definition > >() );
-			Mutex Definition::_allMux;
+// 			Mutex Definition::_allMux;
 
 			Definition::Definition( const TCode code, const string & description )
 			: _code( code ), _description( description )
 			{
-				Lock lk( _allMux );
+// 				Lock lk( _allMux );
 				_all->insert( make_pair( code, *this ) );
 			}
 
@@ -71,7 +71,7 @@ namespace KGD
 
 			const Definition & Definition::getDefinition( const TCode code ) throw( KGD::Exception::NotFound )
 			{
-				Lock lk( _allMux );
+// 				Lock lk( _allMux );
 				try
 				{
 					return *_all->at( code );

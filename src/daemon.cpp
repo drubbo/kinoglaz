@@ -57,7 +57,7 @@ namespace KGD
 {
 	Daemon::Reference Daemon::getInstance() throw( KGD::Exception::InvalidState )
 	{
-		Instance::LockerType lk( _instance );
+		Instance::Lock lk( _instance );
 		if ( ! *_instance )
 			throw KGD::Exception::InvalidState( "KGD: daemon instance not initialized" );
 		else
@@ -66,7 +66,7 @@ namespace KGD
 
 	Daemon::Reference Daemon::getInstance( const string & fileName ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound )
 	{
-		Instance::LockerType lk( _instance );
+		Instance::Lock lk( _instance );
 		if ( *_instance )
 			throw KGD::Exception::InvalidState( "KGD: daemon instance already initialized" );
 		else

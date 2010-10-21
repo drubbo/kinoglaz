@@ -64,48 +64,30 @@ namespace KGD
 	{
 		//! RTCP sender - delivers sender stats
 		class Sender
-		: public boost::noncopyable
+		: public RTCP::Thread
 		{
 		private:
-			//! ref to rtp session
-			RTP::Session & _rtp;
-			//! socket abstraction
-			boost::shared_ptr< Channel::Bi > _sock;
-
 			//! sync barrier with RTP session
-			Barrier _syncRTP;
-			Barrier _syncLoopEnd;
-			//! send thread
-			Thread _th;
-			//! un-pause condition
-			Condition _condUnPause;
-
-			//! status flags declaration
-			struct Status
+			class RTPSync
 			{
-				//! thread safe flag set
-				typedef Safe::FlagSet< 3 > type;
-				//! status identifiers 
-				enum flag
-				{
-					RUNNING,
-					PAUSED,
-					SYNC_WITH_RTP
-				};
-			};
-			//! sender status flags
-			Status::type _status;
+			private:
+				bool _doSync;
+				Barrier _sync;
+			public:
+				RTPSync();
+				RTPSync & operator=( bool );
+				operator bool() const;
+				void wait();
+			} _syncRTP;
 
 			//! buffer of data to send
 			Buffer _buffer;
-			//! sending stats
-			SafeStats _stats;
 
 			//! log identifier
 			const string _logName;
 
 			//! main loop
-			void sendLoop();
+			virtual void run();
 
 			//! enque SR packet in local buffer
 			Sender& enqueueReport();
@@ -114,12 +96,10 @@ namespace KGD
 			//! enque BYE packet in local buffer
 			Sender& enqueueBye();
 
-			//! pause the loop
-			void pause();
-			//! restart the loop
-			void unpause();
 			//! release sync barrier with RTP session
-			void releaseRTP();
+			void releaseRTP( OwnThread::Lock & );
+			//! advice to sync with rtp
+			virtual void _start();
 		public:
 			//! ctor
 			Sender( RTP::Session &, const boost::shared_ptr< Channel::Bi > & );
@@ -129,10 +109,6 @@ namespace KGD
 			//! get log identifier
 			const char * getLogName() const throw();
 
-			//! start the sender
-			void start();
-			//! stop the sender
-			void stop();
 			//! restart the sender, so next delivery will be immediate
 			void restart();
 			//! calling thread (RTP session) will wait for sync on a 2-input barrier
@@ -140,8 +116,6 @@ namespace KGD
 
 			//! add a packet to sender stats
 			void registerPacketSent( size_t sz ) throw();
-			//! return sender stats
-			Stat getStats() const throw();
 
 			friend Channel::Out & KGD::operator<<( Channel::Out &, RTCP::Sender & ) throw( KGD::Socket::Exception );
 

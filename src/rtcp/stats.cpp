@@ -41,7 +41,7 @@ namespace KGD
 {
 	namespace RTCP
 	{
-		Stat::Stat()
+		Stats::Stats()
 		: RRcount(0)
 		, SRcount(0)
 		, destSsrc(0)
@@ -56,7 +56,7 @@ namespace KGD
 		{
 		}
 
-		void Stat::log( const string & lbl ) const
+		void Stats::log( const string & lbl ) const
 		{
 			Log::message("RTCP %s Stats: %d RR, %d SR, %u packets, %u packets lost, %u fraction lost, %u jitter"
 				, lbl.c_str()
@@ -66,6 +66,93 @@ namespace KGD
 				, pktLost
 				, fractLost
 				, jitter);
+		}
+
+
+		Thread::Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
+		: _rtp( s )
+		, _sock( sock )
+		{
+			_flags.bag[ Status::RUNNING ] = false;
+			_flags.bag[ Status::PAUSED ] = false;
+			
+		}
+
+		void Thread::start()
+		{
+			_th.lock();
+
+			this->_start();
+
+			if ( !_flags.bag[ Status::RUNNING ] )
+			{
+				_flags.bag[ Status::RUNNING ] = true;
+				_th.unlock();
+				_th.reset( new boost::thread(boost::bind(&Thread::run,this)) );
+			}
+			else if ( _flags.bag[ Status::PAUSED ] )
+			{
+				_flags.bag[ Status::PAUSED ] = false;
+				_th.unlock();
+				_wakeup.notify_all();
+			}
+		}
+
+		void Thread::pause()
+		{
+			OwnThread::Lock lk( _th );
+			_flags.bag[ Status::PAUSED ] = true;
+		}
+
+		void Thread::unpause()
+		{
+			_th.lock();
+			if ( _flags.bag[ Status::PAUSED ] )
+			{
+				_flags.bag[ Status::PAUSED ] = false;
+				_th.unlock();
+				_wakeup.notify_all();
+			}
+			else if ( _flags.bag[ Status::RUNNING ] )
+			{
+				_th.unlock();
+				_th->interrupt();
+			}
+		}
+
+		void Thread::stop()
+		{
+			if ( _th )
+			{
+				_th.lock();
+				if ( _flags.bag[ Status::RUNNING ] )
+				{
+					_flags.bag[ Status::RUNNING ] = false;
+
+					if ( _flags.bag[ Status::PAUSED ] )
+					{
+						_flags.bag[ Status::PAUSED ] = false;
+						_th.unlock();
+						_wakeup.notify_all();
+					}
+					else
+					{
+						_th.unlock();
+						_th->interrupt();
+					}
+				}
+				else
+					_th.unlock();
+				_th.wait();
+				_th.reset();
+			}
+		}
+
+
+		Stats Thread::getStats() const throw()
+		{
+			SafeStats::Lock lk( _stats );
+			return *_stats;
 		}
 
 	}

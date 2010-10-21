@@ -60,7 +60,7 @@ namespace KGD
 
 		RTSP::PlayRequest Session::eval( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
 		{
-			RLock lk(_th);
+			OwnThread::Lock lk(_th);
 
 			RTSP::PlayRequest ret( rq );
 			if ( _status.bag[ Status::STOPPED ] )

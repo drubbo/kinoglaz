@@ -55,7 +55,7 @@ namespace KGD
 		, _logName( "CONN " + socket->getRemoteHost() + "#" + toString( _id ) )
 		, _socket( new RTSP::Socket( socket, _logName ) )
 		{
-			Log::debug( "%s: created", getLogName() );
+			Log::verbose( "%s: created", getLogName() );
 		}
 
 		Connection::~Connection()
@@ -79,7 +79,7 @@ namespace KGD
 			Log::debug( "%s: releasing SDP local description", getLogName() );
 			_descriptorInstances.clear();
 			
-			Log::debug( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroyed", getLogName() );
 		}
 
 		const char * Connection::getLogName() const throw()

@@ -45,6 +45,7 @@
 #include "lib/utils/factory.hpp"
 #include "lib/utils/safe.hpp"
 
+#include <boost/detail/atomic_count.hpp>
 #include <string>
 #include <map>
 

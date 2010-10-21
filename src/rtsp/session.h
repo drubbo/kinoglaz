@@ -68,7 +68,7 @@ namespace KGD
 
 		//! RTSP session
 		class Session
-		: public Safe::MutexLockable<>
+		: public Safe::LockableBase< RMutex >
 		{
 		private:
 			typedef boost::ptr_map< string, RTP::Session > SessionMap;

@@ -73,11 +73,11 @@ namespace KGD
 		Container::Container( const string & fileName ) throw( SDP::Exception::Generic )
 		: _fileName( fileName )
 		, _description( fileName )
-		, _running( true )
+		, _running( false )
 		, _logName( "SDP " + fileName )
 		, _uuid( KGD::newUUID() )
 		{
-			Log::debug( "%s: creating descriptor", getLogName() );
+			Log::verbose( "%s: creating descriptor", getLogName() );
 
 			if ( _fileName.substr( _fileName.size() - 4) == ".kls" )
 				this->loadPlayList();
@@ -88,14 +88,19 @@ namespace KGD
 
 		Container::~Container()
 		{
+			this->stop();
+			_media.clear();
+			Log::verbose( "%s: destroyed", getLogName() );
+		}
+
+		void Container::stop()
+		{
+			_running = false;
 			if ( _th )
 			{
-				_running = false;
-				_th->join();
+				_th.wait();
 				_th.reset();
 			}
-			_media.clear();
-			Log::debug( "%s: destroyed", getLogName() );
 		}
 
 		const char * Container::getLogName() const throw()
@@ -195,6 +200,7 @@ namespace KGD
 				}
 			}
 
+			_running = true;
 			_th.reset( new boost::thread( boost::bind( &Container::loadFrameIndex, this, fctx ) ));
 			_th->yield();
 		}
@@ -239,6 +245,8 @@ namespace KGD
 			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
 				medium->second->finalizeFrameCount();
 
+			// sync termination
+			_th.wait();
 		}
 
 		string Container::getFilePath() const throw()
@@ -362,12 +370,7 @@ namespace KGD
 
 		void Container::assign( SDP::Container & other ) throw()
 		{
-			if ( _th )
-			{
-				_running = false;
-				_th->join();
-				_th.reset();
-			}
+			this->stop();
 			_media.clear();
 
 			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
