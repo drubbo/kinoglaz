@@ -63,7 +63,7 @@ namespace KGD
 #if ( LOG_VERBOSITY > VB_VERBOSE )
 		va_list args;
 		va_start( args, fmt );
-		::vsyslog( LOG_DAEMON | LOG_DEBUG, fmt, args );
+		::vsyslog( LOG_DAEMON | LOG_DEBUG, (string("VRB - ") + fmt).c_str(), args );
 		va_end( args );
 #endif
 	}
@@ -73,7 +73,7 @@ namespace KGD
 #if ( LOG_VERBOSITY > VB_DEBUG )
 		va_list args;
 		va_start( args, fmt );
-		::vsyslog( LOG_DAEMON | LOG_DEBUG, fmt, args );
+		::vsyslog( LOG_DAEMON | LOG_DEBUG, (string("DBG - ") + fmt).c_str(), args );
 		va_end( args );
 #endif
 	}
@@ -83,7 +83,7 @@ namespace KGD
 #if ( LOG_VERBOSITY > VB_NOTICE )
 		va_list args;
 		va_start( args, fmt );
-		::vsyslog( LOG_DAEMON | LOG_INFO, fmt, args );
+		::vsyslog( LOG_DAEMON | LOG_INFO, (string("NFO - ") + fmt).c_str(), args );
 		va_end( args );
 #endif
 	}
@@ -111,7 +111,7 @@ namespace KGD
 #if ( LOG_VERBOSITY > VB_ERROR )
 		va_list args;
 		va_start( args, fmt );
-		::vsyslog( LOG_DAEMON | LOG_ERR, fmt, args );
+		::vsyslog( LOG_DAEMON | LOG_ERR, (string("ERR - ") + fmt).c_str(), args );
 		va_end( args );
 #endif
 	}
@@ -121,7 +121,7 @@ namespace KGD
 #if ( LOG_VERBOSITY > VB_WARNING )
 		va_list args;
 		va_start( args, fmt );
-		::vsyslog( LOG_DAEMON | LOG_WARNING, fmt, args );
+		::vsyslog( LOG_DAEMON | LOG_WARNING, (string("WRN - ") + fmt).c_str(), args );
 		va_end( args );
 #endif
 	}
@@ -129,14 +129,14 @@ namespace KGD
 	void Log::error( const Exception::Generic &e ) throw()
 	{
 #if ( LOG_VERBOSITY > VB_ERROR )
-		::syslog( LOG_DAEMON | LOG_ERR, "%s", e.what() );
+		::syslog( LOG_DAEMON | LOG_ERR, "ERR - %s", e.what() );
 #endif		
 	}
 
 	void Log::warning( const Exception::Generic &e ) throw()
 	{
 #if ( LOG_VERBOSITY > VB_WARNING )
-		::syslog( LOG_DAEMON | LOG_WARNING, "%s", e.what() );
+		::syslog( LOG_DAEMON | LOG_WARNING, "WRN - %s", e.what() );
 #endif
 	}
 

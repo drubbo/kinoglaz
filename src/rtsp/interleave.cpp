@@ -95,6 +95,7 @@ namespace KGD
 
 		void Interleave::pushToRead( void const * data, size_t sz ) throw( )
 		{
+			Log::verbose( "%s: pushing %u bytes to read", getLogName(), sz );
 			{
 				InputBuffer::Lock lk( _recv );
 				(*_recv).push_back( new ByteArray( data, sz ) );
@@ -109,14 +110,14 @@ namespace KGD
 			_recv.lock();
 			if ( _running )
 			{
-				Log::debug( "%s: notify readers", getLogName() );
+				Log::verbose( "%s: notify readers", getLogName() );
 				_running = false;
 				_recv.unlock();
 				_condNotEmpty.notify_all();
 			}
 			else
 			{
-				Log::warning( "%s: channel already stopped", getLogName() );
+				Log::verbose( "%s: channel already stopped", getLogName() );
 				_recv.unlock();
 			}
 		}
@@ -173,7 +174,10 @@ namespace KGD
 				}
 				// read is not blocking
 				else if ( _rdTimeout == 0 )
+				{
+					Log::verbose( "%s: socket non blocking, no data", getLogName() );
 					return 0;
+				}
 				// read is blocking or timed blocking
 				else
 				{
@@ -186,9 +190,13 @@ namespace KGD
 						// timed, wait at most timeout
 						else
 						{
-							if ( ! _condNotEmpty.timed_wait( lk, Clock::boostDeltaSec( _rdTimeout ) ) )
-								// time expired
-								return 0;
+							if ( _condNotEmpty.timed_wait( lk, Clock::boostDeltaSec( _rdTimeout ) ) )
+								Log::verbose( "%s: data arrived", getLogName(), _rdTimeout );
+							else
+							{
+								Log::debug( "%s: no data in %.2lf sec", getLogName(), _rdTimeout );
+								throw KGD::Socket::Exception( "readSome", EAGAIN );
+							}
 						}
 					}
 					catch( boost::thread_interrupted )

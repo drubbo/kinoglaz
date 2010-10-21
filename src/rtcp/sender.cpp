@@ -58,9 +58,16 @@ namespace KGD
 			}
 			catch( Socket::Exception const & e )
 			{
-				Log::error( "Socket error during RTCP Sender packet send: %s", e.what() );
-				s.close();
-				throw;
+				if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+				{
+					Log::warning( "%s: %s, packet lost", rtcp.getLogName(), e.what() );
+				}
+				else
+				{
+					Log::error( "%s: %s, closing socket", e.what() );
+					s.close();
+					throw;
+				}
 			}
 		}
 

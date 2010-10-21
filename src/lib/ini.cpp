@@ -144,7 +144,7 @@ namespace KGD
 	{
 		SectionsMap::const_iterator it = _sections.find( section );
 		if ( it == _sections.end() )
-			throw KGD::Exception::NotFound( _fileName + "::[" + section + "]" );
+			return defaultValue;
 		else
 			return it->second( key, defaultValue );
 	}
