@@ -93,7 +93,7 @@ namespace KGD
 				public:
 					//! get clone of this iterator
 					virtual Default* getClone() const throw();
-					//! dtor
+					//! dtor, release count from medium
 					virtual ~Default();
 					//! returns frame at position. does not change current position
 					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );

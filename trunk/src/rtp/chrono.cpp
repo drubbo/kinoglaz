@@ -253,7 +253,7 @@ namespace KGD
 
 			void Medium::start( double t, double spd ) throw( )
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				if ( !_life.isRunning() )
 				{
 					_life.start( t );
@@ -263,7 +263,7 @@ namespace KGD
 
 			void Medium::pause( double t ) throw( )
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				if ( _play.isRunning() )
 				{
 					_play.stop( t );
@@ -273,7 +273,7 @@ namespace KGD
 
 			void Medium::unpause( double t, double spd ) throw( )
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				if ( !_life.isRunning() )
 				{
 					_life.start( t );
@@ -288,7 +288,7 @@ namespace KGD
 
 			void Medium::stop( double t ) throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				if ( _life.isRunning() )
 				{
 					_play.stop( t );
@@ -299,7 +299,7 @@ namespace KGD
 
 			void Medium::seek( double t, double pt, double spd ) throw( )
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 
 				double delta = ( pt - this->getPresentationTime( t ) );
 				_seek += delta;
@@ -316,12 +316,12 @@ namespace KGD
 
 			double Medium::getPresentationTime( double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _play.getElapsed( t ) + _seek.relative;
 			}
 // 			TTimestamp Medium::getRTPtime( double deltaPT, double t ) const throw()
 // 			{
-// 				RLock lk( _mux );
+// 				Medium::Lock lk( *this );
 // 				TTimestamp rt = TTimestamp(
 // 						( 	_rtpStart
 // 							+ _seek.relative	//NOTE this is for VLC, without the rtp timeline would really be monotonic
@@ -334,7 +334,7 @@ namespace KGD
 
 			TTimestamp Medium::getRTPtime( double pt, double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				double delta = 0;
 				if ( pt != HUGE_VAL )
 					delta = ( pt - this->getPresentationTime(t) ) / _play.getCurrentSpeed();
@@ -344,42 +344,42 @@ namespace KGD
 
 			TTimestamp Medium::getRTPbegin() const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _rtpStart;
 			}
 			double Medium::getSpeed() const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _play.getCurrentSpeed();
 			}
 			double Medium::getLastPause( double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _pause.getLast( t );
 			}
 			double Medium::getLifeBegin() const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _life.getBegin();
 			}
 			double Medium::getLifeTime( double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _life.getElapsed( t );
 			}
 			double Medium::getPauseTime( double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _pause.getElapsed( t );
 			}
 			double Medium::getPlayTime( double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _life.getElapsed( t ) - _pause.getElapsed( t );
 			}
 			Seek Medium::getSeekTimes() const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				return _seek;
 			}
 
@@ -399,7 +399,7 @@ namespace KGD
 
 			TTimestamp VLCMedium::getRTPtime( double pt, double t ) const throw()
 			{
-				RLock lk( _mux );
+				Medium::Lock lk( *this );
 				double curTime = this->getPresentationTime( t );
 				if ( pt == HUGE_VAL )
 					pt = curTime;

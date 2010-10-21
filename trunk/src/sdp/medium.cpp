@@ -62,6 +62,14 @@ namespace KGD
 		{
 			// ****************************************************************************************************************
 
+			Base::FrameData::FrameData( int64_t n )
+			: count( n )
+			{}
+			
+			Base::It::It( )
+			: count( 0 )
+			{}
+
 			Base::Base( MediaType::kind mt, Payload::type pt )
 			: _type( mt )
 			, _pt( pt )
@@ -72,11 +80,9 @@ namespace KGD
 			, _timeBase( 0 )
 			, _freqBase( 0 )
 			, _extraData( 0 )
-			, _frameCount( -1 )
-			, _itCount( 0 )
-			, _itModel( new Iterator::Default( *this ) )
+			, _frame( -1 )
 			{
-
+				_it.model.reset( new Iterator::Default( *this ) );
 			}
 
 			Base::Base( const Base & b )
@@ -89,39 +95,53 @@ namespace KGD
 			, _timeBase( b._timeBase )
 			, _freqBase( b._freqBase )
 			, _extraData( b._extraData )
-			, _frameCount( 0 )
-			, _itCount( 0 )
-			, _itModel( new Iterator::Default( *this ) )
+			, _frame( 0 )
 			{
-
+				_it.model.reset( new Iterator::Default( *this ) );
 			}
 
 			Base::~Base()
 			{
-				RLock lk( _fMux );
+				FrameData::Lock lk( _frame );
 
-				_itModel.reset();
+				_it.model.reset();
 
-				Log::debug( "%s: waiting for %u iterators", getLogName(), long( _itCount ) );
-				while( _itCount > 0 )
-					_condItReleased.wait( lk );
+				Log::debug( "%s: waiting for %u iterators", getLogName(), long( _it.count ) );
+				while( _it.count > 0 )
+					_it.released.wait( lk );
 
-				_frames.clear();
+				_frame.list.clear();
 			}
 
 			Iterator::Base * Base::newFrameIterator() const throw()
 			{
-				return _itModel->getClone();
+				It::Lock lk( _it );
+				++ _it.count;
+				return _it.model->getClone();
+			}
+
+			void Base::releaseIterator( ) throw()
+			{
+				_it.lock();
+				if ( -- _it.count <= 0 )
+				{
+					_it.unlock();
+					_it.released.notify_all();
+				}
+				else
+					_it.unlock();
 			}
 
 			void Base::setFrameIteratorModel( Iterator::Base * it ) throw()
 			{
-				_itModel.reset( it );
+				It::Lock lk( _it );
+				_it.model.reset( it );
 			}
 
 			double Base::getIterationDuration() const throw()
 			{
-				return _itModel->duration();
+				It::Lock lk( _it );
+				return _it.model->duration();
 			}
 
 			const char * Base::getLogName() const throw()
@@ -213,36 +233,36 @@ namespace KGD
 			void Base::finalizeFrameCount( ) throw()
 			{
 				{
-					RLock lk(_fMux);
-					_frameCount = _frames.size();
+					FrameData::Lock lk( _frame );
+					_frame.count = _frame.list.size();
 				}
-				_condMoreFrames.notify_all();
+				_frame.available.notify_all();
 			}
 
 			void Base::addFrame( Frame::Base * f ) throw()
 			{
 				{
-					RLock lk(_fMux);
+					FrameData::Lock lk( _frame );
 					f->setPayloadType( _pt );
 					f->addTime( _frameTimeShift );
-					f->setMediumPos( _frames.size() );
-					_frames.push_back( f );
+					f->setMediumPos( _frame.list.size() );
+					_frame.list.push_back( f );
 				}
-				_condMoreFrames.notify_all();
+				_frame.available.notify_all();
 			}
 
 			size_t Base::getFrameCount( ) const throw( )
 			{
-				RLock lk(_fMux);
-				while( _frameCount < 0 )
-					_condMoreFrames.wait( lk );
+				FrameData::Lock lk( _frame );
+				while( _frame.count < 0 )
+					_frame.available.wait( lk );
 
-				return _frameCount;
+				return _frame.count;
 			}
 
 			Base::FrameList Base::getFrames( double from, double to ) const throw( )
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
 				size_t
 					fromPos = 0,
 					toPos = this->getFrameCount() - 1;
@@ -276,9 +296,9 @@ namespace KGD
 				rt.reserve( toPos - fromPos + 1 );
 				for( size_t i = fromPos; i <= toPos; ++i )
 				{
-					if ( ! _frames.is_null( i ) )
+					if ( ! _frame.list.is_null( i ) )
 					{
-						auto_ptr< Frame::Base > f( _frames[i].getClone() );
+						auto_ptr< Frame::Base > f( _frame.list[i].getClone() );
 						f->addTime( -from );
 						rt.push_back( f );
 					}
@@ -290,53 +310,54 @@ namespace KGD
 
 			void Base::releaseFrame( size_t pos ) throw()
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
+				It::Lock ilk( _it );
 				if ( ! RTSP::Method::SUPPORT_SEEK
-					&& pos < _frames.size()
-					&& ! _frames.is_null( pos )
-					&& ! _itModel->hasType< Medium::Iterator::Loop >() )
+					&& pos < _frame.list.size()
+					&& ! _frame.list.is_null( pos )
+					&& ! _it.model->hasType< Medium::Iterator::Loop >() )
 				{
-					_frames.replace( pos, 0 );
+					_frame.list.replace( pos, 0 );
 				}
 			}
 
 			const Frame::Base & Base::getFrame( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 			{
-				RLock lk(_fMux);
-				while ( pos >= _frames.size() )
+				FrameData::Lock lk( _frame );
+				while ( pos >= _frame.list.size() )
 				{
-					if ( _frameCount < 0 )
-						_condMoreFrames.wait( lk );
+					if ( _frame.count < 0 )
+						_frame.available.wait( lk );
 					else
-						throw KGD::Exception::OutOfBounds( pos, 0, _frames.size() );
+						throw KGD::Exception::OutOfBounds( pos, 0, _frame.list.size() );
 				}
 
-				if ( ! _frames.is_null( pos ) )
-					return _frames[ pos ];
+				if ( ! _frame.list.is_null( pos ) )
+					return _frame.list[ pos ];
 				else
-					throw KGD::Exception::NullPointer( "Frame at position " + KGD::toString( pos ) + " out of " + KGD::toString( _frames.size() ) );
+					throw KGD::Exception::NullPointer( "Frame at position " + KGD::toString( pos ) + " out of " + KGD::toString( _frame.list.size() ) );
 			}
 
 			size_t Base::getFramePos( double t ) const throw( KGD::Exception::OutOfBounds )
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
 				size_t pos = 0;
 				for( ; ; )
 				{
 					// wait for more frames if needed
-					if( pos >= _frames.size() )
+					if( pos >= _frame.list.size() )
 					{
-						if ( _frameCount < 0 )
-							_condMoreFrames.wait( lk );
+						if ( _frame.count < 0 )
+							_frame.available.wait( lk );
 						else
-							throw KGD::Exception::OutOfBounds( pos, 0, _frames.size() );
+							throw KGD::Exception::OutOfBounds( pos, 0, _frame.list.size() );
 					}
 					// frame time >= searched time
 					// if video frame, must be key
 					else if (
-						! _frames.is_null( pos )
-						&& _frames[pos].getTime() >= t
-						&& ( (_type == SDP::MediaType::Video && _frames[pos].asPtrUnsafe< Frame::MediaFile >()->isKey() )
+						! _frame.list.is_null( pos )
+						&& _frame.list[pos].getTime() >= t
+						&& ( (_type == SDP::MediaType::Video && _frame.list[pos].asPtrUnsafe< Frame::MediaFile >()->isKey() )
 							|| _type != SDP::MediaType::Video ) )
 						return pos;
 					else
@@ -346,16 +367,16 @@ namespace KGD
 
 			void Base::insert( Iterator::Base & otherFrames, double start ) throw( KGD::Exception::OutOfBounds )
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
 				double duration = otherFrames.duration();
 				// guess pos
 				size_t pos = this->getFramePos( start );
 				Log::debug( "%s: media insert: found insert position %lu for time %lf, shifting next frames by %lf", getLogName(), pos, start, duration );
 				// shift successive frames by new medium duration
-				FrameList::iterator insIt = _frames.begin() + pos;
+				FrameList::iterator insIt = _frame.list.begin() + pos;
 				Log::debug( "%s: media insert: first frame to shift at time %lf (previous at %lf)", getLogName(), insIt->getTime(), (insIt - 1)->getTime() );
 				{
-					FrameList::iterator it = insIt, ed = _frames.end();
+					FrameList::iterator it = insIt, ed = _frame.list.end();
 					for( ; it != ed; ++it )
 						it->addTime( duration );
 
@@ -375,7 +396,7 @@ namespace KGD
 				{
 					// and insert
 					Log::debug( "%s: media insert: insert %lu new frames", getLogName(), toInsert.size() );
-					_frames.insert( insIt, toInsert.begin(), toInsert.end() );
+					_frame.list.insert( insIt, toInsert.begin(), toInsert.end() );
 					_duration += duration;
 					_frameTimeShift += duration;
 				}
@@ -383,10 +404,10 @@ namespace KGD
 
 			void Base::append( Iterator::Base & otherFrames ) throw( )
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
 				// we have to wait full fill
-				while( _frameCount < 0 )
-					_condMoreFrames.wait( lk );
+				while( _frame.count < 0 )
+					_frame.available.wait( lk );
 
 				// shift new frames by offset time
 				FrameList toInsert;
@@ -403,7 +424,7 @@ namespace KGD
 				{
 					// and insert
 					Log::debug( "%s: media append: append %lu new frames", getLogName(), toInsert.size() );
-					_frames.insert( _frames.end(), toInsert.begin(), toInsert.end() );
+					_frame.list.insert( _frame.list.end(), toInsert.begin(), toInsert.end() );
 					_duration += otherFrames.duration();
 				}				
 			}
@@ -411,14 +432,14 @@ namespace KGD
 
 			void Base::insert( double duration, double start ) throw( KGD::Exception::OutOfBounds )
 			{
-				RLock lk(_fMux);
+				FrameData::Lock lk( _frame );
 				// guess pos
 				size_t pos = this->getFramePos( start );
 				Log::debug( "%s: media insert: found insert position %lu", getLogName(), pos );
 				// shift successive frames by new medium duration
-				FrameList::iterator insIt = _frames.begin() + pos;
+				FrameList::iterator insIt = _frame.list.begin() + pos;
 				{
-					FrameList::iterator it = insIt, ed = _frames.end();
+					FrameList::iterator it = insIt, ed = _frame.list.end();
 					for( ; it != ed; ++it )
 						it->addTime( duration );
 				}
@@ -428,7 +449,8 @@ namespace KGD
 
 			void Base::loop( uint8_t times ) throw()
 			{
-				_itModel.reset( new Iterator::Loop( _itModel.release(), times ) );
+				It::Lock lk( _it );
+				_it.model.reset( new Iterator::Loop( _it.model.release(), times ) );
 			}
 		}
 	}

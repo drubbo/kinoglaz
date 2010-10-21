@@ -42,6 +42,7 @@
 
 #include <lib/clock.h>
 #include <rtsp/common.h>
+#include <lib/utils/safe.hpp>
 
 namespace KGD
 {
@@ -152,11 +153,10 @@ namespace KGD
 			//! the combined medium timeline: RTP(t) = (LIFE(t) - PAUSED(t)) * rate
 			class Medium
 			: virtual public Factory::Base
+			, public Safe::LockableBase< RMutex >
 			, public Factory::Multiton< Medium, Medium, RTSP::UserAgent::Generic >
 			{
 			protected:
-				mutable RMutex _mux;
-
 				//! this is the lifetime segment, the linear time elapsed from first start
 				Segment _life;
 				//! multiple times, the medium will be paused, always at speed 1.0
