@@ -59,6 +59,7 @@ namespace KGD
 			catch( Socket::Exception const & e )
 			{
 				Log::error( "Socket error during RTCP Sender packet send: %s", e.what() );
+				s.close();
 				throw;
 			}
 		}
@@ -170,7 +171,6 @@ namespace KGD
 								try
 								{
 									_th->sleep( Clock::boostDeltaSec( SR_INTERVAL ) );
-									Log::verbose("%s has sleeped enough", getLogName());
 								}
 								catch( boost::thread_interrupted )
 								{

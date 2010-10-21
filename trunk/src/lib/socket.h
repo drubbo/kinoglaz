@@ -91,6 +91,9 @@ namespace KGD
 			//! is write a blocking operation ?
 			virtual bool isWriteBlock() const = 0;
 
+			//! stop the channel
+			virtual void close() throw() = 0;
+
 			//! an Out channel can describe itself
 			virtual Description getDescription() const = 0;
 		};
