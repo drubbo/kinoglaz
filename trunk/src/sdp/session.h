@@ -88,8 +88,9 @@ namespace KGD
 			//! medium list
 			MediaMap _media;
 
+			typedef Safe::Thread< RMutex > OwnThread;
 			//! load frame thread
-			Safe::ThreadBarrier _th;
+			OwnThread _th;
 			//! is load frame thread running ?
 			Safe::Bool _running;
 

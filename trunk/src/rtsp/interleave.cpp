@@ -232,7 +232,9 @@ namespace KGD
 		, _logName( parentLogName + " SOCKET" )
 		{
 			(*_sock).reset( sk );
-			(*_sock)->setWriteBlock( false );
+			(*_sock)->setReadBlock( true );
+// 			(*_sock)->setReadTimeout( 1.0 );
+			(*_sock)->setWriteBlock( true );
 			(*_sock)->setWriteTimeout( 1.0 );
 		}
 
