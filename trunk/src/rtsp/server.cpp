@@ -69,6 +69,7 @@ namespace KGD
 
 		Server::Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception )
 		: _maxConnections( 0 )
+		, _ip( "" )
 		, _port( 0 )
 		, _running( false )
 		{
@@ -81,17 +82,19 @@ namespace KGD
 			while( _maxConnections != 0 && _conns.size() > _maxConnections )
 				_conns.erase( _conns.rbegin().base() );
 
-			TPort newPort = fromString< TPort >( params[ "port" ] );
-			if ( _socket && _port != newPort )
+			TPort newPort = fromString< TPort >( params( "port", "8554" ) );
+			string newIP = params( "ip", "*" );
+			if ( _socket && (_port != newPort || _ip != newIP ))
 			{
-				Log::message( "KGD: switching port from %d to %d", _port, newPort );
+				Log::message( "KGD: switching from %s:%d to %s:%d", _ip.c_str(), _port, newIP.c_str(), newPort );
 				_socket.reset();
 			}
 			if ( !_socket )
 			{
 				_port = newPort;
-				_socket.reset( new KGD::Socket::TcpServer( _port ) );
-				Log::message( "KGD: binding to port %d", newPort );
+				_ip = newIP;
+				_socket.reset( new KGD::Socket::TcpServer( _port, _maxConnections, _ip ) );
+				Log::message( "KGD: binding to %s:%d", _ip.c_str(), _port );
 			}
 
 		}

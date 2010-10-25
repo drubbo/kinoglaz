@@ -253,6 +253,11 @@ namespace KGD
 			{
 				_socket->stopInterleaving( sessionID );
 				_sessions.erase( sessionID );
+				if ( _sessions.empty() )
+				{
+					Log::debug( "%s: no more sessions, tearing down", getLogName() );
+					_socket->close();
+				}
 			}
 			else
 				throw RTSP::Exception::ManagedError( Error::SessionNotFound );

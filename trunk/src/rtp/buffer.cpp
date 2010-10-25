@@ -249,9 +249,10 @@ namespace KGD
 							{
 								auto_ptr< RTP::Frame::Base > newFrame;
 								{
-									Frame::UnLock ulk( lk );
+									lk.unlock();
 									{
 										Lock lkSeek( _seekMux );
+										lk.lock();
 										// advance iterator
 										const SDP::Frame::Base & next = _frame.idx->next();
 										try

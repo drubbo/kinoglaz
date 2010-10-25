@@ -98,10 +98,13 @@ namespace KGD
 			void Base::setConnection( Connection & conn )
 			{
 				_conn = conn;
+				_conn->lock();
 			}
 
 			Base::~Base()
 			{
+				if ( _conn )
+					_conn->unlock();
 			}
 
 			void Base::execute() throw( RTSP::Exception::ManagedError )

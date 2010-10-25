@@ -53,11 +53,11 @@ namespace KGD
 		//! instance the rtsp server and start it
 		virtual bool run() throw();
 		//! construct with parameter file
-		Daemon( const string & fileName ) throw( KGD::Exception::NotFound );
+		Daemon( const Ini::Reference & params ) throw( KGD::Exception::NotFound );
 		friend class Singleton::Class< Daemon >;
 	public:
 		//! daemon must not have been instanced already - first call
-		static Daemon::Reference getInstance( const string & ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound );
+		static Daemon::Reference getInstance( const Ini::Reference & ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound );
 		//! daemon must have been instanced already
 		static Daemon::Reference getInstance() throw( KGD::Exception::InvalidState );
 		//! reload param file and assign values to static variables here and there
