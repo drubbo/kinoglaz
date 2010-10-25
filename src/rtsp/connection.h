@@ -57,7 +57,7 @@ namespace KGD
 	{	
 		//! RTSP client connection management
 		class Connection
-		: public boost::noncopyable
+		: public Safe::LockableBase< RMutex >
 		{
 		public:
 			static bool SHARE_DESCRIPTORS;

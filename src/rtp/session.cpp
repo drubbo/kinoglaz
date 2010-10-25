@@ -140,11 +140,11 @@ namespace KGD
 
 		const SDP::Medium::Base & Session::getDescription() const
 		{
-			return *_medium;
+			return _medium;
 		}
 		SDP::Medium::Base & Session::getDescription()
 		{
-			return *_medium;
+			return _medium;
 		}
 
 		double Session::fetchNextFrame( OwnThread::Lock & lk) throw( RTP::Eof )
@@ -198,7 +198,7 @@ namespace KGD
 
 				// release sent frame
 				if ( _frame.next )
-					_medium->releaseFrame( _frame.next->getMediumPos() );
+					_medium.releaseFrame( _frame.next->getMediumPos() );
 				// update frame to send
 				_frame.next.reset( tmp.release() );
 
@@ -280,6 +280,16 @@ namespace KGD
 						}
 						catch ( KGD::Socket::Exception const & e )
 						{
+							Log::error( "%s: %s", getLogName(), e.what() );
+							{
+								RTSP::Session::TryLock rtspLk( _rtsp );
+								if ( rtspLk.owns_lock() )
+								{
+									OwnThread::UnLock ulk( lk );
+									Log::debug( "%s: %s, asking to remove RTP session", getLogName(), e.what() );
+									_rtsp.removeSession( _url.track );
+								}									
+							}
 							throw;
 						}
 						catch ( RTP::Eof )
@@ -304,7 +314,7 @@ namespace KGD
 				}
 				catch ( const KGD::Exception::Generic & e)
 				{
-					Log::error( "%s: %s", getLogName(), e.what() );
+					Log::error( "%s: loop interrupted: %s", getLogName(), e.what() );
 				}
 				Log::verbose( "%s: main loop exited", getLogName() );
 
@@ -356,7 +366,7 @@ namespace KGD
 
 		int Session::getRate() const
 		{
-			return _medium->getRate();
+			return _medium.getRate();
 		}
 		TSSrc Session::getSsrc() const
 		{

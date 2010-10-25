@@ -65,11 +65,11 @@ namespace KGD
 		{
 		private:
 			//! RTSP session
-			ref< RTSP::Session > _rtsp;
+			RTSP::Session & _rtsp;
 			//! url, with track, to play
 			Url _url;
 			//! medium description
-			ref< SDP::Medium::Base > _medium;
+			SDP::Medium::Base & _medium;
 
 			//! RTP socket
 			boost::shared_ptr< Channel::Out > _sock;

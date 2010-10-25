@@ -66,20 +66,20 @@ namespace KGD
 			return newInstanceRef();
 	}
 
-	Daemon::Reference Daemon::getInstance( const string & fileName ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound )
+	Daemon::Reference Daemon::getInstance( const Ini::Reference & params ) throw( KGD::Exception::InvalidState, KGD::Exception::NotFound )
 	{
 		Instance::Lock lk( _instance );
 		if ( *_instance )
 			throw KGD::Exception::InvalidState( "KGD: daemon instance already initialized" );
 		else
 		{
-			(*_instance).reset( new Daemon( fileName ) );
+			(*_instance).reset( new Daemon( params ) );
 			return newInstanceRef();
 		}
 	}
 
-	Daemon::Daemon( const string & fileName ) throw( KGD::Exception::NotFound )
-	: KGD::AbstractDaemon( KGD::Ini::getInstance( fileName ) )
+	Daemon::Daemon( const Ini::Reference & params ) throw( KGD::Exception::NotFound )
+	: KGD::AbstractDaemon( params )
 	{
 	}
 

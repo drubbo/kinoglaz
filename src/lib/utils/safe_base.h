@@ -65,6 +65,7 @@ namespace KGD
 		public:
 			typedef M Mutex;
 			typedef typename M::scoped_lock Lock;
+			typedef typename M::scoped_try_lock TryLock;
 			typedef Unlocker< typename M::scoped_lock > UnLock;
 
 			void lock() const							{ _mux.lock(); }

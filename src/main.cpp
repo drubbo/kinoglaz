@@ -105,9 +105,16 @@ int main(int argc, char** argv)
 	{
 		try
 		{
-			KGD::Daemon::Reference d = KGD::Daemon::getInstance( optGet( "-c" ) );
-			bool runResult = d->start( switchIsSet( "-d" ) );
+			bool runResult = false;
+			{
+				KGD::Ini::Reference params = KGD::Ini::getInstance( optGet( "-c" ) );
+				KGD::Daemon::Reference d = KGD::Daemon::getInstance( params );
+				runResult = d->start( switchIsSet( "-d" ) );
+			}
+			KGD::Daemon::destroyInstance();
+			KGD::Ini::destroyInstance();
 			return ( runResult ? EXIT_SUCCESS : EXIT_FAILURE );
+			
 		}
 		catch( KGD::Exception::Generic const &e )
 		{

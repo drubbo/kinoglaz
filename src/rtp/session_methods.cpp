@@ -49,7 +49,7 @@ namespace KGD
 
 			RTSP::PlayRequest ret;
 
-			_timeEnd = min( _medium->getIterationDuration(), rq.to );
+			_timeEnd = min( _medium.getIterationDuration(), rq.to );
 
 			if ( _status.bag[ Status::STOPPED ] )
 				ret = this->doFirstPlay(rq);
@@ -69,7 +69,7 @@ namespace KGD
 			OwnThread::Lock lk( _th );
 
 			// video, o audio a meno di 1x, faccio partire
-			if (_medium->getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0)
+			if (_medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0)
 			{
 				_rtcp.sender->restart();
 				_frame.rate.start();
@@ -119,7 +119,7 @@ namespace KGD
 				ret.from = _frame.time->getPresentationTime();
 
 			// un audio a velocita' superiore a 1.0x non lo invio, lascio il medium in pausa
-			if ( _medium->getType() == SDP::MediaType::Video || fabs( ret.speed ) <= 1.0 )
+			if ( _medium.getType() == SDP::MediaType::Video || fabs( ret.speed ) <= 1.0 )
 			{
 				_status.bag[ Status::SEEKED ] = ret.hasRange;
 
@@ -197,7 +197,7 @@ namespace KGD
 
 			if ( _status.bag[ Status::PAUSED ] )
 			{
-				if ( _medium->getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0 )
+				if ( _medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0 )
 				{
 					_rtcp.sender->restart();
 					_frame.rate.start();

@@ -106,9 +106,11 @@ namespace KGD
 
 				_it.model.reset();
 
-				Log::debug( "%s: waiting for %u iterators", getLogName(), long( _it.count ) );
 				while( _it.count > 0 )
+				{
+					Log::debug( "%s: waiting for %l iterators", getLogName(), long( _it.count ) );
 					_it.released.wait( lk );
+				}
 
 				_frame.list.clear();
 			}

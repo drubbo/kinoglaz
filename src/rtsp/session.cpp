@@ -67,6 +67,7 @@ namespace KGD
 
 		bool Session::hasPlayed() const throw()
 		{
+			Session::Lock lk( *this );
 			return _playIssued;
 		}
 
@@ -84,6 +85,7 @@ namespace KGD
 		{
 			try
 			{
+				Session::Lock lk( *this );
 				// setup channel
 				boost::shared_ptr< Channel::Bi > rtpChan, rtcpChan;
 				TPortPair local;
@@ -168,6 +170,7 @@ namespace KGD
 		{
 			try
 			{
+				Session::Lock lk( *this );
 				Log::debug( "%s: pre-play", getLogName() );
 				// guess common parameters
 				PlayRequest rt( rq );
@@ -192,6 +195,7 @@ namespace KGD
 
 		void Session::insertMedia( SDP::Container & other, double curMediaTime ) throw( KGD::Exception::OutOfBounds )
 		{
+			Session::Lock lk( *this );
 			if ( _sessions.empty() )
 			{
 				Log::error( "%s: media insert: no sessions to add to", getLogName() );
@@ -274,6 +278,7 @@ namespace KGD
 
 		void Session::play() throw()
 		{
+			Session::Lock lk( *this );
 			Log::debug( "%s: play effective", getLogName() );
 
 			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
@@ -282,6 +287,7 @@ namespace KGD
 
 		void Session::pause( const PlayRequest & rq ) throw()
 		{
+			Session::Lock lk( *this );
 			Log::debug( "%s: pause", getLogName() );
 
 			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
@@ -290,6 +296,7 @@ namespace KGD
 
 		void Session::unpause( const PlayRequest & rq ) throw()
 		{
+			Session::Lock lk( *this );
 			Log::debug( "%s: unpause", getLogName() );
 
 			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
@@ -298,6 +305,7 @@ namespace KGD
 
 		ref_list< RTP::Session > Session::getSessions() throw()
 		{
+			Session::Lock lk( *this );
 			list< RTP::Session * > rt;
 			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
 				rt.push_back( sess->second );
@@ -307,6 +315,7 @@ namespace KGD
 
 		ref_list< const RTP::Session > Session::getSessions() const throw()
 		{
+			Session::Lock lk( *this );
 			list< RTP::Session const * > rt;
 			BOOST_FOREACH( SessionMap::const_iterator::reference sess, _sessions )
 				rt.push_back( sess->second );
@@ -318,6 +327,7 @@ namespace KGD
 		{
 			try
 			{
+				Session::Lock lk( *this );
 				return _sessions.at( track );
 			}
 			catch( boost::bad_ptr_container_operation )
@@ -330,6 +340,7 @@ namespace KGD
 		{
 			try
 			{
+				Session::Lock lk( *this );
 				return _sessions.at( track );
 			}
 			catch( boost::bad_ptr_container_operation )
@@ -340,9 +351,19 @@ namespace KGD
 
 		void Session::removeSession( const string & track ) throw( RTSP::Exception::ManagedError )
 		{
+			Session::Lock lk( *this );
 			Log::debug( "%s: removing RTP session %s", getLogName(), track.c_str() );
 			if ( ! _sessions.erase( track ) )
 				throw RTSP::Exception::ManagedError( Error::NotFound );
+			else if ( _sessions.empty() )
+			{
+				Connection::TryLock connLk( _conn );
+				if ( connLk.owns_lock() )
+				{
+					Log::debug( "%s: asking to remove RTSP session", getLogName() );
+					_conn.removeSession( _id );
+				}
+			}
 		}
 
 		const TSessionID & Session::getID() const throw()

@@ -90,7 +90,7 @@ namespace KGD
 			ret.hasRange = true;
 
 			if ( RTSP::Method::SUPPORT_SEEK )
-				ret.to = _medium->getDuration();
+				ret.to = _medium.getIterationDuration();
 
 			return ret;
 		}

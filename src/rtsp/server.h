@@ -64,6 +64,8 @@ namespace KGD
 			ConnectionList _conns;
 			//! max servable requests
 			uint16_t _maxConnections;
+			//! listen ip
+			string _ip;
 			//! listen port
 			TPort _port;
 			//! is main loop running ?
