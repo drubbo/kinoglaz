@@ -289,7 +289,7 @@ namespace KGD
 					}
 					catch( Full f )
 					{
-						Log::verbose( "%s: full", getLogName() );
+// 						Log::verbose( "%s: full", getLogName() );
 						_frame.buf.full.notify_all();
 						if ( f.brk )
 							break;

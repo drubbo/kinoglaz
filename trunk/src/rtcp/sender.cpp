@@ -48,28 +48,8 @@ namespace KGD
 	Channel::Out& operator<< ( Channel::Out & s, RTCP::Sender & rtcp ) throw( KGD::Socket::Exception )
 	{
 		Buffer & b = rtcp._buffer;
-		for(;;)
-		{
-			try
-			{
-				ssize_t wrote = s.writeSome( b.getDataBegin(), b.getDataLength() );
-				b.dequeue( wrote );
-				break;
-			}
-			catch( Socket::Exception const & e )
-			{
-				if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
-				{
-					Log::warning( "%s: %s, packet lost", rtcp.getLogName(), e.what() );
-				}
-				else
-				{
-					Log::error( "%s: %s, closing socket", rtcp.getLogName(), e.what() );
-					s.close();
-					throw;
-				}
-			}
-		}
+		ssize_t wrote = s.writeSome( b.getDataBegin(), b.getDataLength() );
+		b.dequeue( wrote );
 
 		return s;
 	}
@@ -127,6 +107,11 @@ namespace KGD
 			(*_stats).pktCount ++;
 			(*_stats).octetCount += sz;
 		}
+		void Sender::registerPacketLost( size_t sz ) throw()
+		{
+			SafeStats::Lock lk( _stats );
+			(*_stats).pktLost ++;
+		}
 
 		void Sender::wait()
 		{
@@ -168,9 +153,19 @@ namespace KGD
 						if ( _flags.bag[ Status::RUNNING ] )
 						{
 							// send SR and SDES
-							*_sock << enqueueReport().enqueueDescription();
-							// give RTP way if needed
-							this->releaseRTP( lk );
+							try
+							{
+								*_sock << enqueueReport().enqueueDescription();
+								// give RTP way if needed
+								this->releaseRTP( lk );
+							}
+							catch( Socket::Exception const & e )
+							{
+								if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+									Log::warning( "%s: packet lost: %s", getLogName(), e.what() );
+								else
+									throw;
+							}
 
 							// sleep
 							{
@@ -193,7 +188,8 @@ namespace KGD
 				}
 				catch( const KGD::Socket::Exception & e )
 				{
-					Log::error( "%s: socket error: %s", getLogName(), e.what() );
+					Log::error( "%s: closing socket: %s", getLogName(), e.what() );
+					_sock->close();
 				}
 
 				this->releaseRTP( lk );
@@ -236,6 +232,9 @@ namespace KGD
 
 		Sender& Sender::enqueueReport()
 		{
+			//TODO keep to calc fract lost
+// 			static Stats lastStats;
+
 			SenderReport::Header h;
 
 			// times
@@ -267,6 +266,9 @@ namespace KGD
 			_buffer.enqueue( &hh, sizeof(hh) );
 			_buffer.enqueue( &h, sizeof(h) );
 
+
+			//TODO payload for "every" source
+			
 			return *this;
 		}
 

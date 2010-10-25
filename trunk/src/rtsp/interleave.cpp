@@ -232,6 +232,8 @@ namespace KGD
 		, _logName( parentLogName + " SOCKET" )
 		{
 			(*_sock).reset( sk );
+			(*_sock)->setWriteBlock( false );
+			(*_sock)->setWriteTimeout( 1.0 );
 		}
 
 		Socket::~Socket()
