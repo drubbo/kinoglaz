@@ -98,6 +98,7 @@ namespace KGD
 			_running = false;
 			if ( _th )
 			{
+				Log::verbose( "%s: waiting loop termination", getLogName() );
 				_th.wait();
 				_th.reset();
 			}
@@ -246,6 +247,7 @@ namespace KGD
 				medium->second->finalizeFrameCount();
 
 			// sync termination
+			Log::verbose( "%s: sync loop termination", getLogName() );
 			_th.wait();
 		}
 
