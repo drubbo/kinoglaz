@@ -95,10 +95,12 @@ namespace KGD
 
 		void Container::stop()
 		{
+			OwnThread::Lock lk( _th );
 			_running = false;
 			if ( _th )
 			{
 				Log::verbose( "%s: waiting loop termination", getLogName() );
+
 				_th.wait();
 				_th.reset();
 			}
@@ -201,8 +203,11 @@ namespace KGD
 				}
 			}
 
-			_running = true;
-			_th.reset( new boost::thread( boost::bind( &Container::loadFrameIndex, this, fctx ) ));
+			{
+				OwnThread::Lock lk( _th );
+				_running = true;
+				_th.reset( new boost::thread( boost::bind( &Container::loadFrameIndex, this, fctx ) ));
+			}
 			_th->yield();
 		}
 
