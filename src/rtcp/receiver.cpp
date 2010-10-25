@@ -250,24 +250,30 @@ namespace KGD
 				{
 					switch (type)
 					{
+					// SR
 					case PacketType::SenderReport:
 						fPtr = &Receiver::handleSenderReport;
 						break;
+					// RR
 					case PacketType::ReceiverReport:
 						fPtr = &Receiver::handleReceiverReport;
 						break;
+					// SDES
 					case PacketType::SourceDescription:
 						fPtr = &Receiver::handleSourceDescription;
 						break;
+					// BYE, break the loop
 					case PacketType::Bye:
 						Log::message( "%s: BYE", getLogName() );
 						i += size;
-						this->stop();
+						_flags.bag[ Status::RUNNING ] = false;
 						break;
+					// APP, ignore
 					case PacketType::Application:
 						Log::warning( "%s: APP received and ignored", getLogName(), type );
 						i += size;
 						break;
+					// malformed
 					default:
 						Log::warning( "%s: unknown packet type %u", getLogName(), type );
 						++ i;
@@ -291,7 +297,7 @@ namespace KGD
 
 		void Receiver::waitMore() throw()
 		{
-			Log::warning( "%s: increment read timeout", getLogName() );
+			Log::warning( "%s: increment read timeout to %lf", getLogName(), _poll * 1.2 );
 			_poll *= 1.2;
 			_sock->setReadTimeout( _poll );
 		}

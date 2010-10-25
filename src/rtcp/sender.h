@@ -114,8 +114,10 @@ namespace KGD
 			//! calling thread (RTP session) will wait for sync on a 2-input barrier
 			void wait();
 
-			//! add a packet to sender stats
+			//! add a sent packet to sender stats
 			void registerPacketSent( size_t sz ) throw();
+			//! add a lost packet to sender stats
+			void registerPacketLost( size_t sz ) throw();
 
 			friend Channel::Out & KGD::operator<<( Channel::Out &, RTCP::Sender & ) throw( KGD::Socket::Exception );
 

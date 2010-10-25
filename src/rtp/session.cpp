@@ -335,6 +335,7 @@ namespace KGD
 		{
 			if ( _frame.next )
 			{
+				size_t sendingSz;
 				try
 				{
 					RTP::TTimestamp rtp = _frame.time->getRTPtime( _frame.next->getTime() );
@@ -342,14 +343,24 @@ namespace KGD
 
 					BOOST_FOREACH( Packet & pkt, *pkts )
 					{
+						sendingSz = pkt.data.size();
 						*_sock << pkt;
-						_rtcp.sender->registerPacketSent( pkt.data.size() );
+						_rtcp.sender->registerPacketSent( sendingSz );
 					}
 					_frame.rate.tick();
 				}
-				catch( KGD::Socket::Exception )
+				catch( KGD::Socket::Exception const & e )
 				{
-					throw;
+					Log::error( "%s: packet lost: %s", getLogName(), e.what() );
+					if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+					{
+						_rtcp.sender->registerPacketLost( sendingSz );
+						// more than 10% lost
+						if ( _medium.getFrameCount() / _rtcp.sender->getStats().pktLost <= 10 )
+							throw;
+					}
+					else
+						throw;
 				}
 				catch( const Exception::Generic & e )
 				{
