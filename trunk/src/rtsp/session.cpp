@@ -361,6 +361,7 @@ namespace KGD
 				if ( connLk.owns_lock() )
 				{
 					Log::debug( "%s: asking to remove RTSP session", getLogName() );
+					lk.unlock();
 					_conn.removeSession( _id );
 				}
 			}

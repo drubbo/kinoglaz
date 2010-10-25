@@ -90,7 +90,9 @@ namespace KGD
 			_status.bag[ Status::PAUSED ] = false;
 			_status.bag[ Status::STOPPED ] = true;
 			_status.bag[ Status::SEEKED ] = false;
+			_status.bag[ Status::TEARING_DOWN ] = false;
 
+			_frame.firstLost = HUGE_VAL;
 			_frame.time.reset( Factory::ClassRegistry< Timeline::Medium >::newInstance( agent ) );
 			_frame.buf.reset( Factory::ClassRegistry< Buffer::Base >::newInstance( sdp.getPayloadType() ) );
 			
@@ -281,14 +283,14 @@ namespace KGD
 						catch ( KGD::Socket::Exception const & e )
 						{
 							Log::error( "%s: %s", getLogName(), e.what() );
+							if ( !_status.bag[ Status::TEARING_DOWN ] )
 							{
 								RTSP::Session::TryLock rtspLk( _rtsp );
 								if ( rtspLk.owns_lock() )
 								{
-									OwnThread::UnLock ulk( lk );
 									Log::debug( "%s: %s, asking to remove RTP session", getLogName(), e.what() );
-									_rtsp.removeSession( _url.track );
-								}									
+									_thRemove.reset( new boost::thread( boost::bind( &RTSP::Session::removeSession, &_rtsp, _url.track ) ) );
+								}
 							}
 							throw;
 						}
@@ -336,31 +338,36 @@ namespace KGD
 			if ( _frame.next )
 			{
 				size_t sendingSz;
+				RTP::TTimestamp rtp = _frame.time->getRTPtime( _frame.next->getTime() );
+				auto_ptr< Packet::List > pkts = _frame.next->getPackets( rtp, _ssrc, _seqCur );
 				try
 				{
-					RTP::TTimestamp rtp = _frame.time->getRTPtime( _frame.next->getTime() );
-					auto_ptr< Packet::List > pkts = _frame.next->getPackets( rtp, _ssrc, _seqCur );
-
 					BOOST_FOREACH( Packet & pkt, *pkts )
 					{
 						sendingSz = pkt.data.size();
 						*_sock << pkt;
 						_rtcp.sender->registerPacketSent( sendingSz );
+						_frame.firstLost = HUGE_VAL;
 					}
 					_frame.rate.tick();
 				}
 				catch( KGD::Socket::Exception const & e )
 				{
-					Log::error( "%s: packet lost: %s", getLogName(), e.what() );
 					if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
 					{
 						_rtcp.sender->registerPacketLost( sendingSz );
-						// more than 10% lost
-						if ( _medium.getFrameCount() / _rtcp.sender->getStats().pktLost <= 10 )
+						Log::debug( "%s: packet lost %d / %d, %lf, %lf - %lu bytes", getLogName(), _rtcp.sender->getStats().pktLost, _medium.getFrameCount(), Clock::getSec() - _frame.firstLost, _frame.next->getTime(), sendingSz );
+						// more than 10 s of lost packets, drop connection
+						if ( _frame.firstLost == HUGE_VAL )
+							_frame.firstLost = Clock::getSec();
+						else if ( Clock::getSec() - _frame.firstLost >= 5 )
 							throw;
 					}
 					else
+					{
+						Log::warning( "%s: packet lost: %s", getLogName(), e.what() );
 						throw;
+					}
 				}
 				catch( const Exception::Generic & e )
 				{

@@ -96,7 +96,7 @@ namespace KGD
 			//! status flags
 			struct Status
 			{
-				enum Flags { STOPPED, PAUSED, SEEKED };
+				enum Flags { STOPPED, PAUSED, SEEKED, TEARING_DOWN };
 				bitset< 4 > bag;
 			} _status;
 
@@ -120,6 +120,8 @@ namespace KGD
 				boost::scoped_ptr< Buffer::Base > buf;
 				//! next frame to send
 				boost::scoped_ptr< RTP::Frame::Base > next;
+				//! time of first frame lost
+				double firstLost;
 			} _frame;
 			
 			//! time elapsed on media timeline when to stop play
@@ -132,6 +134,9 @@ namespace KGD
 			//! random ssrc
 			TSSrc _ssrc;
 
+
+			Thread _thRemove;
+			
 			//! log identifier
 			const string _logName;
 

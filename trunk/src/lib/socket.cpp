@@ -145,8 +145,7 @@ namespace KGD
 			{
 				Log::debug( "a socket is closing");
 
-// 				::shutdown(_fileDescriptor, SHUT_RD)
-				if ( ::close(_fileDescriptor) < 0 )
+				if ( ::shutdown(_fileDescriptor, SHUT_RDWR ) < 0 || ::close(_fileDescriptor) < 0 )
 				{
 					Log::error( Socket::Exception( "close" ) );
 				}
