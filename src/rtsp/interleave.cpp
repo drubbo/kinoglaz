@@ -245,19 +245,23 @@ namespace KGD
 
 		void Socket::close() throw()
 		{
-			this->stopInterleaving();
+			TcpTunnel::Lock lkS( _sock );
+			if ( *_sock )
 			{
-				Lock lk( _muxPorts );
-				if ( ! _iChans.empty() )
-					_condNoInterleave.wait( lk );
-			}
-			Log::debug("%s: no more interleaves", getLogName());
+				this->stopInterleaving();
+				{
+					Lock lk( _muxPorts );
+					if ( ! _iChans.empty() )
+						_condNoInterleave.wait( lk );
+				}
+				Log::debug("%s: no more interleaves", getLogName());
 
-			{
-				TcpTunnel::Lock lk( _sock );
-				(*_sock)->close();
+	// 			{
+	// 				TcpTunnel::Lock lk( _sock );
+					(*_sock)->close();
+	// 			}
+				Log::debug("%s: closed", getLogName());
 			}
-			Log::debug("%s: closed", getLogName());
 		}
 
 		void Socket::stopInterleaving() throw()

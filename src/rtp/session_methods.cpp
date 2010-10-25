@@ -50,6 +50,7 @@ namespace KGD
 			RTSP::PlayRequest ret;
 
 			_timeEnd = min( _medium.getIterationDuration(), rq.to );
+			_status.bag[ Status::TEARING_DOWN ] = false;
 
 			if ( _status.bag[ Status::STOPPED ] )
 				ret = this->doFirstPlay(rq);
@@ -223,8 +224,11 @@ namespace KGD
 		}
 		void Session::teardown( const RTSP::PlayRequest & rq ) throw()
 		{
-			Log::debug( "%s: tearing down", getLogName() );
 			OwnThread::Lock lk(_th);
+
+			Log::debug( "%s: tearing down", getLogName() );
+
+			_status.bag[ Status::TEARING_DOWN ] = true;
 
 			if ( !_status.bag[ Status::STOPPED ] )
 			{
