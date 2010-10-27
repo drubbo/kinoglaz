@@ -107,13 +107,17 @@ namespace KGD
 		RTCP::Sender::SR_INTERVAL = fromString< double >( (*_ini)( "RTCP", "send-every", "5.0" ) );
 		RTCP::Receiver::POLL_INTERVAL = fromString< double >( (*_ini)( "RTCP", "poll-every", "5.0" ) );
 
+		Socket::READ_TIMEOUT = fromString< double >( (*_ini)( "SERVER", "read-to", "0.1" ) );
+		Socket::WRITE_TIMEOUT = fromString< double >( (*_ini)( "SERVER", "write-to", "0.1" ) );
+		
 		ostringstream s;
 		s << "KGD: Parameters: Buffer [" << RTP::Buffer::Base::SIZE_LOW << "-" << RTP::Buffer::Base::SIZE_FULL
 			<< "] | MTU " << RTP::Packet::MTU
 			<< " | RTP [" << RTSP::Port::Udp::FIRST << "-" << RTSP::Port::Udp::LAST << "]"
 			<< " | SDP shared descriptors " << RTSP::Connection::SHARE_DESCRIPTORS
 			<< " | SDP aggregate control " << SDP::Container::AGGREGATE_CONTROL
-			<< " | RTSP seek support " << RTSP::Method::SUPPORT_SEEK;
+			<< " | RTSP seek support " << RTSP::Method::SUPPORT_SEEK
+			<< " | socket timeouts R=" << setprecision( 2 ) << Socket::READ_TIMEOUT << " W=" << setprecision( 2 ) << Socket::WRITE_TIMEOUT;
 		Log::debug( "%s", s.str().c_str() );
 	}
 

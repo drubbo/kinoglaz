@@ -140,6 +140,10 @@ namespace KGD
 	//! classes to support TCP / UDP connectivity
 	namespace Socket
 	{
+		//! common global value for read timeout
+		extern double READ_TIMEOUT;
+		//! common global value for write timeout
+		extern double WRITE_TIMEOUT;
 
 		//! socket exceptions
 		class Exception:

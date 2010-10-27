@@ -69,7 +69,7 @@ namespace KGD
 			OwnThread::Lock lk( _th );
 
 			// video, o audio a meno di 1x, faccio partire
-			if (_medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0)
+			if (_medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= RTSP::PlayRequest::LINEAR_SCALE )
 			{
 // 				_rtcp.sender->restart();
 				_frame.rate.start();
@@ -89,7 +89,7 @@ namespace KGD
 		{
 			RTSP::PlayRequest ret( rq );
 			if ( !rq.hasScale )
-				ret.speed = 1.0;
+				ret.speed = RTSP::PlayRequest::LINEAR_SCALE;
 			if ( rq.from == HUGE_VAL )
 				ret.from = 0.0;
 
@@ -120,7 +120,7 @@ namespace KGD
 				ret.from = _frame.time->getPresentationTime();
 
 			// un audio a velocita' superiore a 1.0x non lo invio, lascio il medium in pausa
-			if ( _medium.getType() == SDP::MediaType::Video || fabs( ret.speed ) <= 1.0 )
+			if ( _medium.getType() == SDP::MediaType::Video || fabs( ret.speed ) <= RTSP::PlayRequest::LINEAR_SCALE )
 			{
 				_status.bag[ Status::SEEKED ] = ret.hasRange;
 
@@ -201,7 +201,7 @@ namespace KGD
 
 			if ( _status.bag[ Status::PAUSED ] )
 			{
-				if ( _medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= 1.0 )
+				if ( _medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= RTSP::PlayRequest::LINEAR_SCALE )
 				{
 					_rtcp.sender->restart();
 					_frame.rate.start();

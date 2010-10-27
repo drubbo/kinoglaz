@@ -220,7 +220,8 @@ namespace KGD
 		}
 		void Interleave::setReadBlock( bool b ) throw()
 		{
-			_rdTimeout = ( b ? -1 : 0 );
+			if ( (b && _rdTimeout >= 0) || (!b && _rdTimeout < 0) )
+				_rdTimeout = ( b ? -1 : 0 );
 		}
 		void Interleave::setReadTimeout( double t ) throw()
 		{
@@ -248,9 +249,8 @@ namespace KGD
 		{
 			(*_sock).reset( sk );
 			(*_sock)->setReadBlock( true );
-// 			(*_sock)->setReadTimeout( 1.0 );
 			(*_sock)->setWriteBlock( true );
-			(*_sock)->setWriteTimeout( 0.1 );
+			(*_sock)->setWriteTimeout( KGD::Socket::WRITE_TIMEOUT );
 		}
 
 		Socket::~Socket()
