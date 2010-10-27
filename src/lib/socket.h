@@ -88,6 +88,10 @@ namespace KGD
 			template< class T >
 			size_t writeLast( const Array< T > & ) throw( KGD::Exception::Generic );
 
+			//! sets write timeout
+			virtual void setWriteTimeout( double sec ) = 0;
+			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)
+			virtual void setWriteBlock( bool ) = 0;
 			//! is write a blocking operation ?
 			virtual bool isWriteBlock() const = 0;
 
@@ -111,7 +115,11 @@ namespace KGD
 			size_t readSome( Array< T > & ) throw( KGD::Exception::Generic );
 
 			//! sets read timeout in seconds
-			virtual void setReadTimeout( const double sec ) throw( KGD::Exception::Generic ) = 0;
+			virtual void setReadTimeout( double sec ) = 0;
+			//! sets the socket to be read-block (read locks the thread until data is arrived)
+			virtual void setReadBlock( bool ) = 0;
+			//! tells if socket is in read-blocking mode
+			virtual bool isReadBlock( ) const = 0;
 
 			//! an In channel can describe itself
 			virtual Description getDescription() const = 0;
@@ -187,16 +195,16 @@ namespace KGD
 
 			//! if file_descriptor is -1, then the socket is disconnected
 			//! else is connected and we can load local address info
-			Abstract( const int fileDescriptor = -1 ) throw( Socket::Exception );
+			Abstract( int fileDescriptor = -1 ) throw( Socket::Exception );
 
 			//! opens a new socket potentially bound to a local address
-			Abstract( const Type::type t, const TPort bindPort, const string& bindIP) throw( Socket::Exception );
+			Abstract( Type::type t, TPort bindPort, const string& bindIP) throw( Socket::Exception );
 
 			//! converts a port / ip to a sockaddr_in structure; ip = "*" means "INADDR_ANY"
-			sockaddr_in getAddress(const TPort port, const string& hostName ) const throw( Socket::Exception );
+			sockaddr_in getAddress( TPort port, const string& hostName ) const throw( Socket::Exception );
 
 			//! sets socket timeout for read or write depending on param ( see setsockopt )
-			void setTimeout( const double sec, const int param) throw( Socket::Exception );
+			void setTimeout( double sec, int param) throw( Socket::Exception );
 
 		public:
 			//! dtor, closes the socket
@@ -244,11 +252,11 @@ namespace KGD
 			size_t readAll( Array< T > & ) throw( Socket::Exception);
 
 			//! sets read timeout in seconds
-			void setReadTimeout( const double sec ) throw( Socket::Exception );
+			virtual void setReadTimeout( double sec ) throw( Socket::Exception );
 			//! sets the socket to be read-block (read locks the thread until data is arrived)
-			void setReadBlock( bool );
+			virtual void setReadBlock( bool );
 			//! tells if socket is in read-blocking mode
-			bool isReadBlock( ) const;
+			virtual bool isReadBlock( ) const;
 		};
 
 
@@ -271,7 +279,7 @@ namespace KGD
 			Writer() throw();
 
 			//! connects to an end-point
-			void connectTo( const sockaddr_in * const addr ) throw( Socket::Exception );
+			void connectTo( const sockaddr_in * addr ) throw( Socket::Exception );
 
 		public:
 			//! dtor
@@ -280,7 +288,7 @@ namespace KGD
 			virtual void close() throw( );
 
 			//! connects to an end-point
-			void connectTo( const TPort port, const string & host = "127.0.0.1" ) throw( Socket::Exception );
+			void connectTo( TPort port, const string & host = "127.0.0.1" ) throw( Socket::Exception );
 
 			//! 'send' wrapper
 			virtual size_t writeSome(void const *, size_t) throw( Socket::Exception );
@@ -301,9 +309,9 @@ namespace KGD
 			//! tells if socket is actually connected to an end-point
 			bool isConnected() const throw();
 			//! sets write timeout
-			void setWriteTimeout( const double sec ) throw( Socket::Exception );
+			virtual void setWriteTimeout( double sec ) throw( Socket::Exception );
 			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)
-			void setWriteBlock( bool = false );
+			virtual void setWriteBlock( bool );
 			//! tells if the socket is in write-blocking mode
 			virtual bool isWriteBlock( ) const;
 			//! sets "last packet of sequence" flag
@@ -337,14 +345,16 @@ namespace KGD
 		{
 		protected:
 			//! protected ctor used by TcpServer during accept
-			Tcp( const int file_descriptor, sockaddr_in const * const peerAddress ) throw( Socket::Exception );
+			Tcp( int file_descriptor, sockaddr_in const * peerAddress ) throw( Socket::Exception );
 
 			friend class TcpServer;
 		public:
 			//! opens a new socket potentially bound to a local address
-			Tcp( const TPort bindPort = 0, const string & bindIP = "*" ) throw( Socket::Exception );
+			Tcp( TPort bindPort = 0, const string & bindIP = "*" ) throw( Socket::Exception );
 			//! dtor
 			virtual ~Tcp() throw();
+
+			void setKeepAlive( bool ) throw( Socket::Exception );
 		};
 		
 		//! UDP Socket
@@ -353,7 +363,7 @@ namespace KGD
 		{
 		public:
 			//! opens a new socket potentially bound to a local address
-			Udp(const TPort bindPort = 0, const string & bindIP = "*") throw( Socket::Exception );
+			Udp( TPort bindPort = 0, const string & bindIP = "*") throw( Socket::Exception );
 			//! dtor
 			virtual ~Udp() throw();
 		};
@@ -365,7 +375,7 @@ namespace KGD
 		{
 		public:
 			//! opens a socket bound to a local port and sets up listen queue
-			TcpServer(const TPort bind_port, const int queue = 5, const string & ip = "*") throw( Socket::Exception );
+			TcpServer( TPort bind_port, const string & ip = "*", int queue = 5 ) throw( Socket::Exception );
 			virtual ~TcpServer() throw();
 
 			//! waits for a connection and returns it's correspondent socket

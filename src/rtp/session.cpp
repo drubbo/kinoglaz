@@ -90,7 +90,6 @@ namespace KGD
 			_status.bag[ Status::PAUSED ] = false;
 			_status.bag[ Status::STOPPED ] = true;
 			_status.bag[ Status::SEEKED ] = false;
-			_status.bag[ Status::TEARING_DOWN ] = false;
 
 			_frame.firstLost = HUGE_VAL;
 			_frame.time.reset( Factory::ClassRegistry< Timeline::Medium >::newInstance( agent ) );
@@ -283,15 +282,6 @@ namespace KGD
 						catch ( KGD::Socket::Exception const & e )
 						{
 							Log::error( "%s: %s", getLogName(), e.what() );
-							if ( !_status.bag[ Status::TEARING_DOWN ] )
-							{
-								RTSP::Session::TryLock rtspLk( _rtsp );
-								if ( rtspLk.owns_lock() )
-								{
-									Log::debug( "%s: %s, asking to remove RTP session", getLogName(), e.what() );
-									_thRemove.reset( new boost::thread( boost::bind( &RTSP::Session::removeSession, &_rtsp, _url.track ) ) );
-								}
-							}
 							throw;
 						}
 						catch ( RTP::Eof )

@@ -49,6 +49,9 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 }
 
 namespace KGD
@@ -488,6 +491,25 @@ namespace KGD
 			_connected = true;
 		}
 
+		void Tcp::setKeepAlive( bool set ) throw( Socket::Exception )
+		{
+			int flag = ( set ? 1 : 0 );
+			int cnt = 3, idle = 5, intvl = 10;
+
+			if (::setsockopt(_fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int)) < 0)
+				throw Socket::Exception( "setsockopt - SO_KEEPALIVE" );
+
+			if ( set )
+			{
+				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPCNT, &cnt, sizeof(int)) < 0)
+					throw Socket::Exception( "setsockopt - TCP_KEEPCNT" );
+				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(int)) < 0)
+					throw Socket::Exception( "setsockopt - TCP_KEEPIDLE" );
+				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPINTVL, &intvl, sizeof(int)) < 0)
+					throw Socket::Exception( "setsockopt - TCP_KEEPINTVL" );
+			}
+		}
+
 
 		// ****************************************************************************************************************
 
@@ -501,7 +523,7 @@ namespace KGD
 
 		// ****************************************************************************************************************
 
-		TcpServer::TcpServer( const TPort bindPort, const int queue, const string & bindIP ) throw( Socket::Exception )
+		TcpServer::TcpServer( TPort bindPort, const string & bindIP, const int queue ) throw( Socket::Exception )
 		: Socket::Abstract( Type::TCP, bindPort, bindIP )
 		{
 			if ( !_bound )

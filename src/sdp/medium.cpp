@@ -248,6 +248,7 @@ namespace KGD
 					f->setPayloadType( _pt );
 					f->addTime( _frameTimeShift );
 					f->setMediumPos( _frame.list.size() );
+					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
 					_frame.list.push_back( f );
 				}
 				_frame.available.notify_all();

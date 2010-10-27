@@ -93,7 +93,7 @@ namespace KGD
 			{
 				_port = newPort;
 				_ip = newIP;
-				_socket.reset( new KGD::Socket::TcpServer( _port, _maxConnections, _ip ) );
+				_socket.reset( new KGD::Socket::TcpServer( _port, _ip, _maxConnections ) );
 				Log::message( "KGD: binding to %s:%d", _ip.c_str(), _port );
 			}
 
@@ -137,7 +137,8 @@ namespace KGD
 			if ( _maxConnections != 0 && _conns.size() >= _maxConnections )
 				throw RTSP::Exception::Generic( "handle", "KGD: CONN limit already reached" );
 
-// 			channel->setReadTimeout( 1 );
+			// abilitazione TCP keepalive
+			channel->setKeepAlive( true );
 			// creo il gestore della richiesta
 			auto_ptr< Connection > conn( new Connection( channel.release() ) );
 			Connection * cPtr = conn.get();

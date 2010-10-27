@@ -92,7 +92,7 @@ namespace KGD
 			//! load frame thread
 			OwnThread _th;
 			//! is load frame thread running ?
-			Safe::Bool _running;
+			bool _running;
 
 			//! loads a kinoglaz playlist
 			void loadPlayList() throw( SDP::Exception::Generic );

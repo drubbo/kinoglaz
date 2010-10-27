@@ -95,10 +95,18 @@ namespace KGD
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! read from buffer
 			virtual size_t readSome( void *, size_t ) throw( KGD::Socket::Exception );
+			//! invalid operation
+			virtual void setWriteBlock( bool ) throw( );
+			//! invalid operation
+			virtual void setWriteTimeout( double ) throw( );
 			//! is write blocking
 			virtual bool isWriteBlock( ) const throw();
+			//! invalid operation
+			virtual void setReadBlock( bool ) throw( );
 			//! set read timeout
-			virtual void setReadTimeout( const double sec ) throw( );
+			virtual void setReadTimeout( double sec ) throw( );
+			//! is read blocking
+			virtual bool isReadBlock( ) const throw();
 			//! get description
 			virtual Channel::Description getDescription() const;
 			//! push to buffer
@@ -159,8 +167,6 @@ namespace KGD
 			boost::shared_ptr< Interleave > getInterleave( TPort p ) throw( KGD::Exception::NotFound );
 			//! listen for incoming messages
 			void listen() throw( Message::Request *, Message::Response *, KGD::Exception::Generic );
-			//! closes socket and begins shutdown of all interleaved channels
-// 			void stop() throw();
 			//! begins shutdown of all interleaved channels
 			void stopInterleaving() throw();
 			//! begins shutdown of all interleaved channels for a specific RTSP session
@@ -171,6 +177,10 @@ namespace KGD
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! is write blocking
 			virtual bool isWriteBlock( ) const throw();
+			//! sets write timeout
+			virtual void setWriteTimeout( double sec ) throw( KGD::Socket::Exception );
+			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)
+			virtual void setWriteBlock( bool ) throw();
 
 			//! reply an error
 			void reply( const Error::Definition & error ) throw( KGD::Socket::Exception );

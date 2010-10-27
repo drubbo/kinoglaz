@@ -96,7 +96,7 @@ namespace KGD
 			//! status flags
 			struct Status
 			{
-				enum Flags { STOPPED, PAUSED, SEEKED, TEARING_DOWN };
+				enum Flags { STOPPED, PAUSED, SEEKED };
 				bitset< 4 > bag;
 			} _status;
 

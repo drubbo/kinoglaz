@@ -55,6 +55,7 @@ namespace KGD
 		: _id( ID )
 		, _conn( conn )
 		, _playIssued( false )
+// 		, _destroying( false )
 		, _logName( conn.getLogName() + string(" SESS #") + toString( ID ) )
 		{
 		}
@@ -62,6 +63,7 @@ namespace KGD
 		Session::~Session()
 		{
 			Session::Lock lk( *this );
+// 			_destroying = true;
 			_sessions.clear();
 		}
 
@@ -116,6 +118,7 @@ namespace KGD
 					rtp->setWriteTimeout( 1.0 );
 					rtcp->setWriteTimeout( 1.0 );
 					rtcp->setReadBlock( true );
+					rtcp->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 
 					rtpChan = rtp;
 					rtcpChan = rtcp;
@@ -128,6 +131,7 @@ namespace KGD
 
 					rtpChan = rtsp.getInterleave( local.first );
 					rtcpChan = rtsp.getInterleave( local.second );
+					rtcpChan->setReadTimeout( RTCP::Receiver::POLL_INTERVAL );
 				}
 
 				// get description
@@ -355,7 +359,7 @@ namespace KGD
 			Log::debug( "%s: removing RTP session %s", getLogName(), track.c_str() );
 			if ( ! _sessions.erase( track ) )
 				throw RTSP::Exception::ManagedError( Error::NotFound );
-			else if ( _sessions.empty() )
+/*			else if ( _sessions.empty() )
 			{
 				Connection::TryLock connLk( _conn );
 				if ( connLk.owns_lock() )
@@ -364,7 +368,7 @@ namespace KGD
 					lk.unlock();
 					_conn.removeSession( _id );
 				}
-			}
+			}*/
 		}
 
 		const TSessionID & Session::getID() const throw()
