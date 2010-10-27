@@ -58,6 +58,9 @@ namespace KGD
 {
 	namespace Socket
 	{
+		double READ_TIMEOUT = 0.1;
+		double WRITE_TIMEOUT = 0.1;
+		
 		Exception::Exception() throw()
 		: KGD::Exception::Generic( errno )
 		{

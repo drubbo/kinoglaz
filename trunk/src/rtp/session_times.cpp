@@ -68,7 +68,7 @@ namespace KGD
 				if ( !rq.hasScale )
 				{
 					ret.hasScale = true;
-					ret.speed = 1.0;
+					ret.speed = RTSP::PlayRequest::LINEAR_SCALE;
 				}
 					
 				if ( rq.from == HUGE_VAL )

@@ -54,6 +54,8 @@ namespace KGD
 		//! RTSP request to play a certain range at some speed
 		struct PlayRequest
 		{
+			//! normal speed
+			static const double LINEAR_SCALE = 1.0;
 			//! Range header was present
 			bool hasRange;
 			//! Scale header was present

@@ -53,7 +53,7 @@ namespace KGD
 			Segment::Segment( )
 			: _start( HUGE_VAL )
 			, _stop( HUGE_VAL )
-			, _speed( 1.0 )
+			, _speed( RTSP::PlayRequest::LINEAR_SCALE )
 			{
 			}
 
@@ -105,7 +105,7 @@ namespace KGD
 
 			MultiSegment::MultiSegment( )
 			: _current( )
-			, _speed( 1.0 )
+			, _speed( RTSP::PlayRequest::LINEAR_SCALE )
 			, _start( HUGE_VAL )
 			, _tot( 0 )
 			, _last( 0 )

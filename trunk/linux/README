@@ -75,10 +75,14 @@
       path to a file where to store current pid
 
   [SERVER]
+  ip=< * | address >
+      bind address, * = any/every
   port=< 0 - 65535 >
       listening port: 554, 8554, ...
-  limit=< 0-255 >
+  limit=< 0 - 65535 >
       max number of connections - 0 means no limit
+  write-to=< double >
+      sockets write timeout in seconds; default 0.1
 
   [RTSP]
   supp-seek=< bool >

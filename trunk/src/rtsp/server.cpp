@@ -94,7 +94,7 @@ namespace KGD
 				_port = newPort;
 				_ip = newIP;
 				_socket.reset( new KGD::Socket::TcpServer( _port, _ip, _maxConnections ) );
-				Log::message( "KGD: binding to %s:%d", _ip.c_str(), _port );
+				Log::message( "KGD: binding to %s:%d, max connections %u", _ip.c_str(), _port, _maxConnections );
 			}
 
 		}

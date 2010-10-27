@@ -51,18 +51,18 @@ namespace KGD
 
 			double Base::SIZE_LOW = 1.0;
 			double Base::SIZE_FULL = HUGE_VAL;
-			double Base::SCALE_LIMIT = 1.0;
+			double Base::SCALE_LIMIT = RTSP::PlayRequest::LINEAR_SCALE;
 			double Base::SCALE_STEP = 0;
 
 			Base::Base ( SDP::Medium::Base & sdp )
 			: _medium( sdp )
-			, _scale( 1.0 )
+			, _scale( RTSP::PlayRequest::LINEAR_SCALE )
 			{
 				_frame.idx.reset( _medium->newFrameIterator() );
 			}
 
 			Base::Base( )
-			: _scale( 1.0 )
+			: _scale( RTSP::PlayRequest::LINEAR_SCALE )
 			{
 			}
 
