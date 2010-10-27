@@ -97,7 +97,7 @@ namespace KGD
 
 		double Session::evalMediumInsertion( double t ) throw( KGD::Exception::OutOfBounds )
 		{
-			assert( _status.bag[ Status::PAUSED ] );
+			BOOST_ASSERT( _status.bag[ Status::PAUSED ] );
 			// look a bit forward
 			double seekTime = min( t, _frame.time->getPresentationTime() + 1 );
 			return _frame.buf->drySeek( seekTime, _frame.time->getSpeed() );
@@ -105,14 +105,14 @@ namespace KGD
 
 		void Session::insertMedium( SDP::Medium::Base & m, double t ) throw( KGD::Exception::OutOfBounds )
 		{
-			assert( _status.bag[ Status::PAUSED ] );
+			BOOST_ASSERT( _status.bag[ Status::PAUSED ] );
 			_frame.buf->insertMedium( m, t );
 			_timeEnd += m.getIterationDuration();
 		}
 
 		void Session::insertTime( double duration, double t ) throw( KGD::Exception::OutOfBounds )
 		{
-			assert( _status.bag[ Status::PAUSED ] );
+			BOOST_ASSERT( _status.bag[ Status::PAUSED ] );
 			_frame.buf->insertTime( duration, t );
 			_timeEnd += duration;
 		}

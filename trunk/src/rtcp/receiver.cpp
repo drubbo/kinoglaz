@@ -60,7 +60,7 @@ namespace KGD
 		, _logName( s.getLogName() + string(" RTCP Receiver") )
 		, _poll( POLL_INTERVAL )
 		{
-			_sock->setReadTimeout( _poll );
+			
 		}
 
 		Receiver::~Receiver()

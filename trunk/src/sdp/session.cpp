@@ -101,6 +101,7 @@ namespace KGD
 			{
 				Log::verbose( "%s: waiting loop termination", getLogName() );
 
+				lk.unlock();
 				_th.wait();
 				_th.reset();
 			}
@@ -213,36 +214,43 @@ namespace KGD
 
 		void Container::loadFrameIndex( AVFormatContext *fctx )
 		{
-			while( _running )
 			{
-				// load frame
-				AVPacket pkt;
-				av_init_packet( &pkt );
-				int rdRes = av_read_frame( fctx, &pkt );
-				// err
-				if ( rdRes < 0 )
+				OwnThread::Lock lk( _th );
+				while( _running )
 				{
-					// break cycle
-					if ( rdRes == AVERROR_EOF )
-						_running = false;
-					else
-						Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
-				}
-				else
-				{
-					MediaMap::iterator medium = _media.find( pkt.stream_index );
-					if ( medium != _media.end() && pkt.size > 0 )
+					// load frame
+					AVPacket pkt;
+					av_init_packet( &pkt );
+					int rdRes = av_read_frame( fctx, &pkt );
+					// err
+					if ( rdRes < 0 )
 					{
-						Medium::Base & m = *medium->second;
-						Frame::MediaFile * f = new Frame::MediaFile( pkt, m.getTimeBase() );
-						m.addFrame( f );
+						// break cycle
+						if ( rdRes == AVERROR_EOF )
+							_running = false;
+						else
+							Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
 					}
 					else
-						Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
-				}
-				av_free_packet( &pkt );
+					{
+						MediaMap::iterator medium = _media.find( pkt.stream_index );
+						if ( medium != _media.end() && pkt.size > 0 )
+						{
+							Medium::Base & m = *medium->second;
+							Frame::MediaFile * f = new Frame::MediaFile( pkt, m.getTimeBase() );
+							m.addFrame( f );
+						}
+						else
+							Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
+					}
+					av_free_packet( &pkt );
 
-				_th->yield();
+					{
+						OwnThread::UnLock ulk( lk );
+						_th->yield();
+					}
+					
+				}
 			}
 
 			av_close_input_file( fctx );

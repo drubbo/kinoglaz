@@ -102,12 +102,7 @@ namespace KGD
 			
 			//! thread loop to implement
 			virtual void run() = 0;
-
-			//! pause the loop
-			void pause();
-			//! restart the loop
-			void unpause();
-
+			//! additional actions to perform when starting
 			virtual void _start() {};
 
 
@@ -118,6 +113,10 @@ namespace KGD
 			void start();
 			//! stop the thread
 			void stop();
+			//! pause the loop
+			void pause();
+			//! restart the loop
+			void unpause();
 
 			//! return sender stats
 			Stats getStats() const throw();

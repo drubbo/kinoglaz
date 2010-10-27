@@ -83,11 +83,6 @@ namespace KGD
 			return _logName.c_str();
 		}
 
-		void Interleave::setReadTimeout( double t ) throw()
-		{
-			_rdTimeout = t;
-		}
-
 		void Interleave::pushToRead( const ByteArray & data ) throw( )
 		{
 			this->pushToRead( data.get(), data.size() );
@@ -215,6 +210,26 @@ namespace KGD
 		{
 			return (*_sock)->isWriteBlock();
 		}
+		void Interleave::setWriteBlock( bool ) throw()
+		{
+			BOOST_ASSERT( false );
+		}
+		void Interleave::setWriteTimeout( double ) throw()
+		{
+			BOOST_ASSERT( false );
+		}
+		void Interleave::setReadBlock( bool b ) throw()
+		{
+			_rdTimeout = ( b ? -1 : 0 );
+		}
+		void Interleave::setReadTimeout( double t ) throw()
+		{
+			_rdTimeout = t;
+		}
+		bool Interleave::isReadBlock( ) const throw()
+		{
+			return _rdTimeout < 0;
+		}
 
 		Channel::Description Interleave::getDescription() const
 		{
@@ -235,7 +250,7 @@ namespace KGD
 			(*_sock)->setReadBlock( true );
 // 			(*_sock)->setReadTimeout( 1.0 );
 			(*_sock)->setWriteBlock( true );
-			(*_sock)->setWriteTimeout( 1.0 );
+			(*_sock)->setWriteTimeout( 0.1 );
 		}
 
 		Socket::~Socket()
@@ -468,6 +483,16 @@ namespace KGD
 		bool Socket::isWriteBlock( ) const throw()
 		{
 			return (*_sock)->isWriteBlock();
+		}
+
+		void Socket::setWriteTimeout( double sec ) throw( KGD::Socket::Exception )
+		{
+			(*_sock)->setWriteTimeout( sec );
+		}
+
+		void Socket::setWriteBlock( bool b ) throw()
+		{
+			(*_sock)->setWriteBlock( b );
 		}
 
 		void Socket::reply( const uint16_t code, const string & msg ) throw( KGD::Socket::Exception )

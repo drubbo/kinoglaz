@@ -80,6 +80,7 @@ namespace KGD
 			Connection & _conn;
 			//! registers if a play has been ever issued
 			bool _playIssued;
+// 			bool _destroying;
 			//! log identifier
 			const string _logName;
 		public:
