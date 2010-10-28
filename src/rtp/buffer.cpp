@@ -315,8 +315,8 @@ namespace KGD
 				else
 				{
 					Frame::List::auto_type result = _frame.buf.data.pop_front();
-					// se ci sono pochi frame, facciamo ripartire il 3d di fetch
-					// ma solo se sono flusso video, oppure audio con scale buono (altrimenti dell'audio non carico niente)
+					// if buffer size is low, fetch thread must be awakened
+					// but only if video, or audio at supported speed
 					SDP::MediaType::kind mType = _medium->getType();
 					if ( ! _eof
 							&& ( ( mType == SDP::MediaType::Video ) || ( ( mType == SDP::MediaType::Audio ) && ( _scale <= SCALE_LIMIT ) ) )

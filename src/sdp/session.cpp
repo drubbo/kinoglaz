@@ -440,7 +440,7 @@ namespace KGD
 			else
 				s << EOL;
 
-			for( MediaMap::const_iterator it = _media.begin(); it != _media.end(); ++it )
+			BOOST_FOREACH( MediaMap::const_iterator::reference it, _media )
 				s << it->second->getReply( u );
 
 			return s.str();

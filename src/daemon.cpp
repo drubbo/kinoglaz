@@ -184,7 +184,7 @@ namespace KGD
 	void Daemon::SigHandler::setup()
 	{
 		Log::message("KGD: signal setup");
-		// blocco tutti i segnali tranne TERM
+		// block every signal except those supported: TERM, INT, HUP
 		sigset_t sig_mask;
 		sigfillset(&sig_mask);
 		sigdelset(&sig_mask, SIGTERM);
@@ -193,7 +193,7 @@ namespace KGD
 
 		sigprocmask(SIG_BLOCK, &sig_mask, NULL);
 
-		// definisco gli handler
+		// handler definition
 		struct sigaction act;
 
 		// TERM + INT

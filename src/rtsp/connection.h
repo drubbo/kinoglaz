@@ -54,7 +54,9 @@ using namespace std;
 namespace KGD
 {
 	namespace RTSP
-	{	
+	{
+		class Server;
+		
 		//! RTSP client connection management
 		class Connection
 		: public Safe::LockableBase< RMutex >
@@ -66,6 +68,8 @@ namespace KGD
 			typedef map< string, ref< SDP::Container > > DescriptorMap;
 			typedef boost::ptr_map< string, SDP::Container > LocalDescriptorMap;
 
+			//! ref to server
+			RTSP::Server & _svr;
 			//! unique random id
 			uint32_t _id;
 			//! user agent
@@ -84,16 +88,22 @@ namespace KGD
 			DescriptorMap _descriptors;
 			//! local instanced descriptors
 			LocalDescriptorMap _descriptorInstances;
+			//! serving thread id
+			boost::thread::id _threadID;
 
 		public:
 			//! ctor
-			Connection( KGD::Socket::Tcp* socket );
+			Connection( auto_ptr< KGD::Socket::Tcp > socket, RTSP::Server & );
 			//! dtor - closes all sessions and shuts down the socket
 			~Connection();
 
 			//! get log identifier for this connection
 			const char * getLogName() const throw();
-			
+
+			//! set thread ID to ease removal
+			void setServingThreadID( const boost::thread::id & ) throw();
+			//! get serving thread ID
+			const boost::thread::id & getServingThreadID() const throw();
 			//! sets user agent, to build specialized timelines in rtp sessions
 			void setUserAgent( UserAgent::type ) throw();
 			//! get user agent operating on this connection
@@ -101,6 +111,7 @@ namespace KGD
 			
 			//! socket-event-driven main request loop
 			void listen() throw( KGD::Exception::Generic );
+
 			//! returns this id
 			uint32_t getID() const;
 

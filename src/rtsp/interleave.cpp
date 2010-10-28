@@ -243,11 +243,11 @@ namespace KGD
 
 		// ******************************************************************************************************************
 
-		Socket::Socket( KGD::Socket::Tcp * sk, const string & parentLogName )
+		Socket::Socket( auto_ptr< KGD::Socket::Tcp > sk, const string & parentLogName )
 		: _cseq( 0 )
 		, _logName( parentLogName + " SOCKET" )
 		{
-			(*_sock).reset( sk );
+			(*_sock).reset( sk.release() );
 			(*_sock)->setReadBlock( true );
 			(*_sock)->setWriteBlock( true );
 			(*_sock)->setWriteTimeout( KGD::Socket::WRITE_TIMEOUT );
