@@ -168,6 +168,30 @@ namespace KGD
 			}
 		}
 
+		PlayRequest Session::getPlayRange( ) const throw( )
+		{
+			Session::Lock lk( *this );
+			PlayRequest rt;
+
+			BOOST_FOREACH( SessionMap::const_iterator::reference sess, _sessions )
+				rt.merge( sess->second->getPlayRange( ) );
+
+			return rt;
+		}
+
+		PlayRequest Session::getPlayRange( const string & track ) const throw( RTSP::Exception::ManagedError )
+		{
+			try
+			{
+				Session::Lock lk( *this );
+				return _sessions.at( track ).getPlayRange();
+			}
+			catch( boost::bad_ptr_container_operation )
+			{
+				throw RTSP::Exception::ManagedError( Error::NotFound );
+			}
+		}
+
 		PlayRequest Session::play( const PlayRequest & rq ) throw( RTSP::Exception::ManagedError )
 		{
 			try

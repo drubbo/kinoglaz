@@ -141,7 +141,7 @@ namespace KGD
 			const string _logName;
 
 			//! starts a new random sequence
-			TCseq seqRestart();
+			TCseq seqRestart() throw();
 
 			//! sets up the session to do first PLAY request
 			RTSP::PlayRequest doFirstPlay( const RTSP::PlayRequest & ) throw( KGD::Exception::OutOfBounds );
@@ -155,10 +155,10 @@ namespace KGD
 			void sendNextFrame( ) throw( KGD::Socket::Exception );
 
 			//! logs some informations
-			void logTimes() const;
+			void logTimes() const throw();
 
 			//! main loop
-			void loop();
+			void loop() throw();
 		public:
 			//! ctor: given the request URL, the track descriptor, RTP / RTCP channels and the user agent
 			Session( RTSP::Session & parent, const Url &, SDP::Medium::Base &,
@@ -175,23 +175,25 @@ namespace KGD
 			bool isPlaying() const throw();
 
 			//! returns the description this session is streaming
-			const SDP::Medium::Base & getDescription() const;
+			const SDP::Medium::Base & getDescription() const throw();
 			//! returns the description this session is streaming
-			SDP::Medium::Base & getDescription();
+			SDP::Medium::Base & getDescription() throw();
 			//! returns the timeline of this session
-			const Timeline::Medium & getTimeline() const;
+			const Timeline::Medium & getTimeline() const throw();
+			//! returns current play range
+			RTSP::PlayRequest getPlayRange() const throw();
 			//! returns start sequence
-			uint16_t getStartSeq() const;
+			uint16_t getStartSeq() const throw();
 			//! returns medium rate
-			int getRate() const;
+			int getRate() const throw();
 			//! returns SSRC
-			TSSrc getSsrc() const;
+			TSSrc getSsrc() const throw();
 			//! returns requested url
-			const Url& getUrl() const;
+			const Url& getUrl() const throw();
 			//! returns RTP channel description
-			Channel::Description RTPgetDescription() const;
+			Channel::Description RTPgetDescription() const throw();
 			//! returns RTCP channel description
-			Channel::Description RTCPgetDescription() const;
+			Channel::Description RTCPgetDescription() const throw();
 
 			//! returns the time after t when another medium can be inserted
 			double evalMediumInsertion( double t ) throw( KGD::Exception::OutOfBounds );

@@ -238,8 +238,12 @@ namespace KGD
 			, public Factory::Multiton< Method::Base, Play, PLAY >
 			{
 			protected:
+				//! requested play range
 				PlayRequest _rqRange;
+				//! play range we'll send back
 				PlayRequest _rplRange;
+				//! must play or simply toggle pause
+				bool _mustPlay;
 
 				//! ctor
 				Play(  );
