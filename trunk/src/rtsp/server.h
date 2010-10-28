@@ -57,11 +57,15 @@ namespace KGD
 		: public Singleton::Class< Server >
 		{
 		protected:
-			//! tcp server socket
-			boost::scoped_ptr< Socket::TcpServer > _socket;
 			typedef boost::ptr_list< Connection > ConnectionList;
+			typedef boost::ptr_list< boost::thread > ConnectionThreadList;
+
+			//! tcp server socket
+			boost::scoped_ptr< KGD::Socket::TcpServer > _socket;
 			//! active requests
 			ConnectionList _conns;
+			//! active request threads
+			ConnectionThreadList _threads;
 			//! max servable requests
 			uint16_t _maxConnections;
 			//! listen ip
@@ -69,10 +73,10 @@ namespace KGD
 			//! listen port
 			TPort _port;
 			//! is main loop running ?
-			Safe::Flag<> _running;
+			Safe::Bool _running;
 
 			//! handle new connection starting new serve-thread if connection limit has not been reached
-			void handle( auto_ptr< Socket::Tcp > channel );
+			void handle( auto_ptr< KGD::Socket::Tcp > channel );
 			//! a thread to serve last connection - one per connection
 			void serve( Connection * );
 			//! removes the connection when the serve-thread has ended
@@ -82,14 +86,14 @@ namespace KGD
 			void run();
 
 			//! ctor
-			Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, Socket::Exception );
+			Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception );
 			friend class Singleton::Class< Server >;
 		public:
 			//! dtor
 			~Server();
 
 			//! loads or reloads parameters from ini entries
-			void setupParameters( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, Socket::Exception );
+			void setupParameters( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception );
 			//! starts main loop
 			void start();
 			//! informs main loop to exit at next iteration

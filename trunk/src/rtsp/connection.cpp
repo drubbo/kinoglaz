@@ -37,6 +37,7 @@
 #include "rtsp/connection.h"
 #include "rtsp/session.h"
 #include "rtsp/method.h"
+#include "rtsp/server.h"
 #include "lib/log.h"
 #include "lib/common.h"
 
@@ -49,8 +50,9 @@ namespace KGD
 	{
 		bool Connection::SHARE_DESCRIPTORS = false;
 
-		Connection::Connection( KGD::Socket::Tcp * socket )
-		: _id( random() )
+		Connection::Connection( auto_ptr< KGD::Socket::Tcp > socket, RTSP::Server & svr )
+		: _svr( svr )
+		, _id( random() )
 		, _agent( UserAgent::Generic )
 		, _logName( "CONN " + socket->getRemoteHost() + "#" + toString( _id ) )
 		, _socket( new RTSP::Socket( socket, _logName ) )
@@ -80,6 +82,15 @@ namespace KGD
 			_descriptorInstances.clear();
 			
 			Log::verbose( "%s: destroyed", getLogName() );
+		}
+
+		void Connection::setServingThreadID( const boost::thread::id& id ) throw()
+		{
+			_threadID = id;
+		}
+		const boost::thread::id& Connection::getServingThreadID() const throw()
+		{
+			return _threadID;
 		}
 
 		const char * Connection::getLogName() const throw()

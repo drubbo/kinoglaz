@@ -103,13 +103,13 @@ namespace KGD
 		Abstract::Abstract( Type::type t, const TPort bindPort, const string& bindIP ) throw( Socket::Exception )
 		{
 			memset(&_local, 0, sizeof(sockaddr_in));
-			// apertura socket
+			// open socket
 			if ( (_fileDescriptor = ::socket(Domain::INET, t, 0)) < 0)
 			{
 				throw Socket::Exception( "socket" );
 			}
 
-			// se ho una bind port, faccio bind
+			// bind if told to
 			if ( bindPort > 0 )
 			{
 				// reuse
@@ -121,7 +121,7 @@ namespace KGD
 				if (::bind(_fileDescriptor, (sockaddr *) &_local, sizeof(sockaddr_in)) < 0)
 					throw Socket::Exception( "bind" );
 			}
-			// altrimenti uso la getsockname per riempire _local
+			// else fill up _local with getsockname
 			else
 			{
 				socklen_t sz = sizeof(sockaddr_in);
@@ -371,7 +371,6 @@ namespace KGD
 			_connected = false;
 			memset(&_remote, 0, sizeof(sockaddr_in));
 
-// 			SHUT_RDWR
 			Abstract::close();
 		}
 
@@ -438,12 +437,12 @@ namespace KGD
 
 		size_t ReaderWriter::readSome( void * data, size_t len ) throw( Socket::Exception )
 		{
-			// se sono connesso, non mi interesso di chi manda (a torto o ragione)
+			// if connected, don't care who sends message
 			if (_connected)
 			{
 				return Reader::readSome( data, len );
 			}
-			// se non sono connesso, il mittente diventa il mio end point
+			// else, first sender becomes my endpoint
 			else
 			{
 				sockaddr_in peerAddress;

@@ -68,7 +68,7 @@ namespace KGD
 		{
 			OwnThread::Lock lk( _th );
 
-			// video, o audio a meno di 1x, faccio partire
+			// start only for video, or audio at most 1x
 			if (_medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= RTSP::PlayRequest::LINEAR_SCALE )
 			{
 // 				_rtcp.sender->restart();
@@ -119,7 +119,7 @@ namespace KGD
 			if ( rq.from == HUGE_VAL )
 				ret.from = _frame.time->getPresentationTime();
 
-			// un audio a velocita' superiore a 1.0x non lo invio, lascio il medium in pausa
+			// leave this session paused with audio at more than 1x
 			if ( _medium.getType() == SDP::MediaType::Video || fabs( ret.speed ) <= RTSP::PlayRequest::LINEAR_SCALE )
 			{
 				_status.bag[ Status::SEEKED ] = ret.hasRange;
@@ -140,7 +140,6 @@ namespace KGD
 					Log::message( "%s: scale medium at %0.2f x", getLogName(), ret.speed );
 				}
 
-				// posso anche avere seek + scale; in ogni caso lo scale viene passato alla funzione quindi ok
 				if ( _status.bag[ Status::PAUSED ] || ret.hasRange || ret.hasScale )
 				{
 					_frame.next.reset();

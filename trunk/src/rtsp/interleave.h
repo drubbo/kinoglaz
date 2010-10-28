@@ -154,7 +154,7 @@ namespace KGD
 			
 		public:
 			//! constructs shared socket
-			Socket( KGD::Socket::Tcp *, const string & );
+			Socket( auto_ptr< KGD::Socket::Tcp >, const string & );
 			//! stops interleaves and destroyes socket
 			~Socket();
 			//! returns log identifier for this rtsp socket
