@@ -190,8 +190,6 @@ namespace KGD
 
 			//! socket file descriptor
 			int  _fileDescriptor;
-			//! tells is socket bound to a local end-point
-			bool _bound;
 			//! local address
 			sockaddr_in _local;
 

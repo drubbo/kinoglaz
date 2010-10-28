@@ -179,7 +179,7 @@ namespace KGD
 				}
 				catch( RTSP::Exception::ManagedError const & e )
 				{
-					Log::warning( "%s: %s", _conn->getLogName(), e.what() );
+					Log::warning( "%s: no Range/Scale header", _conn->getLogName() );
 				}
 
 				Log::message( "%s: request to play %s", _conn->getLogName(), rt.toString().c_str() );
@@ -365,6 +365,7 @@ namespace KGD
 			// ****************************************************************************************************************
 
 			Play::Play( )
+			: _mustPlay( false )
 			{
 			}
 
@@ -374,43 +375,42 @@ namespace KGD
 
 				// get and check range and speed
 				_rqRange = this->getTimeRange();
-				// Range header
-				if ( _rqRange.hasRange )
+				// check range and speed if seek is supported
+				if ( SUPPORT_SEEK )
 				{
-					// just the first play can have range if we don't support seek
-					if ( ! SUPPORT_SEEK && _rtsp->hasPlayed() )
+					// speed check
+					if ( _rqRange.hasScale && _rqRange.speed == 0.0 )
+					{
+						Log::error( "%s: play request with invalid scale %f", _conn->getLogName(), _rqRange.speed );
 						throw RTSP::Exception::ManagedError( Error::BadRequest );
+					}
+					// range check
 					// playing reverse should have inverted range
-					else if ( (_rqRange.to - _rqRange.from) * sign( _rqRange.speed ) < 0)
+					if ( _rqRange.hasRange && (_rqRange.to - _rqRange.from) * sign( _rqRange.speed ) < 0 )
 					{
 						Log::error( "%s: play request time range misordered: %s", _conn->getLogName(), _rqRange.toString().c_str() );
 						throw RTSP::Exception::ManagedError( Error::BadRequest );
 					}
 				}
-				// Scale header
-				else if ( _rqRange.hasScale )
-				{
-					if ( _rqRange.speed == 0.0 )
-					{
-						Log::error( "%s: play request with invalid scale %f", _conn->getLogName(), _rqRange.speed );
-						throw RTSP::Exception::ManagedError( Error::BadRequest );
-					}
-				}
-				// first time we need a range
-				else if ( ! _rtsp->hasPlayed() )
-				{
-					Log::error( "%s: play request without mandatory time range", _conn->getLogName() );
-					throw RTSP::Exception::ManagedError( Error::BadRequest );
-				}
 
-				// some useful info were given, set up the new scenario
-				if ( _rqRange.hasRange || _rqRange.hasScale )
+				// set up the new scenario when 
+				//   useful informations were given
+				//   we support seek or we never played
+				if ( (SUPPORT_SEEK || !_rtsp->hasPlayed()) && (_rqRange.hasRange || _rqRange.hasScale) )
 				{
-					// pre-play
+					_mustPlay = true;
 					if ( _url->track.empty() )
 						_rplRange = _rtsp->play( _rqRange );
 					else
 						_rplRange = _rtsp->getSession( _url->track ).play( _rqRange );
+				}
+				// load current play range
+				else
+				{
+					if ( _url->track.empty() )
+						_rplRange = _rtsp->getPlayRange();
+					else
+						_rplRange = _rtsp->getPlayRange( _url->track );
 				}
 			}
 
@@ -419,6 +419,7 @@ namespace KGD
 				ostringstream reply;
 
 				reply << this->getTimestamp( _rplRange.time ) << EOL;
+				// range
 				if ( _rplRange.hasRange )
 				{
 					reply << "Range: npt=" << setprecision(3) << fixed << _rplRange.from << "-";
@@ -427,8 +428,13 @@ namespace KGD
 					else
 						reply << EOL;
 				}
+				// scale
+				if ( _rplRange.hasScale )
+				{
+					reply << "Scale: " << setprecision(3) << fixed << _rplRange.speed << EOL;
+				}
+				// others
 				reply
-					<< "Scale: " << setprecision(3) << fixed << _rplRange.speed << EOL
 					<< "Session: " << _sessionID << EOL
 					<< "RTP-Info: ";
 
@@ -465,7 +471,7 @@ namespace KGD
 			void Play::execute() throw( RTSP::Exception::ManagedError )
 			{
 				// play effective
-				if ( _rqRange.hasRange || _rqRange.hasScale )
+				if ( _mustPlay )
 				{
 					if ( _url->track.empty() )
 						_rtsp->play( );

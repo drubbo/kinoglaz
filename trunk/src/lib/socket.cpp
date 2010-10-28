@@ -84,7 +84,7 @@ namespace KGD
 		// ****************************************************************************************************************
 
 		Abstract::Abstract( const int fileDescriptor ) throw( Socket::Exception )
-		: _fileDescriptor( fileDescriptor ), _bound( false )
+		: _fileDescriptor( fileDescriptor )
 		{
 			socklen_t sz = sizeof(sockaddr_in);
 			if (_fileDescriptor >= 0)
@@ -101,7 +101,6 @@ namespace KGD
 		}
 
 		Abstract::Abstract( Type::type t, const TPort bindPort, const string& bindIP ) throw( Socket::Exception )
-		: _bound(false)
 		{
 			memset(&_local, 0, sizeof(sockaddr_in));
 			// apertura socket
@@ -109,24 +108,18 @@ namespace KGD
 			{
 				throw Socket::Exception( "socket" );
 			}
-			else if ( t == Type::TCP )
-			{
-				// keep alive abilitato
-				int true_val = 1;
-				::setsockopt(_fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, &true_val, sizeof(int));
-			}
+
 			// se ho una bind port, faccio bind
-			if (bindPort > 0)
+			if ( bindPort > 0 )
 			{
-				_local = this->getAddress(bindPort, bindIP);
+				// reuse
+				int boolVal = 1;
+				if (::setsockopt(_fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &boolVal, sizeof(int)) < 0)
+					throw Socket::Exception( "setsockopt - SO_REUSEADDR" );
+				
+				_local = this->getAddress( bindPort, bindIP );
 				if (::bind(_fileDescriptor, (sockaddr *) &_local, sizeof(sockaddr_in)) < 0)
-				{
 					throw Socket::Exception( "bind" );
-				}
-				else
-				{
-					_bound = true;
-				}
 			}
 			// altrimenti uso la getsockname per riempire _local
 			else
@@ -497,17 +490,18 @@ namespace KGD
 		void Tcp::setKeepAlive( bool set ) throw( Socket::Exception )
 		{
 			int flag = ( set ? 1 : 0 );
-			int cnt = 3, idle = 5, intvl = 10;
 
 			if (::setsockopt(_fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int)) < 0)
 				throw Socket::Exception( "setsockopt - SO_KEEPALIVE" );
 
 			if ( set )
 			{
-				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPCNT, &cnt, sizeof(int)) < 0)
-					throw Socket::Exception( "setsockopt - TCP_KEEPCNT" );
+				// after 5s idle, try 3 times every 10s
+				int idle = 5, cnt = 3, intvl = 10;
 				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(int)) < 0)
 					throw Socket::Exception( "setsockopt - TCP_KEEPIDLE" );
+				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPCNT, &cnt, sizeof(int)) < 0)
+					throw Socket::Exception( "setsockopt - TCP_KEEPCNT" );
 				if (::setsockopt(_fileDescriptor, SOL_TCP, TCP_KEEPINTVL, &intvl, sizeof(int)) < 0)
 					throw Socket::Exception( "setsockopt - TCP_KEEPINTVL" );
 			}
@@ -529,11 +523,6 @@ namespace KGD
 		TcpServer::TcpServer( TPort bindPort, const string & bindIP, const int queue ) throw( Socket::Exception )
 		: Socket::Abstract( Type::TCP, bindPort, bindIP )
 		{
-			if ( !_bound )
-			{
-				throw Socket::Exception("TcpServer", "server socket bind failed");
-			}
-
 			if (::listen(_fileDescriptor, queue) < 0)
 			{
 				throw Socket::Exception( "listen" );

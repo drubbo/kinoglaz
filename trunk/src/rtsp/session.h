@@ -112,7 +112,10 @@ namespace KGD
 			//! adds another media in the current running sessions at specified media time (oo = asap)
 			void insertMedia( SDP::Container & media, double curMediaTime = HUGE_VAL ) throw( KGD::Exception::OutOfBounds );
 
-			
+			//! returns current (average) play range
+			PlayRequest getPlayRange() const throw();
+			//! returns current play range of given RTP session
+			PlayRequest getPlayRange( const string & track ) const throw( RTSP::Exception::ManagedError );
 			//! aggregate pre-play: sets up time range on every RTP session
 			PlayRequest play( const PlayRequest & ) throw( RTSP::Exception::ManagedError );
 			//! aggregate post-play: invokes play on every RTP session

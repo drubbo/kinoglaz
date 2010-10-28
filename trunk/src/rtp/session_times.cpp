@@ -46,16 +46,30 @@ namespace KGD
 	namespace RTP
 	{
 
-		TCseq Session::seqRestart()
+		TCseq Session::seqRestart() throw()
 		{
 			while (0 == (_seqStart  = TCseq(random() % 0xFFFF)));
 			_seqCur = _seqStart - 1;
 			return _seqStart;
 		}
 
-		const Timeline::Medium & Session::getTimeline() const
+		const Timeline::Medium & Session::getTimeline() const throw()
 		{
 			return *_frame.time;
+		}
+
+		RTSP::PlayRequest Session::getPlayRange() const throw()
+		{
+			OwnThread::Lock lk(_th);
+			
+			RTSP::PlayRequest ret;
+			ret.speed = _frame.time->getSpeed();
+			ret.from = _frame.time->getPresentationTime();
+			ret.to = _medium.getIterationDuration();
+			ret.hasRange = true;
+			ret.hasScale = true;
+
+			return ret;
 		}
 
 		RTSP::PlayRequest Session::eval( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
@@ -117,7 +131,7 @@ namespace KGD
 			_timeEnd += duration;
 		}
 
-		void Session::logTimes() const
+		void Session::logTimes() const throw()
 		{
 			Log::message("%s: Media time %f"
 				, getLogName()

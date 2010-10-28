@@ -139,11 +139,11 @@ namespace KGD
 			return !_status.bag[ Status::STOPPED ] && !_status.bag[ Status::PAUSED ] ;
 		}
 
-		const SDP::Medium::Base & Session::getDescription() const
+		const SDP::Medium::Base & Session::getDescription() const throw()
 		{
 			return _medium;
 		}
-		SDP::Medium::Base & Session::getDescription()
+		SDP::Medium::Base & Session::getDescription() throw()
 		{
 			return _medium;
 		}
@@ -214,7 +214,7 @@ namespace KGD
 			}
 		}
 
-		void Session::loop()
+		void Session::loop() throw()
 		{
 			{
 				OwnThread::Lock lk( _th );
@@ -367,30 +367,30 @@ namespace KGD
 		}
 
 
-		uint16_t Session::getStartSeq() const
+		uint16_t Session::getStartSeq() const throw()
 		{
 			return _seqStart;
 		}
 
-		int Session::getRate() const
+		int Session::getRate() const throw()
 		{
 			return _medium.getRate();
 		}
-		TSSrc Session::getSsrc() const
+		TSSrc Session::getSsrc() const throw()
 		{
 			return _ssrc;
 		}
 
-		const Url& Session::getUrl() const
+		const Url& Session::getUrl() const throw()
 		{
 			return _url;
 		}
 
-		Channel::Description Session::RTPgetDescription() const
+		Channel::Description Session::RTPgetDescription() const throw()
 		{
 			return _sock->getDescription();
 		}
-		Channel::Description Session::RTCPgetDescription() const
+		Channel::Description Session::RTCPgetDescription() const throw()
 		{
 			return _rtcp.sock->getDescription();
 		}
