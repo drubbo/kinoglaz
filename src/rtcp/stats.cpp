@@ -147,7 +147,9 @@ namespace KGD
 				}
 				else
 					_th.unlock();
+
 				_th.wait();
+				_th.join();
 				_th.reset();
 			}
 		}
