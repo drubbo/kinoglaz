@@ -60,6 +60,7 @@ namespace KGD
 	{
 		double READ_TIMEOUT = 0.1;
 		double WRITE_TIMEOUT = 0.1;
+		size_t WRITE_BUFFER_SIZE = 2048;
 		
 		Exception::Exception() throw()
 		: KGD::Exception::Generic( errno )
@@ -194,16 +195,14 @@ namespace KGD
 			return buffer;
 		}
 
-		void Abstract::setTimeout( const double sec, const int param ) throw( Socket::Exception )
+		void Abstract::setTimeout( double sec, int param ) throw( Socket::Exception )
 		{
 			timeval timeout;
 			timeout.tv_sec  = long(floor(sec));
 			timeout.tv_usec = long((sec - floor(sec)) * 1000000);
 
 			if (::setsockopt(_fileDescriptor, SOL_SOCKET, param, &timeout, sizeof(timeval)) < 0)
-			{
 				throw Socket::Exception( "setsockopt" );
-			}
 		}
 
 		// ****************************************************************************************************************
@@ -218,7 +217,7 @@ namespace KGD
 		}
 
 
-		void Reader::setReadTimeout( const double sec ) throw( Socket::Exception )
+		void Reader::setReadTimeout( double sec ) throw( Socket::Exception )
 		{
 			Abstract::setTimeout(sec, SO_RCVTIMEO);
 		}
@@ -321,12 +320,19 @@ namespace KGD
 			return _wrBlock;
 		}
 
-		void Writer::setWriteTimeout( const double sec ) throw( Socket::Exception )
+		void Writer::setWriteBufferSize( size_t sz ) throw( Socket::Exception )
+		{
+			int param = sz;
+			if (::setsockopt(_fileDescriptor, SOL_SOCKET, SO_SNDBUF, &param, sizeof(int)) < 0)
+				throw Socket::Exception( "setsockopt" );
+		}
+
+		void Writer::setWriteTimeout( double sec ) throw( Socket::Exception )
 		{
 			Abstract::setTimeout( sec, SO_SNDTIMEO );
 		}
 
-		void Writer::connectTo( sockaddr_in const * const addr ) throw( Socket::Exception )
+		void Writer::connectTo( sockaddr_in const * addr ) throw( Socket::Exception )
 		{
 			memcpy(&_remote, addr, sizeof(sockaddr_in));
 

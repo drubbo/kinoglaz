@@ -109,6 +109,7 @@ namespace KGD
 
 		Socket::READ_TIMEOUT = fromString< double >( (*_ini)( "SERVER", "read-to", "0.1" ) );
 		Socket::WRITE_TIMEOUT = fromString< double >( (*_ini)( "SERVER", "write-to", "0.1" ) );
+		Socket::WRITE_BUFFER_SIZE = fromString< size_t >( (*_ini)( "SERVER", "write-buf", "1024" ) );
 		
 		ostringstream s;
 		s << "KGD: Parameters: Buffer [" << RTP::Buffer::Base::SIZE_LOW << "-" << RTP::Buffer::Base::SIZE_FULL
@@ -117,7 +118,8 @@ namespace KGD
 			<< " | SDP shared descriptors " << RTSP::Connection::SHARE_DESCRIPTORS
 			<< " | SDP aggregate control " << SDP::Container::AGGREGATE_CONTROL
 			<< " | RTSP seek support " << RTSP::Method::SUPPORT_SEEK
-			<< " | socket timeouts R=" << setprecision( 2 ) << Socket::READ_TIMEOUT << " W=" << setprecision( 2 ) << Socket::WRITE_TIMEOUT;
+			<< " | socket timeouts R=" << setprecision( 2 ) << Socket::READ_TIMEOUT << " W=" << setprecision( 2 ) << Socket::WRITE_TIMEOUT
+			<< " | socket write buffer bytes " << Socket::WRITE_BUFFER_SIZE;
 		Log::debug( "%s", s.str().c_str() );
 	}
 

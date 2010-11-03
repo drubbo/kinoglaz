@@ -95,6 +95,9 @@ namespace KGD
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! read from buffer
 			virtual size_t readSome( void *, size_t ) throw( KGD::Socket::Exception );
+
+			//! invalid operation
+			virtual void setWriteBufferSize( size_t ) throw( );
 			//! invalid operation
 			virtual void setWriteBlock( bool ) throw( );
 			//! invalid operation
@@ -175,6 +178,9 @@ namespace KGD
 			virtual size_t writeSome( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! write to socket
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
+
+			//! sets write buffer size
+			virtual void setWriteBufferSize( size_t ) throw( );
 			//! is write blocking
 			virtual bool isWriteBlock( ) const throw();
 			//! sets write timeout
