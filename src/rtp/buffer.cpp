@@ -85,7 +85,7 @@ namespace KGD
 
 			Base::~Base()
 			{
-				this->clear();
+				//this->clear();
 			}
 
 			void Base::clear()

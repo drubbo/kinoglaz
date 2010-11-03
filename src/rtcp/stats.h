@@ -109,6 +109,7 @@ namespace KGD
 			Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock );
 
 		public:
+			virtual ~Thread();
 			//! start the thread
 			void start();
 			//! stop the thread
