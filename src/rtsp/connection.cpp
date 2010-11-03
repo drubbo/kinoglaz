@@ -62,6 +62,8 @@ namespace KGD
 
 		Connection::~Connection()
 		{
+			Connection::Lock lk( *this );
+			
 			Log::debug("%s: shutting down", getLogName() );
 
 			_sessions.clear();
@@ -116,21 +118,25 @@ namespace KGD
 
 		bool Connection::hasSessions() const
 		{
+			Connection::Lock lk( *this );
 			return ! _sessions.empty();
 		}
 
 		const Message::Request & Connection::getLastRequest() const throw( KGD::Exception::NullPointer )
 		{
+			Connection::Lock lk( *this );
 			return *_lastRq;
 		}
 		const Message::Response & Connection::getLastResponse() const throw( KGD::Exception::NullPointer )
 		{
+			Connection::Lock lk( *this );
 			return *_lastResp;
 		}
 
 		
 		void Connection::reply( const Error::Definition & error ) throw( KGD::Socket::Exception )
 		{
+			Connection::Lock lk( *this );
 			_socket->reply( error );
 		}
 
@@ -141,6 +147,7 @@ namespace KGD
 
 		const SDP::Container & Connection::loadDescription( const string & file ) throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			try
 			{
 				if ( SHARE_DESCRIPTORS )
@@ -174,6 +181,7 @@ namespace KGD
 
 		const SDP::Container & Connection::getDescription( const string & file ) const throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			DescriptorMap::const_iterator it = _descriptors.find( file );
 			if ( it != _descriptors.end( ) )
 				return *it->second;
@@ -182,6 +190,7 @@ namespace KGD
 		}
 		SDP::Container & Connection::getDescription( const string & file ) throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			DescriptorMap::iterator it = _descriptors.find( file );
 			if ( it != _descriptors.end( ) )
 				return *it->second;
@@ -191,6 +200,7 @@ namespace KGD
 
 		void Connection::listen() throw( KGD::Exception::Generic )
 		{
+			Connection::Lock lk( *this );
 			Log::debug( "%s: listen loop start", getLogName() );
 
 			ByteArray receiveBuffer( 1024 );
@@ -236,6 +246,7 @@ namespace KGD
 
 		Session & Connection::createSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			if ( _sessions.find( sessionID ) == _sessions.end() )
 			{
 				auto_ptr< Session > s( new Session( sessionID, *this ) );
@@ -248,6 +259,7 @@ namespace KGD
 
 		Session & Connection::getSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			try
 			{
 				return _sessions.at( sessionID );
@@ -260,6 +272,7 @@ namespace KGD
 
 		void Connection::removeSession( const TSessionID & sessionID ) throw( RTSP::Exception::ManagedError )
 		{
+			Connection::Lock lk( *this );
 			if ( _sessions.find( sessionID ) != _sessions.end() )
 			{
 				_socket->stopInterleaving( sessionID );
