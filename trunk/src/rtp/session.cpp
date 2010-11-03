@@ -234,16 +234,16 @@ namespace KGD
 						while( _status.bag[ Status::PAUSED ] )
 						{
 							Log::debug( "%s: go pause", getLogName() );
-							_frame.rate.stop();
-							_frame.time->pause( Clock::getSec() );
 							// signal "going to pause"
 							if ( _pause.sync )
 							{
 								OwnThread::UnLock ulk( lk );
+								Log::debug( "%s: pause sync", getLogName() );
 								_pause.asleep.wait();
 							}
 							// wait wakeup
 							_pause.wakeup.wait( lk );
+							Log::debug( "%s: wakeup from pause", getLogName() );
 						}
 
 						try
@@ -300,6 +300,8 @@ namespace KGD
 								Log::message( "%s: self pausing", getLogName() );
 								_status.bag[ Status::PAUSED ] = true;
 								_pause.sync = false;
+								_frame.rate.stop();
+								_frame.time->pause( Clock::getSec() );
 							}
 						}
 					}

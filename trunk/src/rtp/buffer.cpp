@@ -259,7 +259,7 @@ namespace KGD
 										{
 											// seek lock
 											newFrame.reset( Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next.getPayloadType() ) );
-											newFrame->as< RTP::Frame::AVMedia >().setFrame( next );
+											newFrame->setFrame( next );
 										}
 										catch( const KGD::Exception::Generic & e )
 										{

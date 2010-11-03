@@ -181,6 +181,9 @@ namespace KGD
 					h.pt = _frame->getPayloadType();
 					h.timestamp = htonl(rtp);
 					h.ssrc = htonl(ssrc);
+					// RFC 3119: This payload format defines no use for this bit.
+					// Senders SHOULD set this bit to zero in each outgoing packet.
+					h.marker = 0;
 
 					auto_ptr< Packet::List > rt( new Packet::List );
 

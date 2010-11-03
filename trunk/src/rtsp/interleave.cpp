@@ -176,9 +176,9 @@ namespace KGD
 				// read is blocking or timed blocking
 				else
 				{
-					Log::verbose( "%s: waiting interleaved data", getLogName() );
 					try
 					{
+						Log::verbose( "%s: waiting interleaved data", getLogName() );
 						// blocking, wait until data arrives
 						if ( _rdTimeout < 0 )
 							_condNotEmpty.wait( lk );

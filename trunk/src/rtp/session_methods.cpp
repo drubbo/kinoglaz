@@ -168,7 +168,7 @@ namespace KGD
 
 			if ( _status.bag[ Status::STOPPED ] )
 			{
-				Log::warning( "%s: session is stopped, can't go to pause", getLogName() );
+				Log::warning( "%s: session is stopped", getLogName() );
 			}
 			else if ( _status.bag[ Status::PAUSED ] )
 			{

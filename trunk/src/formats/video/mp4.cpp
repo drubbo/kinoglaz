@@ -123,6 +123,8 @@ namespace KGD
 						auto_ptr< Packet > pkt( new Packet( copySize + Header::SIZE ) );
 						// make packet
 						h.seqNo = htons(++ seq);
+						// RFC 3016: The marker bit is set to one to indicate the last RTP
+						// packet (or only RTP packet) of a VOP
 						h.marker = (packetized + copySize >= tot ? 1 : 0 );
 						pkt->data
 							.set< Header >( h, 0 )

@@ -120,7 +120,8 @@ namespace KGD
 
 						// make packet
 						h.seqNo = htons(++ seq);
-						h.marker = ( copySize >= tot ? 1 : 0 );
+						// RFC 2250: For audio, set to 1 on first packet of a "talk-spurt," 0 otherwise.
+						h.marker = ( packetized == 0 && copySize < tot ? 1 : 0 );
 
 						uint32_t fragmentOffset = htonl( packetized & 0xFFFF );
 						pkt->data
