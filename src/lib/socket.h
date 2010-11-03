@@ -88,7 +88,9 @@ namespace KGD
 			template< class T >
 			size_t writeLast( const Array< T > & ) throw( KGD::Exception::Generic );
 
-			//! sets write timeout
+			//! sets write buffer size
+			virtual void setWriteBufferSize( size_t ) = 0;
+			//! sets write timeout in seconds
 			virtual void setWriteTimeout( double sec ) = 0;
 			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)
 			virtual void setWriteBlock( bool ) = 0;
@@ -144,6 +146,8 @@ namespace KGD
 		extern double READ_TIMEOUT;
 		//! common global value for write timeout
 		extern double WRITE_TIMEOUT;
+		//! common global value for write timeout
+		extern size_t WRITE_BUFFER_SIZE;
 
 		//! socket exceptions
 		class Exception:
@@ -310,6 +314,9 @@ namespace KGD
 
 			//! tells if socket is actually connected to an end-point
 			bool isConnected() const throw();
+
+			//! sets write buffer size
+			void setWriteBufferSize( size_t sz ) throw( Socket::Exception );
 			//! sets write timeout
 			virtual void setWriteTimeout( double sec ) throw( Socket::Exception );
 			//! sets the socket in write-blocking mode (thread will be suspended until write has been successfully done)

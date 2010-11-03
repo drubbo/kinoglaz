@@ -210,6 +210,10 @@ namespace KGD
 		{
 			return (*_sock)->isWriteBlock();
 		}
+		void Interleave::setWriteBufferSize( size_t ) throw()
+		{
+			BOOST_ASSERT( false );
+		}
 		void Interleave::setWriteBlock( bool ) throw()
 		{
 			BOOST_ASSERT( false );
@@ -251,6 +255,7 @@ namespace KGD
 			(*_sock)->setReadBlock( true );
 			(*_sock)->setWriteBlock( true );
 			(*_sock)->setWriteTimeout( KGD::Socket::WRITE_TIMEOUT );
+			(*_sock)->setWriteBufferSize( KGD::Socket::WRITE_BUFFER_SIZE );
 		}
 
 		Socket::~Socket()
@@ -488,6 +493,11 @@ namespace KGD
 		void Socket::setWriteTimeout( double sec ) throw( KGD::Socket::Exception )
 		{
 			(*_sock)->setWriteTimeout( sec );
+		}
+
+		void Socket::setWriteBufferSize( size_t sz ) throw()
+		{
+			(*_sock)->setWriteBufferSize( sz );
 		}
 
 		void Socket::setWriteBlock( bool b ) throw()
