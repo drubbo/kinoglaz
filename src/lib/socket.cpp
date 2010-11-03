@@ -82,6 +82,11 @@ namespace KGD
 		{
 		}
 
+		bool Exception::wouldBlock() const throw()
+		{
+			return _errno == EAGAIN || _errno == EWOULDBLOCK;
+		}
+
 		// ****************************************************************************************************************
 
 		Abstract::Abstract( const int fileDescriptor ) throw( Socket::Exception )

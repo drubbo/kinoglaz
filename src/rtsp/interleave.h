@@ -147,6 +147,9 @@ namespace KGD
 			//! log identifier
 			const string _logName;
 
+			//! internal utility
+			void reply( const ostringstream & o ) throw( KGD::Socket::Exception );
+			
 			//! will be called by Interleave destructor
 			void release( TPort );
 
@@ -190,8 +193,6 @@ namespace KGD
 
 			//! reply an error
 			void reply( const Error::Definition & error ) throw( KGD::Socket::Exception );
-			//! reply an error
-			void reply( const uint16_t code, const string & msg = "" ) throw( KGD::Socket::Exception );
 			//! reply to a method
 			void reply( Method::Base & m ) throw( KGD::Socket::Exception );
 

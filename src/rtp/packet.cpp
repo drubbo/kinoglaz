@@ -57,27 +57,12 @@ namespace KGD
 		size_t tot = 0, rem = pkt.data.size();
 		while( rem > 0 )
 		{
-/*			try
-			{*/
-				if ( pkt.isLastOfSequence )
-					wrote = s.writeLast( &(pkt.data[tot]), rem );
-				else
-					wrote = s.writeSome( &(pkt.data[tot]), rem );
-				tot += wrote;
-				rem -= wrote;
-/*			}
-			catch ( const Socket::Exception & e )
-			{
-				if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
-				{
-					Log::warning( "RTP packet lost: %s", e.what() );
-				}
-				else
-				{
-					Log::error( "RTP packet lost, socket error: %s", e.what() );
-					throw;
-				}
-			}*/
+			if ( pkt.isLastOfSequence )
+				wrote = s.writeLast( &(pkt.data[tot]), rem );
+			else
+				wrote = s.writeSome( &(pkt.data[tot]), rem );
+			tot += wrote;
+			rem -= wrote;
 		}
 
 		return s;
