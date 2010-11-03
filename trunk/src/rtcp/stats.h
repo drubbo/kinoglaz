@@ -110,6 +110,7 @@ namespace KGD
 
 		public:
 			virtual ~Thread();
+
 			//! start the thread
 			void start();
 			//! stop the thread

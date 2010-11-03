@@ -96,6 +96,7 @@ namespace KGD
 			ThreadBarrier( unsigned int count = 2 ) 	: _term( count ) { }
 
 			void wait() 								{ _term.wait(); }
+			void join() 								{ _th->join(); }
 
 			boost::thread * operator->() 				{ return _th.get(); }
 			boost::thread const * operator->() const 	{ return _th.get(); }
