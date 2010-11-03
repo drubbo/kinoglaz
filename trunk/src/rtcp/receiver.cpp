@@ -65,8 +65,7 @@ namespace KGD
 
 		Receiver::~Receiver()
 		{
-			this->stop();
-			Log::verbose( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroying", getLogName() );
 		}
 
 		const char * Receiver::getLogName() const throw()
@@ -176,7 +175,7 @@ namespace KGD
 				const SourceDescription::Header & hSD = reinterpret_cast< const SourceDescription::Header & >( *data );
 				data += hSizeSDES; pos += hSizeSDES;
 
-				Log::verbose( "%s: parsing SDES, ssrc %X", getLogName(), ntohs( hSD.ssrc ) );
+				Log::verbose( "%s: parsing SDES, ssrc %X, count %u", getLogName(), ntohs( hSD.ssrc ), h.count );
 
 				while( pos < size )
 				{

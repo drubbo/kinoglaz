@@ -92,8 +92,7 @@ namespace KGD
 
 		Sender::~Sender()
 		{
-			this->stop();
-			Log::verbose( "%s: destroyed", getLogName() );
+			Log::verbose( "%s: destroying", getLogName() );
 		}
 
 		const char * Sender::getLogName() const throw()

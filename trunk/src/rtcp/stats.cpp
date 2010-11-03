@@ -75,7 +75,11 @@ namespace KGD
 		{
 			_flags.bag[ Status::RUNNING ] = false;
 			_flags.bag[ Status::PAUSED ] = false;
-			
+		}
+
+		Thread::~Thread()
+		{
+			this->stop();
 		}
 
 		void Thread::start()
