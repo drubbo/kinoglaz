@@ -162,6 +162,8 @@ namespace KGD
 			Exception( const string & fun, int errcode ) throw();
 			//! ctor with function name and custom error message
 			Exception( const string & fun, const string & msg ) throw();
+			//! tells if error code is AGAIN / WOULD BLOCK
+			bool wouldBlock() const throw();
 		};
 
 		//! base socket class

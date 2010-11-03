@@ -131,7 +131,7 @@ namespace KGD
 				if ( _running )
 				{
 					// not counting header bytes
-					return (*_sock)->writeAll( envelope ) - 4;
+					return (*_sock)->writeSome( envelope.get(), envelope.size() ) - 4;
 				}
 				else
 					throw KGD::Socket::Exception( "writeSome", "connection shut down" );
@@ -475,7 +475,7 @@ namespace KGD
 		size_t Socket::writeSome( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
 			TcpTunnel::Lock lk( _sock );
-			return (*_sock)->writeAll( data, sz );
+			return (*_sock)->writeSome( data, sz );
 		}
 
 		size_t Socket::writeLast( void const * data, size_t sz ) throw( KGD::Socket::Exception )
@@ -505,20 +505,46 @@ namespace KGD
 			(*_sock)->setWriteBlock( b );
 		}
 
-		void Socket::reply( const uint16_t code, const string & msg ) throw( KGD::Socket::Exception )
+		void Socket::reply( const ostringstream & o ) throw( KGD::Socket::Exception )
 		{
-			ostringstream s;
-			s << VER << " " << code << " " << msg << EOL
-				<< "CSeq: " << _cseq << EOL << EOL;
+			string msg = o.str();
+			Log::reply( msg );
 
-			string str = s.str();
-			Log::reply( str );
-			this->writeSome( str.c_str(), str.size() );
+			{
+				TcpTunnel::Lock lk( _sock );
+
+				size_t sent = 0, len = msg.size();
+				const char * data = msg.c_str();
+
+				while( sent < len )
+				{
+					try
+					{
+						size_t wrote = (*_sock)->writeSome( data, len - sent );
+						data += wrote;
+						sent += wrote;
+					}
+					catch( KGD::Socket::Exception const & e )
+					{
+						if ( e.wouldBlock() )
+							Log::debug( "%s: socket would block in writeAll (%s)", getLogName(), e.what() );
+						else
+							throw;
+					}
+				}
+			}
 		}
+
 
 		void Socket::reply(const Error::Definition & error) throw( KGD::Socket::Exception )
 		{
-			this->reply( error.getCode(), error.getDescription() );
+			ostringstream s;
+			s << VER << " " << error.getCode() << " " << error.getDescription() << EOL
+				<< "CSeq: " << _cseq << EOL
+				<< "Server: " << KGD::Daemon::getName() << EOL
+				<< EOL;
+
+			this->reply( s );
 		}
 
 		void Socket::reply( Method::Base & m ) throw( KGD::Socket::Exception )
@@ -528,16 +554,15 @@ namespace KGD
 				// prapare data
 				m.prepare();
 
-				// prepend common header do reply
+				// prepend common header
 				ostringstream s;
 				s << VER << " " << Error::Ok.getCode() << " " << Error::Ok.getDescription() << EOL
 					<< "CSeq: " << _cseq << EOL
 					<< "Server: " << KGD::Daemon::getName() << EOL
 					<< m.getReply();
 
-				string str = s.str();
-				Log::reply( str );
-				this->writeSome( str.c_str(), str.size() );
+				// reply
+				this->reply( s );
 
 				// do required actions
 				m.execute();

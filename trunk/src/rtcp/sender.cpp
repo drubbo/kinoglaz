@@ -160,7 +160,7 @@ namespace KGD
 							}
 							catch( Socket::Exception const & e )
 							{
-								if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+								if ( e.wouldBlock() )
 									Log::warning( "%s: packet lost: %s", getLogName(), e.what() );
 								else
 									throw;

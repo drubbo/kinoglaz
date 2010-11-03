@@ -345,7 +345,7 @@ namespace KGD
 				}
 				catch( KGD::Socket::Exception const & e )
 				{
-					if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+					if ( e.wouldBlock() )
 					{
 						_rtcp.sender->registerPacketLost( sendingSz );
 						Log::debug( "%s: packet lost %d / %d, %lf, %lf - %lu bytes", getLogName(), _rtcp.sender->getStats().pktLost, _medium.getFrameCount(), Clock::getSec() - _frame.firstLost, _frame.next->getTime(), sendingSz );
@@ -353,7 +353,10 @@ namespace KGD
 						if ( _frame.firstLost == HUGE_VAL )
 							_frame.firstLost = Clock::getSec();
 						else if ( Clock::getSec() - _frame.firstLost >= 5 )
+						{
+							Log::warning( "%s: 5s packet loss, stopping", getLogName(), e.what() );
 							throw;
+						}
 					}
 					else
 					{

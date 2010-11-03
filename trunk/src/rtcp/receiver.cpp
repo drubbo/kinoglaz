@@ -335,7 +335,7 @@ namespace KGD
 						}
 						catch( const Socket::Exception & e )
 						{
-							if ( e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK )
+							if ( e.wouldBlock() )
 							{
 								Log::warning( "%s: %s", getLogName(), e.what() );
 								this->waitMore();
