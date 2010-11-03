@@ -102,7 +102,6 @@ namespace KGD
 				Log::verbose( "%s: waiting loop termination", getLogName() );
 
 				lk.unlock();
-				_th.wait();
 				_th.reset();
 			}
 		}
@@ -251,13 +250,13 @@ namespace KGD
 					}
 					
 				}
+
+				av_close_input_file( fctx );
+
+				// finalize sizes
+				BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+					medium->second->finalizeFrameCount();
 			}
-
-			av_close_input_file( fctx );
-
-			// finalize sizes
-			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
-				medium->second->finalizeFrameCount();
 
 			// sync termination
 			Log::verbose( "%s: sync loop termination", getLogName() );
