@@ -253,8 +253,6 @@ namespace KGD
 			{
 				Log::debug( "%s: waiting loop termination", getLogName() );
 				OwnThread::UnLock ulk( lk );
-				_th.wait();
-				_th.join();
 				_th.reset();
 				Log::debug( "%s: loop joined terminate", getLogName() );
 			}

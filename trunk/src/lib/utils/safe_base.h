@@ -96,7 +96,6 @@ namespace KGD
 			ThreadBarrier( unsigned int count = 2 ) 	: _term( count ) { }
 
 			void wait() 								{ _term.wait(); }
-			void join() 								{ _th->join(); }
 
 			boost::thread * operator->() 				{ return _th.get(); }
 			boost::thread const * operator->() const 	{ return _th.get(); }
@@ -105,7 +104,16 @@ namespace KGD
 
 			operator bool() const 						{ return bool( _th ); }
 
-			void reset( boost::thread * t = 0 ) 		{ _th.reset( t ); }
+			void reset( boost::thread * t ) 			{ BOOST_ASSERT( !_th ); _th.reset( t ); }
+			void reset()
+			{
+				if ( _th )
+				{
+					_term.wait();
+					_th->join();
+					_th.reset();
+				}
+			}
 		};
 
 	}

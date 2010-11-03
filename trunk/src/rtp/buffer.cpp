@@ -205,7 +205,6 @@ namespace KGD
 				if ( _th )
 				{
 					Log::debug("%s: waiting thread", getLogName() );
-					_th.wait();
 					_th.reset();
 				}
 			}
