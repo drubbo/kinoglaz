@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./daemon.cpp
- * First submitted: 2010-01-16
+ * File name: src/daemon.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     formats on their own; better Factory elements naming; separate library for every component
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     sig HUP supported
- *     frame / other stuff refactor
+ *     added param for tcp socket send buffer
+ *     english comments; removed leak with connection serving threads
+ *     removed magic numbers in favor of constants / ini parameters
+ *     testing interrupted connections
+ *     RTCP poll times in ini file; adaptive RTCP receiver poll interval; uniform EAGAIN handling, also thrown by Interleave
  *
  **/
 

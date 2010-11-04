@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/session.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtsp/session.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     interleaved channels shutdown fixed
- *     removed RTSP::Session state concept, conflicting with non-aggregate control
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     NOTIFY needs lowercase registration names
- *     log messages refactor; shared descriptor are optional now; spot insertion support
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     minor cleanup and more robust Range / Scale support during PLAY
+ *     removed magic numbers in favor of constants / ini parameters
+ *     introduced keep alive on control socket (me dumb)
+ *     testing interrupted connections
  *
  **/
 

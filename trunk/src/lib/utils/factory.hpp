@@ -18,17 +18,15 @@
  *
  *************************************************************************
  *
- * File name: ./lib/utils/factory.hpp
- * First submitted: 2010-01-16
+ * File name: src/lib/utils/factory.hpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     formats on their own; better Factory elements naming; separate library for every component
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     termination, log, method execution refactor
- *     first import
+ *     boosted
+ *     source import
  *
  **/
 

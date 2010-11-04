@@ -18,18 +18,15 @@
  *
  *************************************************************************
  *
- * File name: ./lib/utils/factory.cpp
- * First submitted: 2010-01-16
+ * File name: src/lib/utils/factory.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
- *     termination, log, method execution refactor
+ *     boosted
+ *     source import
  *
  **/
 

@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/method.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtsp/method.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     removed RTSP::Session state concept, conflicting with non-aggregate control
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     fixed some bug in Log and in insertMedia; comments
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     ns refactor over messages; seek exception blobbed up
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     minor cleanup and more robust Range / Scale support during PLAY
+ *     testing interrupted connections
+ *     boosted
+ *     fixed pause toggle recognition
  *
  **/
 

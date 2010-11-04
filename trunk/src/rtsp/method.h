@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/method.h
- * First submitted: 2010-01-16
+ * File name: src/rtsp/method.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     formats on their own; better Factory elements naming; separate library for every component
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     ns refactor over messages; seek exception blobbed up
- *     sdp debugged
+ *     minor cleanup and more robust Range / Scale support during PLAY
+ *     boosted
+ *     Some cosmetics about enums and RTCP library
+ *     fixed bug during PAUSE toggle
+ *     source import
  *
  **/
 

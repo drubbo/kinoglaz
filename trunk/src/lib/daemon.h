@@ -18,18 +18,15 @@
  *
  *************************************************************************
  *
- * File name: ./lib/daemon.h
- * First submitted: 2010-01-16
+ * File name: src/lib/daemon.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sig HUP supported
- *     frame / other stuff refactor
- *     sdp debugged
- *     daemon out of RTSP ns
+ *     boosted
+ *     source import
  *
  **/
 

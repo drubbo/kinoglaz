@@ -18,18 +18,17 @@
  *
  *************************************************************************
  *
- * File name: ./rtp/chrono.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtp/chrono.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     wimtv key stream
- *     sdp debugged
- *     interleave ok
+ *     removed magic numbers in favor of constants / ini parameters
+ *     Lockables in timers and medium; refactorized iterator release
+ *     boosted
+ *     source import
  *
  **/
 

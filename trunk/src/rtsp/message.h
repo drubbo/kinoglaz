@@ -18,18 +18,17 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/message.h
- * First submitted: 2010-02-07
+ * File name: src/rtsp/message.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     ns refactor over messages; seek exception blobbed up
- *     sdp debugged
- *     interleave ok
- *     pre-interleave
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     boosted
+ *     Some cosmetics about enums and RTCP library
+ *     source import
  *
  **/
 

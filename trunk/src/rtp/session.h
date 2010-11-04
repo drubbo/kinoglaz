@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtp/session.h
- * First submitted: 2010-01-16
+ * File name: src/rtp/session.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     removed RTSP::Session state concept, conflicting with non-aggregate control
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     ns refactor over messages; seek exception blobbed up
- *     wimtv key stream
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     fixed RTSP buffer enqueue
+ *     minor cleanup and more robust Range / Scale support during PLAY
+ *     introduced keep alive on control socket (me dumb)
+ *     testing interrupted connections
  *
  **/
 

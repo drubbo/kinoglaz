@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtcp/receiver.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtcp/receiver.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     break loop when received END in SDES
+ *     "would block" cleanup
+ *     testing against a "speed crash"
+ *     introduced keep alive on control socket (me dumb)
  *
  **/
 

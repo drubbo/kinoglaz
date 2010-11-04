@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/interleave.cpp
- * First submitted: 2010-02-07
+ * File name: src/rtsp/interleave.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     interleaved channels shutdown fixed
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     fixed some bug in Log and in insertMedia; comments
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     ns refactor over messages; seek exception blobbed up
+ *     fixed RTSP buffer enqueue
+ *     "would block" cleanup
+ *     added param for tcp socket send buffer
+ *     english comments; removed leak with connection serving threads
+ *     removed magic numbers in favor of constants / ini parameters
  *
  **/
 

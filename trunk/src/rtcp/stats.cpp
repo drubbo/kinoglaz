@@ -18,18 +18,17 @@
  *
  *************************************************************************
  *
- * File name: ./rtcp/stats.cpp
- * First submitted: 2010-01-17
+ * File name: src/rtcp/stats.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
- *     termination, log, method execution refactor
+ *     threads terminate with wait + join
+ *     testing against a "speed crash"
+ *     testing against a "speed crash"
+ *     source import
  *
  **/
 

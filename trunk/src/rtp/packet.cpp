@@ -18,14 +18,17 @@
  *
  *************************************************************************
  *
- * File name: ./rtp/packet.cpp
- * First submitted: 2010-04-27
+ * File name: src/rtp/packet.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
+ *     "would block" cleanup
+ *     testing interrupted connections
+ *     RTCP poll times in ini file; adaptive RTCP receiver poll interval; uniform EAGAIN handling, also thrown by Interleave
+ *     source import
  *
  **/
 

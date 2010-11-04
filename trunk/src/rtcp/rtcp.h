@@ -18,18 +18,14 @@
  *
  *************************************************************************
  *
- * File name: ./rtcp/rtcp.h
- * First submitted: 2010-01-16
+ * File name: src/rtcp/rtcp.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
- *     termination, log, method execution refactor
- *     first import
+ *     source import
  *
  **/
 

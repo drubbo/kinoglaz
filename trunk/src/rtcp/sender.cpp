@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtcp/sender.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtcp/sender.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
+ *     "would block" cleanup
+ *     testing against a "speed crash"
+ *     testing interrupted connections
+ *     Lockables in timers and medium; refactorized iterator release
+ *     RTCP poll times in ini file; adaptive RTCP receiver poll interval; uniform EAGAIN handling, also thrown by Interleave
  *
  **/
 
