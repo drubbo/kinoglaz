@@ -18,14 +18,14 @@
  *
  *************************************************************************
  *
- * File name: ./lib/array.cpp
- * First submitted: 2010-05-12
+ * File name: src/lib/array.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     
+ *     source import
  *
  **/
 

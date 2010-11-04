@@ -18,17 +18,16 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/ports.cpp
- * First submitted: 2010-02-07
+ * File name: src/rtsp/ports.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sdp debugged
- *     interleave ok
- *     pre-interleave
+ *     boosted
+ *     removed deadlock issue in RTCP receiver; unloading sent frames from memory when appliable
+ *     source import
  *
  **/
 

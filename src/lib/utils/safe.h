@@ -18,18 +18,16 @@
  *
  *************************************************************************
  *
- * File name: ./lib/utils/safe.h
- * First submitted: 2010-01-16
+ * File name: src/lib/utils/safe.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     fixed some bug in Log and in insertMedia; comments
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
+ *     boosted
+ *     boosted
+ *     source import
  *
  **/
 

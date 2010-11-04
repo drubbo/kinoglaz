@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/connection.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtsp/connection.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     interleaved channels shutdown fixed
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     ns refactor over messages; seek exception blobbed up
- *     sdp debugged
+ *     fixed some SSRC issues; added support for client-hinted ssrc; fixed SIGTERM shutdown when serving
+ *     english comments; removed leak with connection serving threads
+ *     testing interrupted connections
+ *     boosted
+ *     Some cosmetics about enums and RTCP library
  *
  **/
 

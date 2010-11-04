@@ -18,15 +18,15 @@
  *
  *************************************************************************
  *
- * File name: ./sdp/descriptions.h
- * First submitted: 2010-02-20
+ * File name: src/sdp/descriptions.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
+ *     boosted
+ *     source import
  *
  **/
 

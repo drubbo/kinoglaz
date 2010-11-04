@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./sdp/medium.h
- * First submitted: 2010-02-20
+ * File name: src/sdp/medium.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     formats on their own; better Factory elements naming; separate library for every component
- *     implemented (unused) support for MP3 ADU
- *     interleaved channels shutdown fixed
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     fixed some bug in Log and in insertMedia; comments
+ *     Lockables in timers and medium; refactorized iterator release
+ *     boosted
+ *     removed deadlock issue in RTCP receiver; unloading sent frames from memory when appliable
+ *     Some cosmetics about enums and RTCP library
+ *     source import
  *
  **/
 

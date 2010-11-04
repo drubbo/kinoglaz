@@ -18,18 +18,15 @@
  *
  *************************************************************************
  *
- * File name: ./rtsp/ports.h
- * First submitted: 2010-02-07
+ * File name: src/rtsp/ports.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sdp debugged
- *     sdp threaded loader. sync pause
- *     interleave ok
- *     pre-interleave
+ *     boosted
+ *     source import
  *
  **/
 

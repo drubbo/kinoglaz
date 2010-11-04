@@ -18,18 +18,16 @@
  *
  *************************************************************************
  *
- * File name: ./daemon.h
- * First submitted: 2010-01-16
+ * File name: src/daemon.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     fixed some bug in Log and in insertMedia; comments
- *     sig HUP supported
- *     frame / other stuff refactor
- *     sdp debugged
+ *     testing interrupted connections
+ *     boosted
+ *     source import
  *
  **/
 

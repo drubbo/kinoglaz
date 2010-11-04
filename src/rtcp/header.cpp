@@ -18,18 +18,16 @@
  *
  *************************************************************************
  *
- * File name: ./rtcp/header.cpp
- * First submitted: 2010-01-16
+ * File name: src/rtcp/header.cpp
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     sdp debugged
- *     interleave ok
- *     added licence disclaimer
- *     termination, log, method execution refactor
+ *     added parameter to control aggregate / per track control; fixed parse and send routine of SDES RTCP packets
+ *     Some cosmetics about enums and RTCP library
+ *     source import
  *
  **/
 

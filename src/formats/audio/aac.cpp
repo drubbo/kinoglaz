@@ -18,14 +18,16 @@
  *
  *************************************************************************
  *
- * File name: ./formats/audio/aac.cpp
+ * File name: src/formats/audio/aac.cpp
  * First submitted: 2010-09-02
- * First submitter: Edoardo Radica <edoardo@cedeo.net>
- * Contributor(s) so far - 2010-09-02 :
- *     Edoardo Radica <edoardo@cedeo.net>
+ * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
+ *     boosted
+ *     fixed bug related to AAC sample rate
+ *     Added AAC support
  *
  **/
 

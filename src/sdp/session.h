@@ -18,18 +18,18 @@
  *
  *************************************************************************
  *
- * File name: ./sdp/session.h
- * First submitted: 2010-02-20
+ * File name: src/sdp/session.h
+ * First submitted: 2010-07-30
  * First submitter: Emiliano Leporati <emiliano.leporati@gmail.com>
- * Contributor(s) so far - 2010-07-30 :
+ * Contributor(s) so far - 2010-11-04 :
  *     Emiliano Leporati <emiliano.leporati@gmail.com>
  *
  * Last changes :
- *     formats on their own; better Factory elements naming; separate library for every component
- *     implemented (unused) support for MP3 ADU
- *     Kinoglaz birth: pervasive bug fixing, improvements and client support
- *     log messages refactor; shared descriptor are optional now; spot insertion support
- *     wimtv key stream
+ *     introduced keep alive on control socket (me dumb)
+ *     testing interrupted connections
+ *     boosted
+ *     added parameter to control aggregate / per track control; fixed parse and send routine of SDES RTCP packets
+ *     Some cosmetics about enums and RTCP library
  *
  **/
 
