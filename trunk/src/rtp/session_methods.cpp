@@ -104,7 +104,7 @@ namespace KGD
 			_frame.time->seek( ret.time, ret.from, ret.speed );
 			_frame.buf->seek( ret.from, ret.speed );
 
-			_th.reset( new boost::thread(boost::bind(&RTP::Session::loop, this)) );
+			_th.reset( new boost::thread(boost::bind(&RTP::Session::run, this)) );
 			_rtcp.receiver->start();
 			_rtcp.sender->restart();
 

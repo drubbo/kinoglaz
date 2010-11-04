@@ -437,7 +437,7 @@ namespace KGD
 							catch( KGD::Exception::NotFound )
 							{
 								// deque
-								Log::error( "%s: invalid interleaved channel, invalid inbound packet, deque %lu", getLogName(), msgSz );
+								Log::error( "%s: unrecognized inbound packet, dequeuing %lu bytes", getLogName(), msgSz );
 								_inBuf.dequeue( msgSz );
 							}
 						}

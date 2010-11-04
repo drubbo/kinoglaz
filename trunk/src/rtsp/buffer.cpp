@@ -75,6 +75,7 @@ namespace KGD
 			size_t len = this->getDataLength();
 			const char * data = this->getDataBegin();
 			// interleave
+			// there is always at least one character in the buffer (0)
 			if ( data[0] == '$' )
 			{
 				// $cZS
@@ -82,9 +83,7 @@ namespace KGD
 				{
 					uint16_t payload = 0;
 					memcpy( &payload, &data[2], 2 );
-					payload = ntohs( payload );
-					if ( payload + 4u <= this->getDataLength() )
-						sz = payload + 4u;
+					sz = 4u + ntohs( payload );
 				}
 			}
 			// RTSP message
