@@ -103,6 +103,8 @@ namespace KGD
 			_rtcp.start( *this );
 
 			this->seqRestart();
+
+			Log::debug( "%s: ssrc %lX", getLogName(), _ssrc );
 		}
 
 		Session::~Session()
@@ -380,6 +382,10 @@ namespace KGD
 		int Session::getRate() const throw()
 		{
 			return _medium.getRate();
+		}
+		void Session::setSsrc( TSSrc ssrc ) throw()
+		{
+			_ssrc = ssrc;
 		}
 		TSSrc Session::getSsrc() const throw()
 		{

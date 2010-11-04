@@ -90,7 +90,7 @@ namespace KGD
 			//! returns log identifier for this session
 			const char * getLogName() const throw();
 			//! creates a new RTP session returning it
-			RTP::Session & createSession( const Url & url, const Channel::Description & remote ) throw( RTSP::Exception::ManagedError );
+			RTP::Session & createSession( const Url & url, const Channel::Description & remote, const boost::optional< TSSrc > & ssrc ) throw( RTSP::Exception::ManagedError );
 			//! returns RTP session list
 			ref_list< RTP::Session > getSessions() throw();
 			//! returns RTP session list

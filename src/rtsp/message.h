@@ -109,7 +109,7 @@ namespace KGD
 
 
 				//! returns RTP / RTCP port pair
-				Channel::Description getTransport( ) const throw( RTSP::Exception::ManagedError );
+				pair< Channel::Description, boost::optional< TSSrc > > getTransport( ) const throw( RTSP::Exception::ManagedError );
 			};
 
 			//! RTSP response message

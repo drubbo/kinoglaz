@@ -200,7 +200,6 @@ namespace KGD
 
 		void Connection::listen() throw( KGD::Exception::Generic )
 		{
-			Connection::Lock lk( *this );
 			Log::debug( "%s: listen loop start", getLogName() );
 
 			ByteArray receiveBuffer( 1024 );
@@ -214,7 +213,10 @@ namespace KGD
 				// got request
 				catch ( Message::Request * rq )
 				{
+					Connection::Lock lk( *this );
 					_lastRq.reset( rq );
+
+					// process message and reply
 					try
 					{
 						// get message instance
@@ -239,6 +241,7 @@ namespace KGD
 				// got response
 				catch( Message::Response * resp )
 				{
+					Connection::Lock lk( *this );
 					_lastResp.reset( resp );
 				}
 			}

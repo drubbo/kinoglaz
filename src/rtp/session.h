@@ -186,6 +186,8 @@ namespace KGD
 			uint16_t getStartSeq() const throw();
 			//! returns medium rate
 			int getRate() const throw();
+			//! sets SSRC
+			void setSsrc( TSSrc ) throw();
 			//! returns SSRC
 			TSSrc getSsrc() const throw();
 			//! returns requested url

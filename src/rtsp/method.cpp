@@ -312,8 +312,8 @@ namespace KGD
 			{
 				Session::prepare();
 				// create RTP session
-				Channel::Description cDesc = _conn->getLastRequest().getTransport();
-				_rtp = _rtsp->createSession( *_url, cDesc );
+				pair< Channel::Description, boost::optional< TSSrc > > tDesc = _conn->getLastRequest().getTransport();
+				_rtp = _rtsp->createSession( *_url, tDesc.first, tDesc.second );
 			}
 
 
@@ -321,7 +321,7 @@ namespace KGD
 			{
 				ostringstream reply, ssrc;
 
-				ssrc << setfill('0') << setw(8) << _rtp->getSsrc();
+				ssrc << setfill('0') << setw(8) << hex << _rtp->getSsrc();
 
 				Channel::Description rtp = _rtp->RTPgetDescription();
 				Channel::Description rtcp = _rtp->RTCPgetDescription();
@@ -338,7 +338,7 @@ namespace KGD
 						<< "destination=" << sock.getRemoteHost() << ";"
 						<< "client_port=" << rtp.ports.second << "-" << rtcp.ports.second << ";"
 						<< "server_port=" << rtp.ports.first << "-" << rtcp.ports.first << ";"
-						<< "ssrc=" << ssrc << EOL
+						<< "ssrc=" << ssrc.str() << EOL
 						<< EOL;
 					break;
 
@@ -350,7 +350,7 @@ namespace KGD
 						<< "source=" << sock.getLocalHost() << ";"
 						<< "destination=" << sock.getRemoteHost() << ";"
 						<< "interleaved=" << rtp.ports.first << "-" << rtcp.ports.first << ";"
-						<< "ssrc=" << ssrc << EOL
+						<< "ssrc=" << ssrc.str() << EOL
 						<< EOL;
 					break;
 				}
@@ -441,8 +441,8 @@ namespace KGD
 				// aggregate
 				if ( _url->track.empty() )
 				{
-					const RTSP::Session & rtspSess = _rtsp.get();
-					ref_list< const RTP::Session > rtpSessions = rtspSess.getSessions();
+// 					const RTSP::Session & rtspSess = _rtsp.get();
+					ref_list< const RTP::Session > rtpSessions = _rtsp->getSessions();
 					size_t i = 0, n = rtpSessions.size();
 					BOOST_FOREACH( const RTP::Session & sess, rtpSessions )
 					{

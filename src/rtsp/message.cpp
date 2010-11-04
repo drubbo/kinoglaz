@@ -316,9 +316,9 @@ namespace KGD
 				}
 			}
 
-			Channel::Description Request::getTransport( ) const throw( RTSP::Exception::ManagedError )
+			pair< Channel::Description, boost::optional< TSSrc > > Request::getTransport( ) const throw( RTSP::Exception::ManagedError )
 			{
-				Channel::Description rt;
+				pair< Channel::Description, boost::optional< TSSrc > > rt;
 				try
 				{
 					string data = this->extractHeaderData( Header::Transport ).at(0);
@@ -329,9 +329,6 @@ namespace KGD
 						if ( parts.empty() )
 							continue;
 
-// 						for(size_t i = 0; i < parts.size(); ++i)
-// 							Log::debug("Transport: %s", parts[i].c_str());
-
 						string portParam;
 						// RTP/AVP(/UDP)
 						if ( parts[0] == "RTP/AVP" || parts[0] == "RTP/AVP/UDP" )
@@ -339,32 +336,47 @@ namespace KGD
 							// unicast needed
 							if ( find( parts.begin(), parts.end(), "unicast") != parts.end() )
 							{
-								rt.type = Channel::Owned;
+								rt.first.type = Channel::Owned;
 								portParam = "client_port";
 							}
 							else
-								continue;								
+							{
+								Log::warning("RTSP: unsupported non-unicast transport");
+								continue;
+							}
+								
 						}
 						// TCP interleaved - last type supported
 						else if ( parts[0] == "RTP/AVP/TCP" )
 						{
-							rt.type = Channel::Shared;
+							rt.first.type = Channel::Shared;
 							portParam = "interleaved";
 						}
 						else
+						{
+							Log::warning("RTSP: unsupported transport %s", parts[0].c_str());
 							continue;
+						}
 
 						// client ports
 						vector< string >::const_iterator cPorts = find_if( parts.begin(), parts.end(), BeginsWith( portParam ) );
 						if ( cPorts == parts.end() )
+						{
+							Log::warning("RTSP: no port/channel specification");
 							continue;
+						}
 
 						boost::regex rxPorts( ( portParam + "=(\\d+)-(\\d+)" ).c_str() );
 						boost::match_results< string::const_iterator > match;
 						if (boost::regex_search(cPorts->begin(), cPorts->end(), match, rxPorts))
 						{
-							rt.ports.first = fromString< TPort >( match.str(1) );
-							rt.ports.second = fromString< TPort >( match.str(2) );
+							rt.first.ports.first = fromString< TPort >( match.str(1) );
+							rt.first.ports.second = fromString< TPort >( match.str(2) );
+							// hint ssrc
+							vector< string >::const_iterator cSSRC = find_if( parts.begin(), parts.end(), BeginsWith( "ssrc=" ) );
+							if ( cSSRC != parts.end() )
+								rt.second = fromString< TSSrc >(cSSRC->substr( 5 ));
+
 							return rt;
 						}
 						else
