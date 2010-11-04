@@ -47,13 +47,16 @@ namespace KGD
 	{
 		double Receiver::POLL_INTERVAL = 5.0;
 
-		static const size_t hSize = sizeof( Header );
-		static const size_t hSizeSR = sizeof( SenderReport::Header );
-		static const size_t hSizeRR = sizeof( ReceiverReport::Header );
-		static const size_t hSizeSDES = sizeof( SourceDescription::Header );
-		static const size_t pSizeSR = sizeof( ReceiverReport::Payload );
-		static const size_t pSizeRR = sizeof( ReceiverReport::Payload );
-		static const size_t pSizeSDES = sizeof( SourceDescription::Payload );
+		namespace
+		{
+			const size_t HEADER_SIZE = sizeof( Header );
+			const size_t HEADER_SIZE_SR = sizeof( SenderReport::Header );
+			const size_t HEADER_SIZE_RR = sizeof( ReceiverReport::Header );
+			const size_t HEADER_SIZE_SDES = sizeof( SourceDescription::Header );
+			const size_t PAYLOAD_SIZE_SR = sizeof( ReceiverReport::Payload );
+			const size_t PAYLOAD_SIZE_RR = sizeof( ReceiverReport::Payload );
+			const size_t PAYLOAD_SIZE_SDES = sizeof( SourceDescription::Payload );
+		}
 
 		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
 		: Thread( s, chan )
@@ -94,22 +97,22 @@ namespace KGD
 			size_t pos = 0;
 
 			// get common header data
-			if ( size < hSize ) return false;
+			if ( size < HEADER_SIZE ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
-			data += hSize; pos += hSize;
+			data += HEADER_SIZE; pos += HEADER_SIZE;
 
 			// get sender report data
-			if ( size - pos < hSizeSR ) return false;
+			if ( size - pos < HEADER_SIZE_SR ) return false;
 			const SenderReport::Header & hSR = reinterpret_cast< const SenderReport::Header & >( *data );
-			data += hSizeSR; pos += hSizeSR;
+			data += HEADER_SIZE_SR; pos += HEADER_SIZE_SR;
 
 			// get payload(s)
 			list< const ReceiverReport::Payload * > reports;
 			for (size_t i = 0; i < h.count; ++i)
 			{
-				if ( size - pos < pSizeSR ) return false;
+				if ( size - pos < PAYLOAD_SIZE_SR ) return false;
 				reports.push_back( reinterpret_cast< const ReceiverReport::Payload * >( data ) );
-				data += pSizeSR; pos += pSizeSR;
+				data += PAYLOAD_SIZE_SR; pos += PAYLOAD_SIZE_SR;
 			}
 			// packet complete, update stats
 			{
@@ -130,21 +133,21 @@ namespace KGD
 			size_t pos = 0;
 
 			// get common header data
-			if ( size < hSize ) return false;
+			if ( size < HEADER_SIZE ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
-			data += hSize; pos += hSize;
+			data += HEADER_SIZE; pos += HEADER_SIZE;
 
 			// get receiver report data
-			if ( size - pos < hSizeRR ) return false;
-			data += hSizeRR; pos += hSizeRR;
+			if ( size - pos < HEADER_SIZE_RR ) return false;
+			data += HEADER_SIZE_RR; pos += HEADER_SIZE_RR;
 
 			// get payload(s)
 			list< const ReceiverReport::Payload * > reports;
 			for (size_t i = 0; i < h.count; ++i)
 			{
-				if ( size - pos < pSizeRR ) return false;
+				if ( size - pos < PAYLOAD_SIZE_RR ) return false;
 				reports.push_back( reinterpret_cast< const ReceiverReport::Payload * >( data ) );
-				data += pSizeRR; pos += pSizeRR;
+				data += PAYLOAD_SIZE_RR; pos += PAYLOAD_SIZE_RR;
 			}
 			// packet complete, update stats
 			{
@@ -164,24 +167,24 @@ namespace KGD
 			size_t pos = 0;
 
 			// get common header data
-			if ( size < hSize ) return false;
+			if ( size < HEADER_SIZE ) return false;
 			const Header & h = reinterpret_cast< const Header & >( *data );
-			data += hSize; pos += hSize;
+			data += HEADER_SIZE; pos += HEADER_SIZE;
 			// for each source
 			for( size_t n = 0; n < h.count; ++n )
 			{
 				// get source description header data
-				if ( size - pos < hSizeSDES ) return false;
+				if ( size - pos < HEADER_SIZE_SDES ) return false;
 				const SourceDescription::Header & hSD = reinterpret_cast< const SourceDescription::Header & >( *data );
-				data += hSizeSDES; pos += hSizeSDES;
+				data += HEADER_SIZE_SDES; pos += HEADER_SIZE_SDES;
 
-				Log::verbose( "%s: parsing SDES, ssrc %X, count %u", getLogName(), ntohs( hSD.ssrc ), h.count );
+				Log::verbose( "%s: parsing SDES, ssrc %lX, count %u", getLogName(), ntohl( hSD.ssrc ), h.count );
 
 				while( pos < size )
 				{
-					if ( size - pos < pSizeSDES ) return false;
+					if ( size - pos < PAYLOAD_SIZE_SDES ) return false;
 					const SourceDescription::Payload & pSD = reinterpret_cast< const SourceDescription::Payload & >( *data );
-					data += pSizeSDES; pos += pSizeSDES;
+					data += PAYLOAD_SIZE_SDES; pos += PAYLOAD_SIZE_SDES;
 
 					Log::verbose( "%s: parsing SDES item, size %u, attribute %u", getLogName(), pSD.length, pSD.attributeName );
 
@@ -227,7 +230,7 @@ namespace KGD
 				// update stats
 				{
 					SafeStats::Lock lk( _stats );
-					(*_stats).destSsrc = ntohs( hSD.ssrc );
+					(*_stats).destSsrc = ntohl( hSD.ssrc );
 				}
 			}
 			return true;
@@ -284,7 +287,10 @@ namespace KGD
 						if ( (this->*fPtr)( & data[ i ], size ) )
 							i += size;
 						else
+						{
+							Log::warning( "%s: failed to parse packet type %u", getLogName(), type );
 							++i;
+						}
 					}
 				}
 				else

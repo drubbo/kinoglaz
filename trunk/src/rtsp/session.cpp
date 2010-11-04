@@ -81,7 +81,7 @@ namespace KGD
 			_conn.reply( d );
 		}
 
-		RTP::Session & Session::createSession(const Url &url, const Channel::Description & remote ) throw( RTSP::Exception::ManagedError )
+		RTP::Session & Session::createSession(const Url &url, const Channel::Description & remote, const boost::optional< TSSrc > & ssrc ) throw( RTSP::Exception::ManagedError )
 		{
 			try
 			{
@@ -138,7 +138,12 @@ namespace KGD
 
 				// create session
 				auto_ptr< RTP::Session > s( new RTP::Session( *this, url, med, rtpChan, rtcpChan, _conn.getUserAgent() ) );
+				if ( ssrc )
+					s->setSsrc( *ssrc );
+
+				// temp to return
 				RTP::Session * sPtr = s.get();
+				// add to basket
 				{
 					string tmpTrack( url.track );
 					_sessions.insert( tmpTrack, s );
