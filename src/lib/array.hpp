@@ -229,8 +229,8 @@ namespace KGD
 		string rt;
 		for( size_t i = 0; i < _size && this->_ptr[i]; ++i )
 			rt.push_back( this->_ptr[i] );
-		if ( rt[ rt.size() - 1 ] != '\0' )
-			rt.push_back( '\0' );
+		//if ( rt[ rt.size() - 1 ] != '\0' )
+		rt.push_back( '\0' );
 		return rt;
 	}
 

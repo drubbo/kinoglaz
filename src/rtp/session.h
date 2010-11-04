@@ -158,7 +158,7 @@ namespace KGD
 			void logTimes() const throw();
 
 			//! main loop
-			void loop() throw();
+			void run() throw();
 		public:
 			//! ctor: given the request URL, the track descriptor, RTP / RTCP channels and the user agent
 			Session( RTSP::Session & parent, const Url &, SDP::Medium::Base &,

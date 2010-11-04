@@ -44,9 +44,14 @@
 - build and install
 
   cd ~/kinoglaz/linux/
+  # you can change the log level here by
+  # export LOG_LEV=n
   bash bootstrap
   make
   sudo make install
+
+  When upgrading from a previous kinoglaz version, perform a make uninstall
+  before building.
 
 - bootstrap will enable debug symbols and set log level to 4 (debug); change
   this with appropriate configure switches:
@@ -83,6 +88,8 @@
       max number of connections - 0 means no limit
   write-to=< double >
       sockets write timeout in seconds; default 0.1
+  write-buf=< 0 - 65535 >
+      sockets write buffer in bytes; default 1024
 
   [RTSP]
   supp-seek=< bool >

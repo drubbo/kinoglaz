@@ -76,7 +76,7 @@ namespace KGD
 			_data.reserve( _data.capacity() + BLOCK_SIZE );
 
 		const char * c = reinterpret_cast< const char * >( s );		
-		_data.insert( _data.begin(), c, c + len );
+		_data.insert( _data.end() - 1, c, c + len );
 	}
 
 	void Buffer::enqueue( const string &s ) throw( KGD::Exception::Generic )

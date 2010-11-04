@@ -214,7 +214,7 @@ namespace KGD
 			}
 		}
 
-		void Session::loop() throw()
+		void Session::run() throw()
 		{
 			{
 				OwnThread::Lock lk( _th );
