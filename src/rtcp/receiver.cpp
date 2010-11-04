@@ -193,6 +193,7 @@ namespace KGD
 					{
 					case SourceDescription::Payload::Attribute::END:
 						Log::verbose( "%s: END of SDES packet", getLogName() );
+						pos = size;
 						break;
 					case SourceDescription::Payload::Attribute::CNAME:
 						Log::verbose( "%s: CNAME is %s", getLogName(), tmp.get() );
