@@ -238,18 +238,17 @@ namespace KGD
 				return;
 			}
 
-			SessionMap::iterator sessIt = _sessions.begin();
 			// list of sessions forced to pause
 			list< string > pausedSessions;
 			PlayRequest pauseRq;
 			// pause all RTP sessions
-			for( ; sessIt != _sessions.end(); ++sessIt )
+			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
 			{
-				if ( sessIt->second->isPlaying() )
+				if ( sess->second->isPlaying() )
 				{
-					Log::message( "%s: media insert: pause %s", getLogName(), sessIt->first.c_str() );
-					pausedSessions.push_back( sessIt->first );
-					sessIt->second->pause( pauseRq );
+					Log::message( "%s: media insert: pause %s", getLogName(), sess->first.c_str() );
+					pausedSessions.push_back( sess->first );
+					sess->second->pause( pauseRq );
 				}
 			}
 
