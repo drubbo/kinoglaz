@@ -67,6 +67,7 @@ namespace KGD
 			typedef boost::ptr_map< TSessionID, Session > SessionMap;
 			typedef map< string, ref< SDP::Container > > DescriptorMap;
 			typedef boost::ptr_map< string, SDP::Container > LocalDescriptorMap;
+			typedef Safe::ThreadBarrier OwnThread;
 
 			//! ref to server
 			RTSP::Server & _svr;
@@ -88,9 +89,19 @@ namespace KGD
 			DescriptorMap _descriptors;
 			//! local instanced descriptors
 			LocalDescriptorMap _descriptorInstances;
-			//! serving thread id
-			boost::thread::id _threadID;
+			//! connection thread
+			OwnThread _th;
+			//! connection active and listening flag
+			bool _active;
 
+			//! socket-event-driven main action loop
+			void listen() throw( KGD::Exception::Generic );
+			//! listen guard and sync
+			void run() throw();
+			//! release every SDP descriptor
+			void releaseDescriptors() throw();
+			//! resource deallocation
+			void shutdown() throw();
 		public:
 			//! ctor
 			Connection( auto_ptr< KGD::Socket::Tcp > socket, RTSP::Server & );
@@ -100,17 +111,13 @@ namespace KGD
 			//! get log identifier for this connection
 			const char * getLogName() const throw();
 
-			//! set thread ID to ease removal
-			void setServingThreadID( const boost::thread::id & ) throw();
-			//! get serving thread ID
-			const boost::thread::id & getServingThreadID() const throw();
+			//! is connection active and listening ?
+			bool isActive() const throw();
+
 			//! sets user agent, to build specialized timelines in rtp sessions
 			void setUserAgent( UserAgent::type ) throw();
 			//! get user agent operating on this connection
 			UserAgent::type getUserAgent(  ) const throw();
-			
-			//! socket-event-driven main request loop
-			void listen() throw( KGD::Exception::Generic );
 
 			//! returns this id
 			uint32_t getID() const;

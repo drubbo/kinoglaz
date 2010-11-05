@@ -50,49 +50,67 @@ namespace KGD
 	{
 		bool Connection::SHARE_DESCRIPTORS = false;
 
+		void Connection::run( ) throw()
+		{
+			try
+			{
+				this->listen();
+			}
+			catch( const KGD::Exception::Generic & e )
+			{
+				Log::error( "%s: %s", getLogName(), e.what() );
+			}
+
+			this->shutdown();
+			_th.wait();
+		}
+
+		
 		Connection::Connection( auto_ptr< KGD::Socket::Tcp > socket, RTSP::Server & svr )
 		: _svr( svr )
 		, _id( random() )
 		, _agent( UserAgent::Generic )
 		, _logName( "CONN " + socket->getRemoteHost() + "#" + toString( _id ) )
 		, _socket( new RTSP::Socket( socket, _logName ) )
+		, _active( true )
 		{
 			Log::verbose( "%s: created", getLogName() );
+			_th.reset( new boost::thread( boost::bind( &Connection::run, this ) ) );
 		}
 
 		Connection::~Connection()
 		{
-			Connection::Lock lk( *this );
-			
-			Log::debug("%s: shutting down", getLogName() );
+			this->shutdown();
 
-			_sessions.clear();
-
-			_socket.reset();
-
-			// release descriptors
-			SDP::Descriptions::Reference sdpool = SDP::Descriptions::getInstance();
-			BOOST_FOREACH( DescriptorMap::iterator::reference it, _descriptors )
-			{
-				Log::debug( "%s: releasing SDP description %s", getLogName(), it.first.c_str() );
-				// maybe they were shared, inform the pool
-				sdpool->releaseDescription( it.first );
-				it.second.invalidate();
-			}
-			// release local descriptors
-			Log::debug( "%s: releasing SDP local description", getLogName() );
-			_descriptorInstances.clear();
-			
+			Log::debug("%s: joining thread", getLogName() );
+			_th.reset();
 			Log::verbose( "%s: destroyed", getLogName() );
 		}
 
-		void Connection::setServingThreadID( const boost::thread::id& id ) throw()
+		void Connection::shutdown() throw()
 		{
-			_threadID = id;
+			Connection::Lock lk( *this );
+
+			Log::debug("%s: shutting down", getLogName() );
+
+			_active = false;
+			_sessions.clear();
+			_socket.reset();
+			releaseDescriptors();
 		}
-		const boost::thread::id& Connection::getServingThreadID() const throw()
+// 		void Connection::setServingThreadID( const boost::thread::id& id ) throw()
+// 		{
+// 			_threadID = id;
+// 		}
+// 		const boost::thread::id& Connection::getServingThreadID() const throw()
+// 		{
+// 			return _threadID;
+// 		}
+
+		bool Connection::isActive() const throw()
 		{
-			return _threadID;
+			Connection::Lock lk( *this );
+			return _active;
 		}
 
 		const char * Connection::getLogName() const throw()
@@ -179,6 +197,23 @@ namespace KGD
 			}
 		}
 
+		void Connection::releaseDescriptors() throw()
+		{
+			// release descriptors
+			SDP::Descriptions::Reference sdpool = SDP::Descriptions::getInstance();
+			BOOST_FOREACH( DescriptorMap::iterator::reference it, _descriptors )
+			{
+				Log::debug( "%s: releasing SDP description %s", getLogName(), it.first.c_str() );
+				// maybe they were shared, inform the pool
+				sdpool->releaseDescription( it.first );
+				it.second.invalidate();
+			}
+			_descriptors.clear();
+			// release local descriptors
+			Log::debug( "%s: releasing %u SDP local description", getLogName(), _descriptorInstances.size() );
+			_descriptorInstances.clear();
+		}
+
 		const SDP::Container & Connection::getDescription( const string & file ) const throw( RTSP::Exception::ManagedError )
 		{
 			Connection::Lock lk( *this );
@@ -230,7 +265,7 @@ namespace KGD
 					catch( const KGD::Exception::NotFound & e )
 					{
 						Log::error( "%s: %s", getLogName(), e.what() );
-						throw RTSP::Exception::ManagedError( Error::NotImplemented );
+						_socket->reply( Error::NotImplemented );
 					}
 					catch( const KGD::Socket::Exception & e )
 					{

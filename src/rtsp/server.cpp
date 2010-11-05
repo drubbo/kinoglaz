@@ -67,10 +67,39 @@ namespace KGD
 			return newInstanceRef();
 		}
 
+
+		Server::Connections::Connections( Server & s )
+		: _srv( s )
+		, max( 0 )
+		{
+		}
+
+
+		void Server::Connections::start()
+		{
+			th.reset( new boost::thread( boost::bind( &Server::Connections::run, this )));
+		}
+
+		void Server::Connections::run()
+		{
+			while( _srv._running )
+			{
+				Server::Lock lk( Server::mux() );
+				list.erase_if( ! boost::bind( &Connection::isActive, _1 ) );
+				Log::debug( "KGD: active connections %u", list.size() );
+				wakeup.timed_wait( lk, Clock::boostDeltaSec( 10 ) );
+			}
+			th.wait();
+		}
+
+
+
+
+
 		Server::Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception )
-		: _maxConnections( 0 )
-		, _ip( "" )
+		: _ip( "" )
 		, _port( 0 )
+		, _conns( *this )
 		, _running( false )
 		{
 			this->setupParameters( params );
@@ -78,9 +107,9 @@ namespace KGD
 
 		void Server::setupParameters( const Ini::Entries & params ) throw( KGD::Exception::NotFound, KGD::Socket::Exception )
 		{
-			_maxConnections = fromString< uint16_t >( params[ "limit" ] );
-			while( _maxConnections != 0 && _conns.size() > _maxConnections )
-				_conns.erase( _conns.rbegin().base() );
+			_conns.max = fromString< uint16_t >( params[ "limit" ] );
+			while( _conns.max != 0 && _conns.list.size() > _conns.max )
+				_conns.list.erase( _conns.list.rbegin().base() );
 
 			TPort newPort = fromString< TPort >( params( "port", "8554" ) );
 			string newIP = params( "ip", "*" );
@@ -93,86 +122,39 @@ namespace KGD
 			{
 				_port = newPort;
 				_ip = newIP;
-				_socket.reset( new KGD::Socket::TcpServer( _port, _ip, _maxConnections ) );
-				Log::message( "KGD: binding to %s:%d, max connections %u", _ip.c_str(), _port, _maxConnections );
+				_socket.reset( new KGD::Socket::TcpServer( _port, _ip, _conns.max ) );
+				Log::message( "KGD: binding to %s:%d, max connections %u", _ip.c_str(), _port, _conns.max );
 			}
 
 		}
 
 
 		Server::~Server()
-		{
-			Log::message("KGD: tearing down %d connections", _conns.size());
-			_conns.clear();
-			_threads.clear();
+		{			
+			Log::message("KGD: stop clean thread");
+			_running = false;
+			_conns.wakeup.notify_all();
+			_conns.th.reset();
+			Log::message("KGD: tearing down %d connections", _conns.list.size());
+			_conns.list.clear();
 			Log::message("KGD: shut down");
-		}
-
-		void Server::serve( Connection * conn )
-		{
-			try
-			{
-				conn->listen();
-			}
-			catch( const KGD::Exception::Generic & e )
-			{
-				Log::debug( "KGD: serve: %s", e.what() );
-			}
-
-			if ( _running )
-			{
-				Log::debug( "KGD: calling remove of %lu", conn->getID() );
-				this->remove( *conn );
-			}
-			else
-			{
-				Log::warning( "KGD: server is not running, destruction in progress" );
-				boost::this_thread::yield();
-			}
 		}
 
 		void Server::handle( auto_ptr< KGD::Socket::Tcp > channel )
 		{
 			Server::Lock lk( Server::mux() );
 
-			if ( _maxConnections != 0 && _conns.size() >= _maxConnections )
-				throw RTSP::Exception::Generic( "handle", "KGD: CONN limit already reached" );
+			_conns.list.erase_if( ! boost::bind( &Connection::isActive, _1 ) );
+			Log::debug( "KGD: active connections %u", _conns.list.size() );
+			if ( _conns.max != 0 && _conns.list.size() >= _conns.max )
+				throw RTSP::Exception::Generic( "handle", "KGD: connection limit reached ("+toString( _conns.max )+")" );
 
 			// enable TCP keepalive
 			channel->setKeepAlive( true );
 			// creo il gestore della richiesta
 			auto_ptr< Connection > conn( new Connection( channel, *this ) );
-			Connection * cPtr = conn.get();
 			// add connection to the basket
-			_conns.push_back( conn );
-			// start service thread
-			auto_ptr< boost::thread > th( new boost::thread( boost::bind( &RTSP::Server::serve, this, cPtr ) ) );
-			cPtr->setServingThreadID( th->get_id() );
-			_threads.push_back( th );
-		}
-
-		void Server::remove( Connection & conn ) throw( KGD::Exception::NotFound )
-		{
-			Server::Lock lk( Server::mux() );
-
-			uint32_t connID = conn.getID();
-
-			Log::debug( "KGD: removing connection %lu", connID );
-
-			ConnectionList::iterator it =
-				find_if( _conns.begin(), _conns.end(),
-						 boost::bind( &Connection::getID, _1 ) == connID );
-
-			if ( it == _conns.end() )
-			{
-				Log::error("KGD: no connection %lu found", connID );
-				throw KGD::Exception::NotFound( "KGD: CONN to remove " + toString( connID ) );
-			}
-			else
-			{
-				_conns.erase( it );
-				Log::message("KGD: CONN removed, %d remaining", _conns.size());
-			}
+			_conns.list.push_back( conn );
 		}
 
 		void Server::run()
@@ -185,25 +167,6 @@ namespace KGD
 					{
 						Log::message("KGD: waiting connections");
 						this->handle( _socket->accept() );
-						// clear every thread without session
-						{
-							Server::Lock lk( Server::mux() );
-							ConnectionThreadList::iterator it = _threads.begin();
-							while( it != _threads.end() )
-							{
-								ConnectionList::iterator conn =
-									find_if( _conns.begin(), _conns.end(),
-											 boost::bind( &Connection::getServingThreadID, _1 ) == it->get_id() );
-
-								if ( conn == _conns.end() )
-								{
-									it = _threads.erase( it );
-									Log::debug( "KGD: removed connection serving thread" );
-								}
-								else
-									++ it;
-							}
-						}
 					}
 					catch( const KGD::Socket::Exception & e)
 					{
@@ -231,11 +194,10 @@ namespace KGD
 
 		void Server::start()
 		{
-			if ( !_running )
-			{
-				_running = true;
-				this->run();
-			}
+			BOOST_ASSERT( !_running );
+			_running = true;
+			_conns.start();
+			this->run();
 		}
 
 	}
