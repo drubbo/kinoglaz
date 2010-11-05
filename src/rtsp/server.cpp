@@ -144,8 +144,10 @@ namespace KGD
 		{
 			Server::Lock lk( Server::mux() );
 
+			// clear inactive connections
 			_conns.list.erase_if( ! boost::bind( &Connection::isActive, _1 ) );
 			Log::debug( "KGD: active connections %u", _conns.list.size() );
+			// check limit
 			if ( _conns.max != 0 && _conns.list.size() >= _conns.max )
 				throw RTSP::Exception::Generic( "handle", "KGD: connection limit reached ("+toString( _conns.max )+")" );
 

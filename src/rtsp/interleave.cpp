@@ -278,10 +278,7 @@ namespace KGD
 				}
 				Log::debug("%s: no more interleaves", getLogName());
 
-	// 			{
-	// 				TcpTunnel::Lock lk( _sock );
-					(*_sock)->close();
-	// 			}
+				(*_sock)->close();
 				Log::debug("%s: closed", getLogName());
 			}
 		}
@@ -514,6 +511,7 @@ namespace KGD
 				TcpTunnel::Lock lk( _sock );
 
 				size_t sent = 0, len = msg.size();
+				uint8_t tries = 0;
 				const char * data = msg.c_str();
 
 				while( sent < len )
@@ -526,8 +524,8 @@ namespace KGD
 					}
 					catch( KGD::Socket::Exception const & e )
 					{
-						if ( e.wouldBlock() )
-							Log::debug( "%s: socket would block in writeAll (%s)", getLogName(), e.what() );
+						if ( e.wouldBlock() && tries ++ < 5 )
+							Log::debug( "%s: socket would block in writeAll (%s) - %u", getLogName(), e.what(), tries );
 						else
 							throw;
 					}
