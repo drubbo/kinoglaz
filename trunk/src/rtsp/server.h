@@ -56,37 +56,48 @@ namespace KGD
 		: public Singleton::Class< Server >
 		{
 		protected:
-			typedef boost::ptr_list< Connection > ConnectionList;
-			typedef boost::ptr_list< boost::thread > ConnectionThreadList;
-
 			//! tcp server socket
 			boost::scoped_ptr< KGD::Socket::TcpServer > _socket;
-			//! active requests
-			ConnectionList _conns;
-			//! active request threads
-			ConnectionThreadList _threads;
-			//! max servable requests
-			uint16_t _maxConnections;
 			//! listen ip
 			string _ip;
 			//! listen port
 			TPort _port;
+
+			//! dead connection cleaner
+			class Connections
+			{
+				Server & _srv;
+				//! dead connection cleanup loop
+				void run();
+			public:
+				typedef boost::ptr_list< Connection > List;
+				//! max servable requests
+				uint16_t max;
+				//! active requests
+				List list;
+
+				//! thread
+				Safe::ThreadBarrier th;
+				//! sleep condition
+				Condition wakeup;
+
+				Connections( Server & );
+				void start();
+			} _conns;
+
 			//! is main loop running ?
 			Safe::Bool _running;
 
 			//! handle new connection starting new serve-thread if connection limit has not been reached
 			void handle( auto_ptr< KGD::Socket::Tcp > channel );
-			//! a thread to serve last connection - one per connection
-			void serve( Connection * );
-			//! removes the connection when the serve-thread has ended
-			void remove( Connection & ) throw( KGD::Exception::NotFound );
 
-			//! main loop: waits for TCP incoming connections and serves them
+			//! daemon loop: waits for TCP incoming connections and serves them
 			void run();
 
 			//! ctor
 			Server( const Ini::Entries & params ) throw ( KGD::Exception::NotFound, KGD::Socket::Exception );
 			friend class Singleton::Class< Server >;
+			friend class Connections;
 		public:
 			//! dtor
 			~Server();
