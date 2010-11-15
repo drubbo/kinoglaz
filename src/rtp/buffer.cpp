@@ -251,6 +251,7 @@ namespace KGD
 								{
 									newFrame.reset( Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next->getPayloadType() ) );
 									newFrame->setFrame( *next );
+									newFrame->setTimeShift( _frame.idx->getTimeShift() );
 									_frame.buf.data.push_back ( newFrame );
 								}
 								catch( const KGD::Exception::Generic & e )

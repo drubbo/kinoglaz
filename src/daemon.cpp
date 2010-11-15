@@ -115,11 +115,12 @@ namespace KGD
 		s << "KGD: Parameters: Buffer [" << RTP::Buffer::Base::SIZE_LOW << "-" << RTP::Buffer::Base::SIZE_FULL
 			<< "] | MTU " << RTP::Packet::MTU
 			<< " | RTP [" << RTSP::Port::Udp::FIRST << "-" << RTSP::Port::Udp::LAST << "]"
+			<< " | RCTP [S=" << setprecision( 2 ) << RTCP::Sender::SR_INTERVAL << " R=" << setprecision( 2 ) << RTCP::Receiver::POLL_INTERVAL << "]"
 			<< " | SDP shared descriptors " << RTSP::Connection::SHARE_DESCRIPTORS
 			<< " | SDP aggregate control " << SDP::Container::AGGREGATE_CONTROL
 			<< " | RTSP seek support " << RTSP::Method::SUPPORT_SEEK
-			<< " | socket timeouts R=" << setprecision( 2 ) << Socket::READ_TIMEOUT << " W=" << setprecision( 2 ) << Socket::WRITE_TIMEOUT
-			<< " | socket write buffer bytes " << Socket::WRITE_BUFFER_SIZE;
+			<< " | socket [R=" << setprecision( 2 ) << Socket::READ_TIMEOUT << " W=" << setprecision( 2 ) << Socket::WRITE_TIMEOUT << " B=" << Socket::WRITE_BUFFER_SIZE << "]"
+		;
 		Log::debug( "%s", s.str().c_str() );
 	}
 

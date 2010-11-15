@@ -38,7 +38,8 @@
 
 #include "sdp/common.h"
 #include "lib/utils/virtual.hpp"
-#include <lib/array.h>
+#include "lib/utils/ref.hpp"
+#include "lib/array.h"
 
 #include <string>
 #include <functional>
@@ -66,7 +67,7 @@ namespace KGD
 				//! presentation time
 				double _time;
 				//! time displace
-				mutable double _displace;
+// 				mutable double _displace;
 				//! RTP payload type for this frame
 				Payload::type _pt;
 				//! array index in medium
@@ -89,7 +90,7 @@ namespace KGD
 				//! permanently shifts time by delta seconds
 				void addTime( double delta );
 				//! set temporary time shift
-				void setDisplace( double delta ) const;
+// 				void setDisplace( double delta ) const;
 				//! get frame time
 				double getTime() const;
 
@@ -103,7 +104,6 @@ namespace KGD
 				//! get fresh copy
 				virtual Base* getClone() const;
 			};
-
 
 			//! ptr container clone support
 			Base* new_clone( const Base & b );

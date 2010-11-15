@@ -297,55 +297,53 @@ namespace KGD
 						else
 							Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
 					}
-					else
+					else if ( pkt.size > 0 )
 					{
-						if ( pkt.size > 0 )
-						{
-							// decode
-							iCdcCtx->reordered_opaque = pkt.pts;
-							int decodeRes = avcodec_decode_video2( iCdcCtx, picture, &gotPicture, &pkt );
-							if ( decodeRes < 0 )
-								Log::debug( "%s: decoding failed", getLogName() );
-							else if (!gotPicture )
-								Log::debug( "%s: no picture yet", getLogName() );
-							else
-							{
-								// change colorspace
-								avpicture_fill((AVPicture *)planar, planarBuf.get(), oCtx->pix_fmt, oCtx->width, oCtx->height);								
-								sws_scale(sws, picture->data, picture->linesize, 0, iCdcCtx->height, planar->data, planar->linesize);
-								// encode
-								ByteArray encBuf( 65536 );
-								int encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), planar );
-								if ( encSize <= 0 )
-									encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), 0 );
-
-								if ( encSize > 0 )
-								{
-									// create frame
-									auto_ptr< ByteArray > rawData( encBuf.popFront( encSize ) );
-									Frame::MediaFile * f = new Frame::MediaFile( *rawData, oCtx->coded_frame->pts * medium.getTimeBase() );
-									if ( oCtx->coded_frame->key_frame )
-										f->setKey();
-
-									// ordered push to medium
-									cache.insert( make_pair( oCtx->coded_frame->pts, f ) );
-									FrameCache::iterator itCache = cache.begin();
-									while( !cache.empty() && itCache->first == prevPts + 1 )
-									{
-										prevPts = itCache->first;
-										medium.addFrame( itCache->second );
-										cache.erase( itCache );
-										itCache = cache.begin();
-// 										Log::verbose("%s: %lld", getLogName(), prevPts );
-									}
-								}
-								else
-									Log::debug( "%s: encoding failed", getLogName() );									
-							}
-						}
+						// decode
+						iCdcCtx->reordered_opaque = pkt.pts;
+						int decodeRes = avcodec_decode_video2( iCdcCtx, picture, &gotPicture, &pkt );
+						if ( decodeRes < 0 )
+							Log::debug( "%s: decoding failed", getLogName() );
+						else if (!gotPicture )
+							Log::debug( "%s: no picture yet", getLogName() );
 						else
-							Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
+						{
+							// change colorspace
+							avpicture_fill((AVPicture *)planar, planarBuf.get(), oCtx->pix_fmt, oCtx->width, oCtx->height);
+							sws_scale(sws, picture->data, picture->linesize, 0, iCdcCtx->height, planar->data, planar->linesize);
+							// encode
+							ByteArray encBuf( 65536 );
+							int encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), planar );
+							if ( encSize <= 0 )
+								encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), 0 );
+
+							if ( encSize > 0 )
+							{
+								// create frame
+								auto_ptr< ByteArray > rawData( encBuf.popFront( encSize ) );
+								Frame::MediaFile * f = new Frame::MediaFile( *rawData, oCtx->coded_frame->pts * medium.getTimeBase() );
+								if ( oCtx->coded_frame->key_frame )
+									f->setKey();
+
+								// ordered push to medium
+								cache.insert( make_pair( oCtx->coded_frame->pts, f ) );
+								FrameCache::iterator itCache = cache.begin();
+								while( !cache.empty() && itCache->first == prevPts + 1 )
+								{
+									prevPts = itCache->first;
+									medium.addFrame( itCache->second );
+									cache.erase( itCache );
+									itCache = cache.begin();
+// 										Log::verbose("%s: %lld", getLogName(), prevPts );
+								}
+							}
+							else
+								Log::debug( "%s: encoding failed", getLogName() );
+						}
 					}
+					else
+						Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
+
 					av_free_packet( &pkt );
 				}
 

@@ -59,6 +59,8 @@ namespace KGD
 			protected:
 				//! reference to frame data
 				ref< const SDP::Frame::Base > _frame;
+				//! shift time
+				double _shift;
 			public:
 				//! empty ctor
 				Base();
@@ -72,6 +74,8 @@ namespace KGD
 				size_t getMediumPos() const throw( KGD::Exception::NullPointer );
 				//! set reference to a frame description
 				virtual void setFrame( const SDP::Frame::Base & ) throw( KGD::Exception::InvalidType );
+				//! set reference to a frame description
+				virtual void setTimeShift( double ) throw( );
 				//! get frame data if any
 				virtual const ByteArray & getData() const throw( KGD::Exception::NotFound );
 			};

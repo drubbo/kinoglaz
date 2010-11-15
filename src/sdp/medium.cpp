@@ -69,7 +69,7 @@ namespace KGD
 			{}
 			
 			Base::It::It( )
-			: count( 0 )
+// 			: count( 0 )
 			{}
 
 			Base::Base( MediaType::kind mt, Payload::type pt )
@@ -107,32 +107,42 @@ namespace KGD
 
 				_it.model.reset();
 
-				while( _it.count > 0 )
+				while( ! _it.instances.empty() )
 				{
-					Log::debug( "%s: waiting for %l iterators", getLogName(), long( _it.count ) );
+					Log::debug( "%s: waiting for %u iterators", getLogName(), _it.instances.size() );
 					_it.released.wait( lk );
 				}
 
 				_frame.list.clear();
 			}
 
-			Iterator::Base * Base::newFrameIterator() const throw()
+			Iterator::Base * Base::newFrameIterator() throw()
 			{
 				It::Lock lk( _it );
-				++ _it.count;
-				return _it.model->getClone();
+				Iterator::Base * rt = _it.model->getClone();
+				_it.instances.push_back( rt );
+				Log::verbose( "%s: new iterator %p", getLogName(), rt );
+				return rt;
 			}
 
-			void Base::releaseIterator( ) throw()
+			void Base::releaseIterator( Iterator::Base & i ) throw()
 			{
+				Log::debug( "%s: releasing iterator %p", getLogName(), &i );
 				_it.lock();
-				if ( -- _it.count <= 0 )
+				IteratorList::iterator toRemove = find( _it.instances.begin(), _it.instances.end(), &i );
+				if ( toRemove != _it.instances.end() )
 				{
-					_it.unlock();
-					_it.released.notify_all();
+					Log::verbose( "%s: iterator %p found", getLogName(), &i );
+					_it.instances.erase( toRemove );
+
+					if ( _it.instances.empty() )
+					{
+						_it.unlock();
+						_it.released.notify_all();
+						return;
+					}
 				}
-				else
-					_it.unlock();
+				_it.unlock();
 			}
 
 			void Base::setContainer( SDP::Container & cnt ) throw()
@@ -261,7 +271,7 @@ namespace KGD
 					f->setPayloadType( _pt );
 					f->addTime( _frame.timeShift );
 					f->setMediumPos( _frame.list.size() );
-// 					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
+					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
 					_frame.list.push_back( f );
 				}
 				_frame.available.notify_all();
@@ -336,8 +346,12 @@ namespace KGD
 					&& ! _it.model->hasType< Medium::Iterator::Loop >() )
 				{
 					// effectively release when every iterator has released the frame
-					if ( _frame.list[ pos ].release() >= _it.count )
+					if ( _frame.list[ pos ].release() >= _it.instances.size() )
 						_frame.list.replace( pos, 0 );
+/*					{
+						_frame.list.erase( _frame.list.begin() + pos );
+						for_each( _it.instances.begin(), _it.instances.end(), boost::bind( &Iterator::Base::frameRemoved, _1, pos ) );
+					}*/
 				}
 			}
 

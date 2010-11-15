@@ -52,21 +52,21 @@ namespace KGD
 			
 			Base::Base( const AVPacket & pkt, double timebase )
 			: _time( pkt.dts * timebase )
-			, _displace( 0 )
+// 			, _displace( 0 )
 			, _released( 0 )
 			{
 			}
 				
 			Base::Base( double t )
 			: _time( t )
-			, _displace( 0 )
+// 			, _displace( 0 )
 			, _released( 0 )
 			{
 			}
 
 			Base::Base( const Base & b )
 			: _time( b._time )
-			, _displace( 0 )
+// 			, _displace( 0 )
 			, _pt( b._pt )
 			, _mediumPos( b._mediumPos )
 			, _released( 0 )
@@ -83,10 +83,10 @@ namespace KGD
 				_time += delta;
 			}
 
-			void Base::setDisplace( double t ) const
-			{
-				_displace = t;
-			}
+// 			void Base::setDisplace( double t ) const
+// 			{
+// 				_displace = t;
+// 			}
 
 			Base* Base::getClone() const
 			{
@@ -95,7 +95,7 @@ namespace KGD
 
 			double Base::getTime() const
 			{
-				return _time + _displace;
+				return _time /*+ _displace*/;
 			}
 
 			Payload::type Base::getPayloadType() const

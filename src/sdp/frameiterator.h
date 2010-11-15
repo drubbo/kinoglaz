@@ -47,6 +47,12 @@ namespace KGD
 		{
 			namespace Iterator
 			{
+				class Base;
+				class Default;
+				class Loop;
+
+				
+				//! Medium frame iterator interface
 				class Base
 				: public boost::noncopyable
 				, public Virtual
@@ -57,28 +63,37 @@ namespace KGD
 					virtual Base* getClone() const throw() = 0;
 					//! returns frame at position. does not change current position
 					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
+
 					//! returns frame at current position
 					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns frame at current position then advances position by 1
 					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns frame at current position then backwards position by 1
 					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer ) = 0;
+
 					//! seeks first frame at specified time. changes current position
 					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! seeks to a position
 					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
+
 					//! returns current position
 					virtual size_t pos() const throw() = 0;
 					//! returns number of frames this iterator referers to
 					virtual size_t size() const throw() = 0;
 					//! returns duration of this iteration in seconds
 					virtual double duration() const throw() = 0;
+					//! returns time shift to be applied to RTP frames
+					virtual double getTimeShift() const throw() = 0;
+
 					//! inserts another iterator
 					virtual void insert( Iterator::Base &, double t ) throw( KGD::Exception::OutOfBounds ) = 0;
 					//! inserts another medium
 					void insert( Medium::Base &, double t ) throw( KGD::Exception::OutOfBounds );
 					//! inserts a void space
 					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds ) = 0;
+
+					//! get medium this iterator works on
+					virtual Medium::Base & getMedium() throw() = 0;
 				};
 
 				//! Medium frame iterator
@@ -91,12 +106,11 @@ namespace KGD
 					//! current position in the frame vector
 					size_t _pos;
 
-					//! construct from an abstract medium
-					Default( Medium::Base & ) throw();
 					//! copy another iterator
 					Default( const Default & ) throw();
-					friend class Medium::Base;
 				public:
+					//! construct from an abstract medium
+					Default( Medium::Base & ) throw();
 					//! get clone of this iterator
 					virtual Default* getClone() const throw();
 					//! dtor, release count from medium
@@ -119,11 +133,76 @@ namespace KGD
 					virtual size_t size() const throw();
 					//! returns duration of this iteration in seconds
 					virtual double duration() const throw();
+					//! no time shift
+					virtual double getTimeShift() const throw();
 					//! inserts another medium
 					virtual void insert( Iterator::Base &, double t ) throw( KGD::Exception::OutOfBounds );
 					//! inserts a void space
 					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
+
+					//! get medium this iterator works on
+					virtual Medium::Base & getMedium() throw();
 				};
+
+				//! Loops another iterator
+				class Loop
+				: public Base
+				{
+				protected:
+					//! iterator we're looping
+					boost::scoped_ptr< Iterator::Base > _it;
+					//! number of iterations to do ( 0 = oo )
+					uint8_t _times;
+					//! current iteration
+					size_t _cur;
+
+					//! copy another iterator
+					Loop( const Loop & ) throw();
+
+					//! returns the input position normalized wrt to number of frames; updates _cur
+					size_t seekPos( size_t ) throw( KGD::Exception::OutOfBounds );
+					//! returns the input position normalized wrt to number of frames
+					size_t normalizePos( size_t ) const throw( KGD::Exception::OutOfBounds );
+					//! returns the input time normalized wrt to base iteration duration; updates _cur
+					double seekTime( double ) throw( KGD::Exception::OutOfBounds );
+					//! returns the input time normalized wrt to base iteration duration; updates _cur
+					double normalizeTime( double ) const throw( KGD::Exception::OutOfBounds );
+				public:
+					//! construct from another iterator, with loop count
+					Loop( Iterator::Base *, uint8_t = 0 ) throw();
+					//! get clone of this iterator
+					virtual Loop* getClone() const throw();
+					//! dtor
+					virtual ~Loop();
+					//! returns frame at position. does not change current position
+					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns frame at current position
+					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns frame at current position then advances position by 1
+					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns frame at current position then backwards position by 1
+					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! seeks first frame at specified time. changes current position
+					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! seeks to a position
+					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns current position
+					virtual size_t pos() const throw();
+					//! returns number of effective frames in this medium
+					virtual size_t size() const throw();
+					//! returns duration of this iteration in seconds
+					virtual double duration() const throw();
+					//! time shift is duration * every performed iteration
+					virtual double getTimeShift() const throw();
+					//! inserts another medium
+					virtual void insert( Iterator::Base &, double t ) throw( KGD::Exception::OutOfBounds );
+					//! inserts a void space
+					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
+
+					//! get medium this iterator works on
+					virtual Medium::Base & getMedium() throw();
+				};
+
 /*
 				//! Iterator over a detached frame set
 				class Slice
@@ -170,61 +249,6 @@ namespace KGD
 					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
 				};
 */
-				//! Loops another iterator
-				class Loop
-				: public Base
-				{
-				protected:
-					//! iterator we're looping
-					boost::scoped_ptr< Iterator::Base > _it;
-					//! number of iterations to do ( 0 = oo )
-					uint8_t _times;
-					//! current iteration
-					size_t _cur;
-
-					//! copy another iterator
-					Loop( const Loop & ) throw();
-
-					//! returns the input position normalized wrt to number of frames; updates _cur
-					size_t seekPos( size_t ) throw( KGD::Exception::OutOfBounds );
-					//! returns the input position normalized wrt to number of frames
-					size_t normalizePos( size_t ) const throw( KGD::Exception::OutOfBounds );
-					//! returns the input time normalized wrt to base iteration duration; updates _cur
-					double seekTime( double ) throw( KGD::Exception::OutOfBounds );
-					//! returns the input time normalized wrt to base iteration duration; updates _cur
-					double normalizeTime( double ) const throw( KGD::Exception::OutOfBounds );
-					//! sets _curFrame normalizing its time wrt current loop number
-					const SDP::Frame::Base & normalizeFrame( const SDP::Frame::Base & ) const throw();
-				public:
-					//! construct from another iterator, with loop count
-					Loop( Iterator::Base *, uint8_t = 0 ) throw();
-					//! get clone of this iterator
-					virtual Loop* getClone() const throw();
-					//! dtor
-					virtual ~Loop();
-					//! returns frame at position. does not change current position
-					virtual const SDP::Frame::Base & at( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! returns frame at current position
-					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! returns frame at current position then advances position by 1
-					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! returns frame at current position then backwards position by 1
-					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! seeks first frame at specified time. changes current position
-					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! seeks to a position
-					virtual const SDP::Frame::Base & seek( size_t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
-					//! returns current position
-					virtual size_t pos() const throw();
-					//! returns number of effective frames in this medium
-					virtual size_t size() const throw();
-					//! returns duration of this iteration in seconds
-					virtual double duration() const throw();
-					//! inserts another medium
-					virtual void insert( Iterator::Base &, double t ) throw( KGD::Exception::OutOfBounds );
-					//! inserts a void space
-					virtual void insert( double duration, double t ) throw( KGD::Exception::OutOfBounds );
-				};
 
 			}
 		}
