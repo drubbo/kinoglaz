@@ -78,6 +78,7 @@ namespace KGD
 			{
 			public:
 				typedef boost::ptr_vector< boost::nullable< Frame::Base > > FrameList;
+				typedef vector< Iterator::Base * > IteratorList;
 				friend class SDP::Container;
 			protected:
 				//! ref to container
@@ -124,8 +125,9 @@ namespace KGD
 				: public Safe::LockableBase< RMutex >
 				{
 					It( );
-					//! number of instanced iterators
-					mutable boost::detail::atomic_count count;
+					//! instance references
+					IteratorList instances;
+// 					mutable boost::detail::atomic_count count;
 					//! frame iterator model
 					auto_ptr< Iterator::Base > model;
 					//! condition for dtor to wait for no more iterator instances
@@ -196,7 +198,9 @@ namespace KGD
 				//! set a new iterator model
 				void setFrameIteratorModel( Iterator::Base * ) throw();
 				//! returns a new frame iterator for this medium' frames, cloning the model
-				Iterator::Base * newFrameIterator() const throw();
+				Iterator::Base * newFrameIterator() throw();
+				//! release iterator
+				void releaseIterator( Iterator::Base & ) throw();
 				//! returns the duration of this medium wrt its iterator model - HUGE_VAL is fine
 				double getIterationDuration() const throw();
 				//! returns effective frame count, waiting until one has been determined
@@ -219,8 +223,7 @@ namespace KGD
 			private:
 				//! internal insert utility
 				void insert( FrameList::iterator at, double offset, double shift, Iterator::Base & otherFrames );
-				//! release iterator
-				void releaseIterator() throw();
+
 				friend class Iterator::Default;
 			};
 		}

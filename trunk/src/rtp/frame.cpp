@@ -45,16 +45,23 @@ namespace KGD
 		{
 			Base::Base( const SDP::Frame::Base &f )
 			: _frame( f )
+			, _shift( 0 )
 			{
 			}
 
 			Base::Base()
+			: _shift( 0 )
 			{
+			}
+
+			void Base::setTimeShift( double s ) throw()
+			{
+				_shift = s;
 			}
 
 			double Base::getTime() const throw( KGD::Exception::NullPointer )
 			{
-				return _frame->getTime();
+				return _frame->getTime() + _shift;
 			}
 
 			size_t Base::getMediumPos() const throw( KGD::Exception::NullPointer )

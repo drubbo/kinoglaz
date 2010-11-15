@@ -69,9 +69,10 @@ namespace KGD
 				{
 				}
 
+
 				Default::~Default( )
 				{
-					_med.releaseIterator();
+					_med.releaseIterator( *this );
 				}
 
 				Default * Default::getClone() const throw()
@@ -123,6 +124,11 @@ namespace KGD
 					return _med.getDuration();
 				}
 
+				double Default::getTimeShift( ) const throw()
+				{
+					return 0;
+				}
+
 				void Default::insert( Iterator::Base & it, double t ) throw( KGD::Exception::OutOfBounds )
 				{
 					_med.insert( it, t );
@@ -131,6 +137,161 @@ namespace KGD
 				void Default::insert( double duration, double t ) throw( KGD::Exception::OutOfBounds )
 				{
 					_med.insert( duration, t );
+				}
+
+				Medium::Base & Default::getMedium() throw()
+				{
+					return _med;
+				}
+				
+				// ***************************************************************************************************
+
+				Loop::Loop( Iterator::Base * it, uint8_t n ) throw()
+				: _it( it )
+				, _times( n )
+				, _cur( 0 )
+				{
+					Log::debug("Creating loop for %u times", n);
+				}
+
+				Loop::Loop( const Loop & it ) throw()
+				: _it( it._it->getClone() )
+				, _times( it._times )
+				, _cur( 0 )
+				{
+				}
+
+				Loop::~Loop( )
+				{
+					_it->getMedium().releaseIterator( *this );
+				}
+
+				Loop * Loop::getClone() const throw()
+				{
+					return new Loop( *this );
+				}
+
+				size_t Loop::seekPos( size_t pos ) throw( KGD::Exception::OutOfBounds )
+				{
+					_cur = pos / _it->size();
+					return this->normalizePos( pos );
+				}
+
+				size_t Loop::normalizePos( size_t pos ) const throw( KGD::Exception::OutOfBounds )
+				{
+					size_t sz = _it->size();
+					if ( _times == 0 || pos < sz * _times )
+						return pos % sz;
+					else
+						throw KGD::Exception::OutOfBounds( pos, 0, sz * _times );
+				}
+
+				double Loop::seekTime( double t ) throw( KGD::Exception::OutOfBounds )
+				{
+					_cur = size_t( floor( t / _it->duration() ) );
+					return this->normalizeTime( t );
+				}
+
+				double Loop::normalizeTime( double t ) const throw( KGD::Exception::OutOfBounds )
+				{
+					double duration = _it->duration();
+					if ( _times == 0 || t < duration * _times )
+					{
+						while( t >= duration )
+							t -= duration;
+						return t;
+					}
+					else
+						throw KGD::Exception::OutOfBounds( t, 0, duration * _times );
+				}
+
+				double Loop::getTimeShift( ) const throw()
+				{
+					return _cur * _it->duration();
+				}
+
+				const SDP::Frame::Base & Loop::at( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					return _it->at( this->normalizePos( pos ) );
+				}
+
+				const SDP::Frame::Base & Loop::curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					return _it->curr();
+				}
+				const SDP::Frame::Base & Loop::next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					try
+					{
+						return _it->next();
+					}
+					catch( KGD::Exception::OutOfBounds )
+					{
+						++ _cur;
+
+						Log::debug("Loop: next %lu of %u", _cur, _times );
+						if ( _times == 0 || _cur < _times )
+						{
+							Log::debug("Loop: reset next", _cur, _times );
+							_it->seek( size_t(0) );
+							return this->next();
+						}
+						else
+							throw;
+					}
+				}
+				const SDP::Frame::Base & Loop::prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					try
+					{
+						return _it->prev();
+					}
+					catch( KGD::Exception::OutOfBounds )
+					{
+						Log::debug("Loop: reset prev");
+						_it->seek( _it->size() - 1 );
+						return this->prev();
+					}
+				}
+				const SDP::Frame::Base & Loop::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					return _it->seek( this->seekTime( t ) );
+				}
+
+				const SDP::Frame::Base & Loop::seek( size_t p ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					return _it->seek( this->seekPos( p ) );
+				}
+
+				size_t Loop::pos( ) const throw( )
+				{
+					return _it->pos() + (_it->size() * _cur);
+				}
+
+				size_t Loop::size( ) const throw( )
+				{
+					return _it->size();
+				}
+
+				double Loop::duration() const throw()
+				{
+					return ( _times > 0 ? _it->duration() * _times : HUGE_VAL );
+				}
+
+				void Loop::insert( Iterator::Base & otherFrames, double t ) throw( KGD::Exception::OutOfBounds )
+				{
+					_it->insert( otherFrames, this->seekTime( t ) );
+				}
+
+				void Loop::insert( double duration, double t ) throw( KGD::Exception::OutOfBounds )
+				{
+					_it->insert( duration, this->seekTime( t ) );
+				}
+
+				
+				Medium::Base & Loop::getMedium() throw()
+				{
+					return _it->getMedium();
 				}
 
 				// ***************************************************************************************************
@@ -271,151 +432,6 @@ namespace KGD
 					// restore position
 					_pos = pos;
 				}*/
-
-				// ***************************************************************************************************
-
-				Loop::Loop( Iterator::Base * it, uint8_t n ) throw()
-				: _it( it )
-				, _times( n )
-				, _cur( 0 )
-				{
-					Log::debug("Creating loop for %u times", n);
-				}
-
-				Loop::Loop( const Loop & it ) throw()
-				: _it( it._it->getClone() )
-				, _times( it._times )
-				, _cur( 0 )
-				{
-				}
-
-				Loop::~Loop( )
-				{
-
-				}
-
-				Loop * Loop::getClone() const throw()
-				{
-					return new Loop( *this );
-				}
-
-				size_t Loop::seekPos( size_t pos ) throw( KGD::Exception::OutOfBounds )
-				{
-					_cur = pos / _it->size();
-					return this->normalizePos( pos );
-				}
-
-				size_t Loop::normalizePos( size_t pos ) const throw( KGD::Exception::OutOfBounds )
-				{
-					size_t sz = _it->size();
-					if ( _times == 0 || pos < sz * _times )
-						return pos % sz;
-					else
-						throw KGD::Exception::OutOfBounds( pos, 0, sz * _times );
-				}
-
-				double Loop::seekTime( double t ) throw( KGD::Exception::OutOfBounds )
-				{
-					_cur = size_t( floor( t / _it->duration() ) );
-					return this->normalizeTime( t );
-				}
-
-				double Loop::normalizeTime( double t ) const throw( KGD::Exception::OutOfBounds )
-				{
-					double duration = _it->duration();
-					if ( _times == 0 || t < duration * _times )
-					{
-						while( t >= duration )
-							t -= duration;
-						return t;
-					}
-					else
-						throw KGD::Exception::OutOfBounds( t, 0, duration * _times );
-				}
-
-				const SDP::Frame::Base & Loop::normalizeFrame( const SDP::Frame::Base & f ) const throw()
-				{
-					f.setDisplace( _cur * _it->duration() );
-					return f;
-				}
-
-				const SDP::Frame::Base & Loop::at( size_t pos ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					return this->normalizeFrame( _it->at( this->normalizePos( pos ) ) );
-				}
-
-				const SDP::Frame::Base & Loop::curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					return this->normalizeFrame( _it->curr() );
-				}
-				const SDP::Frame::Base & Loop::next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					try
-					{
-						return this->normalizeFrame( _it->next() );
-					}
-					catch( KGD::Exception::OutOfBounds )
-					{
-						++ _cur;
-
-						Log::debug("Loop: next %lu of %u", _cur, _times );
-						if ( _times == 0 || _cur < _times )
-						{
-							Log::debug("Loop: reset next", _cur, _times );
-							_it->seek( size_t(0) );
-							return this->next();
-						}
-						else
-							throw;
-					}
-				}
-				const SDP::Frame::Base & Loop::prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					try
-					{
-						return this->normalizeFrame( _it->prev() );
-					}
-					catch( KGD::Exception::OutOfBounds )
-					{
-						Log::debug("Loop: reset prev");
-						_it->seek( _it->size() - 1 );
-						return this->prev();
-					}
-				}
-				const SDP::Frame::Base & Loop::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					return this->normalizeFrame( _it->seek( this->seekTime( t ) ) );
-				}
-
-				const SDP::Frame::Base & Loop::seek( size_t p ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
-				{
-					return this->normalizeFrame( _it->seek( this->seekPos( p ) ) );
-				}
-
-				size_t Loop::pos( ) const throw( )
-				{
-					return _it->pos() + (_it->size() * _cur);
-				}
-
-				size_t Loop::size( ) const throw( )
-				{
-					return _it->size();
-				}
-
-				double Loop::duration() const throw()
-				{
-					return ( _times > 0 ? _it->duration() * _times : HUGE_VAL );
-				}
-
-				void Loop::insert( Iterator::Base & otherFrames, double t ) throw( KGD::Exception::OutOfBounds )
-				{
-					_it->insert( otherFrames, this->seekTime( t ) );
-				}
-
-				void Loop::insert( double duration, double t ) throw( KGD::Exception::OutOfBounds )
-				{
-					_it->insert( duration, this->seekTime( t ) );
-				}
 
 			}
 		}
