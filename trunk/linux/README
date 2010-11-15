@@ -99,7 +99,7 @@
   send-every=< double >
       send a report every those seconds
   poll-every=< double >
-      wait for a report every those seconds; this time will increase 
+      wait for a report every those seconds; this time will increase
       to adapt to sender rate
 
   [RTP]
@@ -174,7 +174,9 @@
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 7     CLIENT COMPATIBILITY
 
-  VLC 1.0.x GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd          RFC non compliant
+  VLC 1.0.x GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd/bwd      RFC non compliant
+  VLC 1.1.4             PLAY, PAUSE, SEEK, SCALE fwd/bwd      RFC non compliant
   TOTEM 2.28.2:         PLAY, PAUSE                           RFC compliant
+  TOTEM 2.32.0:         PLAY, PAUSE, SEEK                     RFC compliant
   QuickTime 7.6.6:      PLAY, PAUSE, SEEK, SCALE fwd          RFC compliant
-  MPlayer:              PLAY                                  gui is crappy
+  MPlayer:              PLAY                                  ???
