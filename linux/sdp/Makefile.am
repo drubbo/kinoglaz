@@ -15,6 +15,8 @@ noinst_HEADERS = \
 libkgd_sdp_la_SOURCES = \
 	../../src/sdp/common.cpp \
 	../../src/sdp/container.cpp \
+	../../src/sdp/container_mediafile.cpp \
+	../../src/sdp/container_v4l.cpp \
 	../../src/sdp/medium.cpp \
 	../../src/sdp/frameiterator.cpp \
 	../../src/sdp/descriptions.cpp \

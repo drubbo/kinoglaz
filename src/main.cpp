@@ -41,6 +41,14 @@
 #include <algorithm>
 #include <boost/regex.hpp>
 
+extern "C"
+{
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavdevice/avdevice.h>
+}
+
+
 using namespace std;
 using namespace KGD;
 
@@ -103,6 +111,11 @@ int main(int argc, char** argv)
 	{
 		try
 		{
+			// ff start
+			avdevice_register_all();
+			avcodec_register_all();
+			av_register_all();
+
 			bool runResult = false;
 			{
 				KGD::Ini::Reference params = KGD::Ini::getInstance( optGet( "-c" ) );
