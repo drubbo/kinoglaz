@@ -48,13 +48,13 @@ namespace KGD
 			{
 				//! Mpeg4 video medium descriptor
 				class MP4
-				: public Base
-				, public Factory::Multiton< Base, MP4, CODEC_ID_MPEG4 >
+				: public Medium::Base
+				, public Factory::Multiton< Medium::Base, MP4, CODEC_ID_MPEG4 >
 				{
 				protected:
 					MP4( );
 					MP4( const MP4 & );
-					friend class Factory::Multi< Base, MP4 >;
+					friend class Factory::Multi< Medium::Base, MP4 >;
 				public:
 					//! clone informations
 					virtual MP4* getInfoClone() const throw();
@@ -73,13 +73,13 @@ namespace KGD
 			namespace Video
 			{
 				class MP4
-				: public AVFrame
-				, public Factory::Multiton< Base, MP4, SDP::Payload::VideoMPEG4 >
+				: public Video::Base
+				, public Factory::Multiton< Buffer::Base, MP4, SDP::Payload::VideoMPEG4 >
 				{
 				protected:
 					//! factory ctor
 					MP4();
-					friend class Factory::Multi< Base, MP4 >;
+					friend class Factory::Multi< Buffer::Base, MP4 >;
 				};
 			}
 		}
@@ -92,12 +92,12 @@ namespace KGD
 				//! mpeg4 video
 				class MP4
 				: public AVMedia
-				, public Factory::Multiton< Base, MP4, SDP::Payload::VideoMPEG4 >
+				, public Factory::Multiton< Frame::Base, MP4, SDP::Payload::VideoMPEG4 >
 				{
 				protected:
 					//! factory ctor
 					MP4();
-					friend class Factory::Multi< Base, MP4 >;
+					friend class Factory::Multi< Frame::Base, MP4 >;
 				public:
 					//! mpeg4 video packetization
 					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw();

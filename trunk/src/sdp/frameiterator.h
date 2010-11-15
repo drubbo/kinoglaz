@@ -61,6 +61,8 @@ namespace KGD
 					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! returns frame at current position then advances position by 1
 					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
+					//! returns frame at current position then backwards position by 1
+					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer ) = 0;
 					//! seeks first frame at specified time. changes current position
 					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  ) = 0;
 					//! seeks to a position
@@ -105,6 +107,8 @@ namespace KGD
 					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position then advances position by 1
 					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns frame at current position then backwards position by 1
+					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks first frame at specified time. changes current position
 					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks to a position
@@ -204,6 +208,8 @@ namespace KGD
 					virtual const SDP::Frame::Base & curr() const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! returns frame at current position then advances position by 1
 					virtual const SDP::Frame::Base & next() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
+					//! returns frame at current position then backwards position by 1
+					virtual const SDP::Frame::Base & prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks first frame at specified time. changes current position
 					virtual const SDP::Frame::Base & seek( double ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
 					//! seeks to a position

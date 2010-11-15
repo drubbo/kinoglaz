@@ -225,6 +225,7 @@ namespace KGD
 			: public Medium
 			, public Factory::Multiton< Medium, VLCMedium, RTSP::UserAgent::VLC_1_0_2 >
 			, public Factory::Multiton< Medium, VLCMedium, RTSP::UserAgent::VLC_1_0_6 >
+			, public Factory::Multiton< Medium, VLCMedium, RTSP::UserAgent::VLC_1_1_4 >
 			{
 			protected:
 				//! factory ctor

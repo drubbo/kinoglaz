@@ -135,7 +135,7 @@ namespace KGD
 
 			void Url::urlCheckValid( ) const throw( RTSP::Exception::ManagedError )
 			{
-				if ( ! fileExists( (SDP::Container::BASE_DIR + _url->file).c_str() ) )
+				if ( ! fileExists( (SDP::Container::BASE_DIR + _url->file).c_str() ) && _url->file.substr(0,9) != "dev.video" )
 					throw RTSP::Exception::ManagedError( Error::NotFound );
 			}
 
@@ -366,6 +366,7 @@ namespace KGD
 
 			Play::Play( )
 			: _mustPlay( false )
+			, _isLive( false )
 			{
 			}
 
@@ -373,10 +374,12 @@ namespace KGD
 			{
 				Session::prepare();
 
+				_isLive = _conn->getDescription( _url->file ).isLiveCast( );
+
 				// get and check range and speed
 				_rqRange = this->getTimeRange();
 				// check range and speed if seek is supported
-				if ( SUPPORT_SEEK )
+				if ( !_isLive )
 				{
 					// speed check
 					if ( _rqRange.hasScale && _rqRange.speed == 0.0 )
@@ -396,7 +399,7 @@ namespace KGD
 				// set up the new scenario when 
 				//   useful informations were given
 				//   we support seek or we never played
-				if ( (SUPPORT_SEEK || !_rtsp->hasPlayed()) && (_rqRange.hasRange || _rqRange.hasScale) )
+				if ( (!_isLive || !_rtsp->hasPlayed()) && (_rqRange.hasRange || _rqRange.hasScale) )
 				{
 					_mustPlay = true;
 					if ( _url->track.empty() )
@@ -412,6 +415,13 @@ namespace KGD
 					else
 						_rplRange = _rtsp->getPlayRange( _url->track );
 				}
+
+
+				if ( _url->file == "mp2.avi" )
+				{
+					SDP::Container c( "auto_norm.avi" );
+					_rtsp->insertMedia( c, 5.2 );
+				}
 			}
 
 			string Play::getReply() throw( RTSP::Exception::ManagedError )
@@ -423,7 +433,9 @@ namespace KGD
 				if ( _rplRange.hasRange )
 				{
 					reply << "Range: npt=" << setprecision(3) << fixed << _rplRange.from << "-";
-					if ( SUPPORT_SEEK && _rplRange.to < HUGE_VAL )
+					if ( _rplRange.speed < 0 )
+						reply << setprecision(3) << fixed << 0.0 << EOL;
+					else if ( _rplRange.to < HUGE_VAL )
 						reply << setprecision(3) << fixed << _rplRange.to << EOL;
 					else
 						reply << EOL;

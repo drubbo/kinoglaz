@@ -65,9 +65,10 @@ namespace KGD
 			RTSP::PlayRequest ret;
 			ret.speed = _frame.time->getSpeed();
 			ret.from = _frame.time->getPresentationTime();
-			ret.to = _medium.getIterationDuration();
+			ret.to = _timeEnd;// medium.getIterationDuration();
 			ret.hasRange = true;
 			ret.hasScale = true;
+			ret.mediaType = _medium.getType();
 
 			return ret;
 		}
@@ -76,7 +77,10 @@ namespace KGD
 		{
 			OwnThread::Lock lk(_th);
 
+			Log::debug( "%s: in: %s", getLogName(), rq.toString().c_str() );
+
 			RTSP::PlayRequest ret( rq );
+
 			if ( _status.bag[ Status::STOPPED ] )
 			{
 				if ( !rq.hasScale )
@@ -86,7 +90,7 @@ namespace KGD
 				}
 					
 				if ( rq.from == HUGE_VAL )
-					ret.from = 0.0;
+					ret.from = signedMin( 0.0, _medium.getIterationDuration(), sign( ret.speed ) );
 			}
 			else
 			{
@@ -102,19 +106,25 @@ namespace KGD
 			}
 
 			ret.hasRange = true;
+			ret.mediaType = _medium.getType();
 
-			if ( RTSP::Method::SUPPORT_SEEK )
-				ret.to = _medium.getIterationDuration();
+			if ( _medium.isLiveCast() )
+				ret.to = HUGE_VAL;
+			else
+				ret.to = signedMax( 0.0, _medium.getIterationDuration(), sign( ret.speed ) );
 
+			Log::debug( "%s: out: %s", getLogName(), ret.toString().c_str() );
 			return ret;
 		}
 
 		double Session::evalMediumInsertion( double t ) throw( KGD::Exception::OutOfBounds )
 		{
 			BOOST_ASSERT( _status.bag[ Status::PAUSED ] );
-			// look a bit forward
-			double seekTime = min( t, _frame.time->getPresentationTime() + 1 );
-			return _frame.buf->drySeek( seekTime, _frame.time->getSpeed() );
+			double spd = _frame.time->getSpeed();
+			if ( t == HUGE_VAL )
+				return _frame.buf->drySeek( _frame.time->getPresentationTime() + 2 / fabs(spd) , spd);
+			else
+				return _frame.buf->drySeek( t, _frame.time->getSpeed() );
 		}
 
 		void Session::insertMedium( SDP::Medium::Base & m, double t ) throw( KGD::Exception::OutOfBounds )
@@ -133,35 +143,16 @@ namespace KGD
 
 		void Session::logTimes() const throw()
 		{
-			Log::message("%s: Media time %f"
+			Log::message("%s: Media time %lf | Life time %lf | Play time %lf | Paused for %lf | Seeked by %lf | CurSpd %0.2lf | Frame rate %lf"
 				, getLogName()
 				, _frame.time->getPresentationTime()
-			);
-			Log::message("%s: Life time %f"
-				, getLogName()
 				, _frame.time->getLifeTime()
-			);
-			Log::message("%s: Play time %f"
-				, getLogName()
 				, _frame.time->getPlayTime()
-			);
-			Log::message("%s: Paused for %f"
-				, getLogName()
 				, _frame.time->getPauseTime()
-			);
-			Log::message("%s: Seeked by %f"
-				, getLogName()
 				, _frame.time->getSeekTimes().absolute
-			);
-			Log::message("%s: Speed %0.2f"
-				, getLogName()
 				, _frame.time->getSpeed()
-			);
-			Log::message("%s: Frame rate %f"
-				, getLogName()
 				, _frame.rate.getFrequency()
 			);
 		}
-
 	}
 }

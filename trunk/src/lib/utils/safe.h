@@ -88,6 +88,7 @@ namespace KGD
 		typedef Unlocker< KGD::Lock > UnLock;
 		//! unlocker for recursive lock
 		typedef Unlocker< KGD::RLock > UnRLock;
+
 	}
 }
 

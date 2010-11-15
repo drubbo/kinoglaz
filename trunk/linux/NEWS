@@ -3,13 +3,23 @@
                         Kinoglaz Streaming Server
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+15/11/2010      Many tests have been done with current version by the guys at
+                wimtv and we're pretty satisfied
+
+                Better support for Scaling, also via a small refactor of the
+                RTP buffers
+
+                Experimental v4l2 stream of your connected video devices (no
+                audio yet)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 25/10/2010      Bind address now in parameters
 
                 Shutdown process more robust
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 22/10/2010      Boosted everything (I missed to tag previous version :/)
-                
+
                 Massive use of FOREACH, bind, smart ptrs and ptr containers
                 Got rid of Ptr and Ctr; reviewed the ref< T > and introduced
                 ref containers

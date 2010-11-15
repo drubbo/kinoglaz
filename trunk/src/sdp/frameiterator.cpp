@@ -91,6 +91,12 @@ namespace KGD
 				{
 					return _med.getFrame( _pos ++ );
 				}
+				const SDP::Frame::Base & Default::prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
+				{
+					if ( _pos == -1 )
+						throw KGD::Exception::OutOfBounds( -1, 0, _med.getFrameCount() );
+					return _med.getFrame( _pos -- );
+				}
 				const SDP::Frame::Base & Default::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer )
 				{
 					_pos = _med.getFramePos( t );
@@ -361,6 +367,19 @@ namespace KGD
 						}
 						else
 							throw;
+					}
+				}
+				const SDP::Frame::Base & Loop::prev() throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )
+				{
+					try
+					{
+						return this->normalizeFrame( _it->prev() );
+					}
+					catch( KGD::Exception::OutOfBounds )
+					{
+						Log::debug("Loop: reset prev");
+						_it->seek( _it->size() - 1 );
+						return this->prev();
 					}
 				}
 				const SDP::Frame::Base & Loop::seek( double t ) throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer  )

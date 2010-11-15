@@ -35,7 +35,7 @@
 #define __KGD_SDP_H
 
 #include "sdp/common.h"
-#include "sdp/session.h"
+#include "sdp/container.h"
 #include "sdp/medium.h"
 #include "sdp/frameiterator.h"
 #include "sdp/descriptions.h"

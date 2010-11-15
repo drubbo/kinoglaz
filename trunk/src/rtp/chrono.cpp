@@ -309,8 +309,6 @@ namespace KGD
 					_life.start( t );
 
 				_play.next( t, spd );
-
-// 				Log::debug( "Timeline::Medium seek by %lf", delta );
 			}
 
 			double Medium::getPresentationTime( double t ) const throw()
@@ -318,18 +316,7 @@ namespace KGD
 				Medium::Lock lk( *this );
 				return _play.getElapsed( t ) + _seek.relative;
 			}
-// 			TTimestamp Medium::getRTPtime( double deltaPT, double t ) const throw()
-// 			{
-// 				Medium::Lock lk( *this );
-// 				TTimestamp rt = TTimestamp(
-// 						( 	_rtpStart
-// 							+ _seek.relative	//NOTE this is for VLC, without the rtp timeline would really be monotonic
-// 							+ _play.getPrevious()
-// 							+ ( _play.getCurrent( t ) + deltaPT ) /*/ _play.getSpeed()*/ )
-// 						* _rate );
-// // 				Log::message("RTP TIME for %lf AT %lf OF %lf x %0.2lf = %lu / %lu", t, delta, _life.getElapsed() - _pause.getElapsed(), _play.getSpeed(), rt, _rtpStart );
-// 				return rt;
-// 			}
+
 
 			TTimestamp Medium::getRTPtime( double pt, double t ) const throw()
 			{
@@ -388,7 +375,7 @@ namespace KGD
 			VLCMedium::VLCMedium( )
 			: Medium( )
 			{
-// 				Log::debug("Building VLC media timeline");
+
 			}
 
 			VLCMedium::VLCMedium( int rate )
@@ -399,9 +386,9 @@ namespace KGD
 			TTimestamp VLCMedium::getRTPtime( double pt, double t ) const throw()
 			{
 				Medium::Lock lk( *this );
-				double curTime = this->getPresentationTime( t );
+
 				if ( pt == HUGE_VAL )
-					pt = curTime;
+					pt = this->getPresentationTime( t );
 
 				TTimestamp rt = _rtpStart + sec2ts( pt, _rate );
 				return rt;

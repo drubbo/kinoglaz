@@ -41,6 +41,8 @@
 #include "lib/socket.h"
 #include "lib/utils/safe.hpp"
 
+#define NO_INTERRUPT( x ) 	{try { x; } catch( boost::thread_interrupted ) { Log::debug( "%s: interrupt !", getLogName() ); }}
+
 namespace KGD
 {
 	namespace RTP
@@ -86,7 +88,7 @@ namespace KGD
 			//! thread
 			OwnThread _th;
 
-			//! pause sync
+			//! pause condition
 			Condition _wakeup;
 			
 			//! status flags
@@ -98,18 +100,25 @@ namespace KGD
 
 			//! stats
 			SafeStats _stats;
+			//! log identifier
+			const string _logName;
 
 			
 			//! thread loop to implement
 			virtual void run() = 0;
 			//! additional actions to perform when starting
 			virtual void _start() {};
+			//! pause loop
+			void doPause( OwnThread::Lock &lk );
 
 
-			Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock );
+			Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock, const char * name );
 
 		public:
 			virtual ~Thread();
+
+			//! get log identifier
+			const char * getLogName() const throw();
 
 			//! start the thread
 			void start();

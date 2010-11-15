@@ -36,6 +36,7 @@
 
 
 #include "sdp/medium.h"
+#include "sdp/container.h"
 #include "sdp/frameiterator.h"
 #include "sdp/frame.h"
 #include "lib/log.h"
@@ -64,6 +65,7 @@ namespace KGD
 
 			Base::FrameData::FrameData( int64_t n )
 			: count( n )
+			, timeShift( 0 )
 			{}
 			
 			Base::It::It( )
@@ -76,7 +78,6 @@ namespace KGD
 			, _rate( 90000 )
 			, _index( 0 )
 			, _duration( 0 )
-			, _frameTimeShift( 0 )
 			, _timeBase( 0 )
 			, _freqBase( 0 )
 			, _extraData( 0 )
@@ -86,12 +87,12 @@ namespace KGD
 			}
 
 			Base::Base( const Base & b )
-			: _type( b._type )
+			: _container( b._container )
+			, _type( b._type )
 			, _pt( b._pt )
 			, _rate( b._rate )
 			, _index( b._index )
 			, _duration( 0 )
-			, _frameTimeShift( 0 )
 			, _timeBase( b._timeBase )
 			, _freqBase( b._freqBase )
 			, _extraData( b._extraData )
@@ -134,10 +135,21 @@ namespace KGD
 					_it.unlock();
 			}
 
+			void Base::setContainer( SDP::Container & cnt ) throw()
+			{
+				_container = cnt;
+			}
+
 			void Base::setFrameIteratorModel( Iterator::Base * it ) throw()
 			{
 				It::Lock lk( _it );
 				_it.model.reset( it );
+			}
+
+			bool Base::isLiveCast() const throw()
+			{
+				BOOST_ASSERT( _container );
+				return _container->isLiveCast();
 			}
 
 			double Base::getIterationDuration() const throw()
@@ -156,76 +168,76 @@ namespace KGD
 				return ( in < 10 ? '0' + in : 'A' + in - 10 );
 			}
 
-			double Base::getDuration() const
+			double Base::getDuration() const throw()
 			{
 				return _duration;
 			}
-			const string & Base::getFileName() const
+			const string & Base::getFileName() const throw()
 			{
 				return _fileName;
 			}
-			const string & Base::getTrackName() const
+			const string & Base::getTrackName() const throw()
 			{
 				return _trackName;
 			}
-			const ByteArray & Base::getExtraData() const
+			const ByteArray & Base::getExtraData() const throw()
 			{
 				return _extraData;
 			}
-			Payload::type Base::getPayloadType() const
+			Payload::type Base::getPayloadType() const throw()
 			{
 				return _pt;
 			}
-			int Base::getRate() const
+			int Base::getRate() const throw()
 			{
 				return _rate;
 			}
-			unsigned char Base::getIndex() const
+			unsigned char Base::getIndex() const throw()
 			{
 				return _index;
 			}
-			MediaType::kind Base::getType() const
+			MediaType::kind Base::getType() const throw()
 			{
 				return _type;
 			}
-			double Base::getTimeBase() const
+			double Base::getTimeBase() const throw()
 			{
 				return _timeBase;
 			}
 
-			void Base::setDuration( double x )
+			void Base::setDuration( double x ) throw()
 			{
 				_duration = x;
 			}
-			void Base::setFileName( const string & x )
+			void Base::setFileName( const string & x ) throw()
 			{
 				_fileName = x;
 				_trackName = x + "[" + toString< int >(_index) + "]";
 				_logName = "SDP " + _trackName;
 			}
-			void Base::setPayloadType( Payload::type x )
+			void Base::setPayloadType( Payload::type x ) throw()
 			{
 				_pt = x;
 			}
-			void Base::setRate( int x )
+			void Base::setRate( int x ) throw()
 			{
 				_rate = x;
 			}
-			void Base::setIndex( uint8_t x )
+			void Base::setIndex( uint8_t x ) throw()
 			{
 				_index = x;
 				_trackName = _fileName + "[" + toString< int >(x) + "]";
 				_logName = "SDP " + _trackName;
 			}
-			void Base::setType( MediaType::kind x )
+			void Base::setType( MediaType::kind x ) throw()
 			{
 				_type = x;
 			}
-			void Base::setExtraData( void const * const data, size_t sz )
+			void Base::setExtraData( void const * const data, size_t sz ) throw()
 			{
 				_extraData.set( data, sz, 0 );
 			}
-			void Base::setTimeBase( double x )
+			void Base::setTimeBase( double x ) throw()
 			{
 				_timeBase = x;
 				_freqBase = 1 / x;
@@ -237,6 +249,7 @@ namespace KGD
 				{
 					FrameData::Lock lk( _frame );
 					_frame.count = _frame.list.size();
+					Log::debug("%s: %lld frames", getLogName(), _frame.count );
 				}
 				_frame.available.notify_all();
 			}
@@ -246,9 +259,9 @@ namespace KGD
 				{
 					FrameData::Lock lk( _frame );
 					f->setPayloadType( _pt );
-					f->addTime( _frameTimeShift );
+					f->addTime( _frame.timeShift );
 					f->setMediumPos( _frame.list.size() );
-					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
+// 					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
 					_frame.list.push_back( f );
 				}
 				_frame.available.notify_all();
@@ -315,12 +328,16 @@ namespace KGD
 			{
 				FrameData::Lock lk( _frame );
 				It::Lock ilk( _it );
-				if ( ! RTSP::Method::SUPPORT_SEEK
+				// we won't release frames on non-live casts
+				// since we may want to seek back
+				if ( _container->isLiveCast()
 					&& pos < _frame.list.size()
 					&& ! _frame.list.is_null( pos )
 					&& ! _it.model->hasType< Medium::Iterator::Loop >() )
 				{
-					_frame.list.replace( pos, 0 );
+					// effectively release when every iterator has released the frame
+					if ( _frame.list[ pos ].release() >= _it.count )
+						_frame.list.replace( pos, 0 );
 				}
 			}
 
@@ -371,38 +388,20 @@ namespace KGD
 			void Base::insert( Iterator::Base & otherFrames, double start ) throw( KGD::Exception::OutOfBounds )
 			{
 				FrameData::Lock lk( _frame );
-				double duration = otherFrames.duration();
+				double otherDuration = otherFrames.duration();
 				// guess pos
 				size_t pos = this->getFramePos( start );
-				Log::debug( "%s: media insert: found insert position %lu for time %lf, shifting next frames by %lf", getLogName(), pos, start, duration );
+				Log::debug( "%s: media insert: found insert position %lu for time %lf, shifting next frames by %lf", getLogName(), pos, start, otherDuration );
 				// shift successive frames by new medium duration
 				FrameList::iterator insIt = _frame.list.begin() + pos;
 				Log::debug( "%s: media insert: first frame to shift at time %lf (previous at %lf)", getLogName(), insIt->getTime(), (insIt - 1)->getTime() );
 				{
 					FrameList::iterator it = insIt, ed = _frame.list.end();
 					for( ; it != ed; ++it )
-						it->addTime( duration );
+						it->addTime( otherDuration );
+				}
 
-				}
-				// shift new frames by offset time
-				FrameList toInsert;
-				try
-				{
-					for(;;)
-					{
-						auto_ptr< Frame::Base > newFrame( otherFrames.next().getClone() );
-						newFrame->addTime( start );
-						toInsert.push_back( newFrame );
-					}
-				}
-				catch( KGD::Exception::OutOfBounds )
-				{
-					// and insert
-					Log::debug( "%s: media insert: insert %lu new frames", getLogName(), toInsert.size() );
-					_frame.list.insert( insIt, toInsert.begin(), toInsert.end() );
-					_duration += duration;
-					_frameTimeShift += duration;
-				}
+				this->insert( insIt, start, otherDuration, otherFrames );
 			}
 
 			void Base::append( Iterator::Base & otherFrames ) throw( )
@@ -412,26 +411,32 @@ namespace KGD
 				while( _frame.count < 0 )
 					_frame.available.wait( lk );
 
-				// shift new frames by offset time
+				this->insert( _frame.list.end(), _duration, 0, otherFrames );
+			}
+
+			void Base::insert( FrameList::iterator at, double offset, double shift, Iterator::Base & otherFrames )
+			{
 				FrameList toInsert;
 				try
 				{
+					// clone and shift by offset time
 					for(;;)
 					{
 						auto_ptr< Frame::Base > newFrame( otherFrames.next().getClone() );
-						newFrame->addTime( _duration );
+						newFrame->addTime( offset );
 						toInsert.push_back( newFrame );
 					}
 				}
 				catch( KGD::Exception::OutOfBounds )
 				{
-					// and insert
+					// insert and adjust internal state
 					Log::debug( "%s: media append: append %lu new frames", getLogName(), toInsert.size() );
-					_frame.list.insert( _frame.list.end(), toInsert.begin(), toInsert.end() );
+					_frame.list.insert( at, toInsert.begin(), toInsert.end() );
+					_frame.count += toInsert.size();
 					_duration += otherFrames.duration();
-				}				
+					_frame.timeShift += shift;
+				}
 			}
-
 
 			void Base::insert( double duration, double start ) throw( KGD::Exception::OutOfBounds )
 			{
@@ -447,7 +452,7 @@ namespace KGD
 						it->addTime( duration );
 				}
 				_duration += duration;
-				_frameTimeShift += duration;
+				_frame.timeShift += duration;
 			}
 
 			void Base::loop( uint8_t times ) throw()

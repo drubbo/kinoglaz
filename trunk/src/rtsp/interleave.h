@@ -77,9 +77,13 @@ namespace KGD
 			//! receive data ready
 			Condition _condNotEmpty;
 			//! running flag
-			bool _running;
+			Safe::Bool _running;
 			//! log identifier
 			const string _logName;
+
+			//! internal utility
+			template< class L >
+			size_t readSome( L & lk, void * data, size_t sz ) throw( KGD::Socket::Exception );
 
 			Interleave( TPort local, TPort remote, TSessionID, TcpTunnel &, Socket & );
 			friend class Socket;
@@ -95,6 +99,10 @@ namespace KGD
 			virtual size_t writeLast( void const *, size_t ) throw( KGD::Socket::Exception );
 			//! read from buffer
 			virtual size_t readSome( void *, size_t ) throw( KGD::Socket::Exception );
+			//! interlocked read from buffer
+			virtual size_t readSome(Lock &, void * data, size_t sz) throw( KGD::Socket::Exception );
+			//! interlocked read from buffer
+			virtual size_t readSome(RLock &, void * data, size_t sz) throw( KGD::Socket::Exception );
 
 			//! invalid operation
 			virtual void setWriteBufferSize( size_t ) throw( );

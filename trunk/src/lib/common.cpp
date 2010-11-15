@@ -59,11 +59,17 @@ namespace KGD
 
 	double signedMax( double a, double b, int sign )
 	{
-		return (sign > 0 ? std::max(a, b) : std::min(a, b));
+		if ( a < HUGE_VAL && b < HUGE_VAL )
+			return (sign > 0 ? std::max(a, b) : std::min(a, b));
+		else
+			return std::min( a, b );
 	}
 	double signedMin( double a, double b, int sign )
 	{
-		return (sign < 0 ? std::max(a, b) : std::min(a, b));
+		if ( a < HUGE_VAL && b < HUGE_VAL )
+			return (sign < 0 ? std::max(a, b) : std::min(a, b));
+		else
+			return std::min( a, b );
 	}
 	
 	bool fileExists ( const char* fpath ) throw()

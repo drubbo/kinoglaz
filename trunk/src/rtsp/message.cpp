@@ -282,6 +282,8 @@ namespace KGD
 						return UserAgent::VLC_1_0_2;
 					else if ( ua == "VLC media player (LIVE555 Streaming Media v2010.02.10)" )
 						return UserAgent::VLC_1_0_6;
+					else if ( ua == "LibVLC/1.1.4 (LIVE555 Streaming Media v2010.04.09)")
+						return UserAgent::VLC_1_1_4;
 					else
 						return UserAgent::Generic;
 				}

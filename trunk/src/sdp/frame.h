@@ -71,6 +71,8 @@ namespace KGD
 				Payload::type _pt;
 				//! array index in medium
 				size_t _mediumPos;
+				//! number of release issued for this frame
+				size_t _released;
 			public:
 				//! build from a ffmpeg packet and timebase to guess time
 				Base( const AVPacket &, double timebase );
@@ -96,6 +98,8 @@ namespace KGD
 				//! force different RTP payload type
 				void setPayloadType( Payload::type );
 
+				//! release and return count
+				size_t release();
 				//! get fresh copy
 				virtual Base* getClone() const;
 			};
@@ -120,7 +124,7 @@ namespace KGD
 				ByteArray data;
 				//! build from a ffmpeg packet
 				MediaFile( const AVPacket &, double timebase );
-				//! build from a ffmpeg packet
+				//! build from raw data
 				MediaFile( const ByteArray &, double t );
 				//! copy
 				MediaFile( const MediaFile & );
@@ -128,6 +132,8 @@ namespace KGD
 				int getSize() const;
 				//! return position into media container
 				uint64_t getFilePos() const;
+				//! set key frame
+				void setKey( bool = true );
 				//! return key frame indicator
 				bool isKey() const;
 				//! get fresh copy

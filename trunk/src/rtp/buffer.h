@@ -83,6 +83,7 @@ namespace KGD
 				public:
 					typedef boost::scoped_ptr< SDP::Medium::Iterator::Base > Index;
 					typedef boost::ptr_list< RTP::Frame::Base > List;
+					typedef ref< const SDP::Frame::Base > Fetch;
 					//! frame iterator
 					Index idx;
 					//! out frame buffer
@@ -107,9 +108,11 @@ namespace KGD
 				//! returns size in second of out buffer
 				virtual double getOutBufferTimeSize() const;
 				//! tells if buffer is under the "low"
-				virtual double isBufferLow() const;
+				virtual bool isBufferLow() const;
 				//! tells if buffer size is above the "full"
-				virtual double isBufferFull() const;
+				virtual bool isBufferFull() const;
+				//! get next frame
+				virtual Frame::Fetch fetchNextFrame();
 
 				//! void ctor
 				Base();
@@ -149,18 +152,13 @@ namespace KGD
 			class AVFrame
 			: public Base
 			{
-			private:
+			protected:
 				typedef Safe::ThreadBarrier OwnThread;
 				//! fetch thread
 				OwnThread _th;
 				//! running status indicator
 				bool _running;
-				//! mutex to cleanly seek
-				Mutex _seekMux;
-				//! end-of-file indicator
-				bool _eof;
 
-			protected:
 				//! fetch loop
 				void fetch();
 
@@ -180,13 +178,54 @@ namespace KGD
 
 				//!@{
 				//! base buffer implementation
-				virtual void insertMedium( SDP::Medium::Base &, double t ) throw( KGD::Exception::OutOfBounds );
-				virtual void insertTime( double duration, double t ) throw( KGD::Exception::OutOfBounds );
-				virtual double drySeek(double t, double scale) throw( KGD::Exception::OutOfBounds );
 				virtual void seek(double t, double scale) throw( KGD::Exception::OutOfBounds );
 				virtual RTP::Frame::AVMedia * getNextFrame() throw( RTP::Eof );
 				//!@}
 			};
+
+			namespace Audio
+			{
+				//! audio frame buffer
+				class Base
+				: public AVFrame
+				{
+				protected:
+					//! yes on negative speed
+					virtual bool isBufferLow() const;
+					//! yes on negative speed
+					virtual bool isBufferFull() const;
+					//! one every scale, only for positive speed
+					virtual Frame::Fetch fetchNextFrame();
+
+					//! only derived classes can build without params - factory constraint
+					Base();
+
+				public:
+					//! construct from a track descriptor
+					Base( SDP::Medium::Base & );
+				};
+			}
+
+			namespace Video
+			{
+				//! video frame buffer
+				class Base
+				: public AVFrame
+				{
+				protected:
+					double _lastKeyTime;
+					//! get next frame: only key frames when speedy
+					virtual Frame::Fetch fetchNextFrame();
+					//! reset last key time
+					virtual void clear();
+					//! only derived classes can build without params - factory constraint
+					Base();
+
+				public:
+					//! construct from a track descriptor
+					Base( SDP::Medium::Base & );
+				};
+			}
 		}
 	}
 }

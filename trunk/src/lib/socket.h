@@ -111,6 +111,10 @@ namespace KGD
 			virtual ~In() {}
 			//! an In channel must be able to read data
 			virtual size_t readSome(void *, size_t) throw( KGD::Exception::Generic ) = 0;
+			//! an In channel must be able to read data
+			virtual size_t readSome(Lock &, void *, size_t) throw( KGD::Exception::Generic );
+			//! an In channel must be able to read data
+			virtual size_t readSome(RLock &, void *, size_t) throw( KGD::Exception::Generic );
 
 			//! read a byte array
 			template< class T >

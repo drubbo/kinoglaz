@@ -42,13 +42,13 @@ namespace KGD
 			namespace Audio
 			{
 				AAC::AAC( )
-				: Base( MediaType::Audio, Payload::AudioAAC )
+				: Medium::Base( MediaType::Audio, Payload::AudioAAC )
 				, _nChannels( 0 )
 				{
 				}
 
 				AAC::AAC( const AAC & m )
-				: Base( m )
+				: Medium::Base( m )
 				, _nChannels( m._nChannels )
 				{
 

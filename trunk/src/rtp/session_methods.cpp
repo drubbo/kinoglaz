@@ -49,15 +49,24 @@ namespace KGD
 
 			RTSP::PlayRequest ret;
 
-			_timeEnd = min( _medium.getIterationDuration(), rq.to );
+			// setup end time according to scale
+			if ( rq.speed > 0 )
+				_timeEnd = min( _medium.getIterationDuration(), rq.to );
+			else if ( rq.to < HUGE_VAL )
+				_timeEnd = rq.to;
+			else
+				_timeEnd = 0;
 
+			// setup to play
 			if ( _status.bag[ Status::STOPPED ] )
 				ret = this->doFirstPlay(rq);
 			else
 				ret = this->doSeekScale(rq);
 
+			ret.to = _timeEnd;
 			ret.hasRange = true;
 			ret.hasScale = true;
+			ret.mediaType = _medium.getType();
 
 			this->logTimes();
 
@@ -66,23 +75,19 @@ namespace KGD
 
 		void Session::play() throw()
 		{
-			OwnThread::Lock lk( _th );
-
-			// start only for video, or audio at most 1x
-			if (_medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= RTSP::PlayRequest::LINEAR_SCALE )
 			{
-// 				_rtcp.sender->restart();
-				_frame.rate.start();
-
-				Log::debug( "%s: waiting RTCP sender", getLogName() );
-				_rtcp.sender->wait();
-
+				OwnThread::Lock lk( _th );
 				Log::message( "%s: start play", getLogName() );
 				_status.bag[ Status::PAUSED ] = false;
-
-				lk.unlock();
-				_pause.wakeup.notify_all();
+				if ( ! _th )
+				{
+					_rtcp.receiver->start();
+					_rtcp.sender->reset();
+					_th.reset( new boost::thread(boost::bind(&RTP::Session::run, this)) );
+				}
 			}
+
+			_pause.wakeup.notify_all();
 		}
 
 		RTSP::PlayRequest Session::doFirstPlay( const RTSP::PlayRequest & rq ) throw( KGD::Exception::OutOfBounds )
@@ -91,7 +96,7 @@ namespace KGD
 			if ( !rq.hasScale )
 				ret.speed = RTSP::PlayRequest::LINEAR_SCALE;
 			if ( rq.from == HUGE_VAL )
-				ret.from = 0.0;
+				ret.from = signedMin( 0.0, _medium.getIterationDuration(), sign( ret.speed ) );
 
 			Log::message( "%s: play %s", getLogName(), ret.toString().c_str() );
 
@@ -104,10 +109,6 @@ namespace KGD
 			_frame.time->seek( ret.time, ret.from, ret.speed );
 			_frame.buf->seek( ret.from, ret.speed );
 
-			_th.reset( new boost::thread(boost::bind(&RTP::Session::run, this)) );
-			_rtcp.receiver->start();
-			_rtcp.sender->restart();
-
 			return ret;
 		}
 
@@ -119,45 +120,33 @@ namespace KGD
 			if ( rq.from == HUGE_VAL )
 				ret.from = _frame.time->getPresentationTime();
 
-			// leave this session paused with audio at more than 1x
-			if ( _medium.getType() == SDP::MediaType::Video || fabs( ret.speed ) <= RTSP::PlayRequest::LINEAR_SCALE )
+			_status.bag[ Status::SEEKED ] = ret.hasRange;
+
+			// pause
+			if ( _status.bag[ Status::PAUSED ] )
 			{
-				_status.bag[ Status::SEEKED ] = ret.hasRange;
+				Log::message( "%s: unpause medium after %f s", getLogName(), _frame.time->getLastPause() );
+			}
+			// seek
+			if ( ret.hasRange )
+			{
+				Log::message( "%s: seek medium at %f", getLogName(), ret.from );
+			}
+			// scale
+			if ( ret.hasScale )
+			{
+				Log::message( "%s: scale medium at %0.2f x", getLogName(), ret.speed );
+			}
 
-				// pause
-				if ( _status.bag[ Status::PAUSED ] )
-				{
-					Log::message( "%s: unpause medium after %f s", getLogName(), _frame.time->getLastPause() );
-				}
-				// seek
-				if ( ret.hasRange )
-				{
-					Log::message( "%s: seek medium at %f", getLogName(), ret.from );
-				}
-				// scale
-				if ( ret.hasScale )
-				{
-					Log::message( "%s: scale medium at %0.2f x", getLogName(), ret.speed );
-				}
-
-				if ( _status.bag[ Status::PAUSED ] || ret.hasRange || ret.hasScale )
-				{
-					_frame.next.reset();
-					_frame.buf->seek( ret.from, ret.speed );
-					_seqStart = _seqCur + 1;
-					_frame.time->seek( rq.time, ret.from, ret.speed );
-					_rtcp.sender->restart();
-					_rtcp.receiver->unpause();
-				}
-				else
-					Log::warning( "%s: no mutations in play status", getLogName() );
+			if ( _status.bag[ Status::PAUSED ] || ret.hasRange || ret.hasScale )
+			{
+				_frame.next.reset();
+				_frame.buf->seek( ret.from, ret.speed );
+				_seqStart = _seqCur + 1;
+				_frame.time->seek( rq.time, ret.from, ret.speed );
 			}
 			else
-			{
-				Log::warning( "%s: was asked to seek at unsupported speed %0.2f, going pause", getLogName(), ret.speed );
-				_frame.time->seek( rq.time, ret.from, ret.speed );
-				_status.bag[ Status::PAUSED ] = true;
-			}
+				Log::warning( "%s: no changes in play status", getLogName() );
 
 			return ret;
 		}
@@ -177,10 +166,8 @@ namespace KGD
 			else
 			{
 				_status.bag[ Status::PAUSED ] = true;
-				
-				_frame.rate.stop();
+
 				_frame.time->pause( rq.time );
-				_rtcp.receiver->pause();
 
 				Log::message( "%s: start pause at media time %lf", getLogName(), _frame.time->getPresentationTime() );
 				this->logTimes();
@@ -188,6 +175,7 @@ namespace KGD
 				_pause.sync = true;
 				{
 					OwnThread::UnLock ulk( lk );
+					_th.interrupt();
 					_pause.asleep.wait();
 				}
 				Log::debug( "%s: effectively paused", getLogName() );
@@ -196,37 +184,23 @@ namespace KGD
 
 		void Session::unpause( const RTSP::PlayRequest & rq ) throw()
 		{
-			OwnThread::Lock lk( _th );
+			_th.lock();
 
 			if ( _status.bag[ Status::PAUSED ] )
 			{
-				if ( _medium.getType() == SDP::MediaType::Video || fabs( _frame.time->getSpeed() ) <= RTSP::PlayRequest::LINEAR_SCALE )
-				{
-					_rtcp.sender->restart();
-					_frame.rate.start();
 
-					Log::debug( "%s: waiting RTCP sender", getLogName() );
-					_rtcp.sender->wait();
+				Log::message( "%s: unpause", getLogName() );
+				_status.bag[ Status::PAUSED ] = false;
+				_frame.time->unpause( rq.time, _frame.time->getSpeed() );
+				_th.unlock();
 
-					Log::message( "%s: unpause", getLogName() );
-					_status.bag[ Status::PAUSED ] = false;
-					_frame.time->unpause( rq.time, _frame.time->getSpeed() );
-					_rtcp.receiver->unpause();
-
-					lk.unlock();
-					_pause.wakeup.notify_all();
-				}
-				else
-				{
-					_frame.time->unpause( rq.time, _frame.time->getSpeed() );
-					_rtcp.receiver->unpause();
-					_rtcp.sender->restart();
-					_rtcp.sender->wait();
-				}
+				Log::verbose( "%s: wakeup", getLogName() );
+				_pause.wakeup.notify_all();
 			}
 			else
 			{
 				Log::warning( "%s: already playing", getLogName() );
+				_th.unlock();
 			}
 
 		}
@@ -248,19 +222,16 @@ namespace KGD
 						_pause.wakeup.notify_all();
 					}
 				}
+				_frame.buf->stop();
 			}
 			if ( _th )
 			{
-				Log::debug( "%s: waiting loop termination", getLogName() );
+				Log::verbose( "%s: waiting loop termination", getLogName() );
 				OwnThread::UnLock ulk( lk );
 				_th.reset();
-				Log::debug( "%s: loop joined terminate", getLogName() );
+				Log::verbose( "%s: loop joined terminate", getLogName() );
 			}
 
-			Log::debug( "%s: stopping RTCP Receiver", getLogName() );
-			_rtcp.receiver->stop();
-
-			_frame.rate.stop();
 			_frame.time->stop( rq.time );
 			this->logTimes();
 

@@ -244,6 +244,8 @@ namespace KGD
 				PlayRequest _rplRange;
 				//! must play or simply toggle pause
 				bool _mustPlay;
+				//! is this play issued on a live cast ?
+				bool _isLive;
 
 				//! ctor
 				Play(  );

@@ -85,19 +85,13 @@ namespace KGD
 		
 		
 		Sender::Sender( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
-		: Thread( s, sock )
-		, _logName( s.getLogName() + string(" RTCP Sender") )
+		: Thread( s, sock, "Sender" )
 		{
 		}
 
 		Sender::~Sender()
 		{
 			Log::verbose( "%s: destroying", getLogName() );
-		}
-
-		const char * Sender::getLogName() const throw()
-		{
-			return _logName.c_str();
 		}
 
 		void Sender::registerPacketSent( size_t sz ) throw()
@@ -129,7 +123,10 @@ namespace KGD
 				Log::verbose( "%s: release barrier", getLogName() );
 				{
 					OwnThread::UnLock ulk( lk );
-					_syncRTP.wait();
+					bool done = false;
+					do
+						NO_INTERRUPT( _syncRTP.wait(); done = true; )
+					while( ! done );
 				}
 				_syncRTP = false;
 			}
@@ -137,17 +134,16 @@ namespace KGD
 
 		void Sender::run()
 		{
-			Log::debug( "%s: loop started", getLogName() );
-
 			{
 				OwnThread::Lock lk( _th );
+
+				Log::verbose( "%s: loop started", getLogName() );
 
 				try
 				{
 					while( _flags.bag[ Status::RUNNING ] )
 					{
-						while ( _flags.bag[ Status::PAUSED ] )
-							_wakeup.wait( lk );
+						this->doPause( lk );
 
 						if ( _flags.bag[ Status::RUNNING ] )
 						{
@@ -168,10 +164,11 @@ namespace KGD
 
 							// sleep
 							{
-								OwnThread::UnLock ulk( lk );
+								OwnThread::Interruptible intr( _th );
 								try
 								{
-									_th->sleep( Clock::boostDeltaSec( SR_INTERVAL ) );
+									Log::verbose("%s sleeping", getLogName());
+									_th.sleepSec( lk, SR_INTERVAL );
 								}
 								catch( boost::thread_interrupted )
 								{
@@ -204,18 +201,19 @@ namespace KGD
 			_th.wait();
 		}
 
+		void Sender::reset()
+		{
+			SafeStats::Lock lk( _stats );
+			(*_stats).RRcount = 0;
+			(*_stats).SRcount = 0;
+		}
+
 		void Sender::restart()
 		{
 			Log::debug( "%s: restarting", getLogName() );
 
 			_th.lock();
 			_syncRTP = true;
-
-			{
-				SafeStats::Lock lk( _stats );
-				(*_stats).RRcount = 0;
-				(*_stats).SRcount = 0;
-			}
 
 			if ( _flags.bag[ Status::RUNNING ] )
 			{

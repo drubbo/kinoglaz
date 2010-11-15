@@ -41,12 +41,7 @@
 namespace KGD
 {
 	namespace Clock
-	{
-		boost::posix_time::ptime boostDeltaSec( double sec ) throw()
-		{
-			return boost::get_system_time() + boost::posix_time::seconds( sec );
-		}
-		
+	{		
 		double getSec( timespec *now ) throw()
 		{
 			clock_gettime ( CLOCK_REALTIME, now );

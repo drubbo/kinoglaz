@@ -42,12 +42,12 @@ namespace KGD
 			namespace Audio
 			{
 				MP2::MP2( )
-				: Base( MediaType::Audio, Payload::AudioMPA )
+				: Medium::Base( MediaType::Audio, Payload::AudioMPA )
 				{
 				}
 
 				MP2::MP2( const MP2 & m )
-				: Base( m )
+				: Medium::Base( m )
 				{
 
 				}

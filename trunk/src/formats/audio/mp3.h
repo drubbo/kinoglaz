@@ -51,8 +51,8 @@ namespace KGD
 			{
 				//! mpeg2 layer III audio medium descriptor
 				class MP3
-				: public Base
-				, public Factory::Multiton< Base, MP3, CODEC_ID_MP3 >
+				: public Medium::Base
+				, public Factory::Multiton< Medium::Base, MP3, CODEC_ID_MP3 >
 				{
 				protected:
 					struct Segment
@@ -71,7 +71,7 @@ namespace KGD
 
 					MP3( );
 					MP3( const MP3 & );
-					friend class Factory::Multi< Base, MP3 >;
+					friend class Factory::Multi< Medium::Base, MP3 >;
 
 					void addADU( ) throw();
 				public:
@@ -95,13 +95,13 @@ namespace KGD
 			namespace Audio
 			{
 				class MP3
-				: public AVFrame
-				, public Factory::Multiton< Base, MP3, SDP::Payload::AudioMP3 >
+				: public Audio::Base
+				, public Factory::Multiton< Buffer::Base, MP3, SDP::Payload::AudioMP3 >
 				{
 				protected:
 					//! factory ctor
 					MP3();
-					friend class Factory::Multi< Base, MP3 >;
+					friend class Factory::Multi< Buffer::Base, MP3 >;
 				};
 			}
 		}
@@ -113,11 +113,11 @@ namespace KGD
 				//! mpeg2 layer III audio packetization - ADU conversion
 				class MP3
 				: public AVMedia
-				, public Factory::Multiton< Base, MP3, SDP::Payload::AudioMP3 >
+				, public Factory::Multiton< Frame::Base, MP3, SDP::Payload::AudioMP3 >
 				{
 				protected:
 					MP3();
-					friend class Factory::Multi< Base, MP3 >;
+					friend class Factory::Multi< Frame::Base, MP3 >;
 				public:
 					//! mp3 audio packetization
 					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );

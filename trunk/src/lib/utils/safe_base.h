@@ -88,17 +88,24 @@ namespace KGD
 		//! thread with termination barrier
 		class ThreadBarrier
 		{
+		private:
+			bool _interruptible;
+		protected:
 			KGD::Thread _th;
 			KGD::Barrier _term;
 		public:
+			class Interruptible
+			{
+				ThreadBarrier & _th;
+			public:
+				Interruptible( ThreadBarrier & th ) : _th( th ) { _th._interruptible = true; }
+				~Interruptible()								{ _th._interruptible = false; }
+			};
+			friend class Interruptible;
+
 			ThreadBarrier( unsigned int count = 2 ) 	: _term( count ) { }
 
 			void wait() 								{ _term.wait(); }
-
-			boost::thread * operator->() 				{ return _th.get(); }
-			boost::thread const * operator->() const 	{ return _th.get(); }
-			boost::thread & operator*() 				{ return *_th; }
-			boost::thread const & operator*() const 	{ return *_th; }
 
 			operator bool() const 						{ return bool( _th ); }
 
@@ -112,8 +119,15 @@ namespace KGD
 					_th.reset();
 				}
 			}
-		};
 
+			void interrupt()							{ if ( _interruptible ) _th->interrupt(); }
+			template< class L >
+			void yield( L & lk )						{ Unlocker< L > ulk( lk ); _th->yield(); }
+			template< class L >
+			void sleepSec( L & lk, double sec )			{ Unlocker< L > ulk( lk ); _th->sleep( boost::get_system_time() + boost::posix_time::seconds( sec ) ); }
+			template< class L >
+			void sleepNano( L & lk, uint64_t nano )		{ Unlocker< L > ulk( lk ); _th->sleep( boost::get_system_time() + boost::posix_time::microseconds( nano / 1000 ) ); }
+		};
 	}
 }
 
