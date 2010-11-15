@@ -416,12 +416,11 @@ namespace KGD
 						_rplRange = _rtsp->getPlayRange( _url->track );
 				}
 
-
-				if ( _url->file == "mp2.avi" )
+/*				if ( _url->file == "mp2.avi" )
 				{
 					SDP::Container c( "auto_norm.avi" );
 					_rtsp->insertMedia( c, 5.2 );
-				}
+				}*/
 			}
 
 			string Play::getReply() throw( RTSP::Exception::ManagedError )
