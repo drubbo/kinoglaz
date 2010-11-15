@@ -63,8 +63,6 @@ namespace KGD
 			//! data buffer
 			Buffer _buffer;
 
-			//! log identifier
-			const string _logName;
 			//! poll interval / socket adaptive read timeout
 			double _poll;
 
@@ -73,6 +71,8 @@ namespace KGD
 
 			//! increase read timeout
 			void waitMore() throw();
+			//! decrease read timeout
+			void waitLess() throw();
 			//! update stats from received packets
 			void updateStats( const ReceiverReport::Payload & );
 
@@ -89,8 +89,6 @@ namespace KGD
 			Receiver( RTP::Session &, const boost::shared_ptr< Channel::Bi > & );
 			//! dtor
 			~Receiver();
-			//! log identifier
-			const char * getLogName() const throw();
 
 			//! maximum time waiting data
 			static double POLL_INTERVAL;

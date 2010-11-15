@@ -51,8 +51,6 @@ namespace KGD
 
 			double Base::SIZE_LOW = 1.0;
 			double Base::SIZE_FULL = HUGE_VAL;
-			double Base::SCALE_LIMIT = RTSP::PlayRequest::LINEAR_SCALE;
-			double Base::SCALE_STEP = 0;
 
 			Base::Base ( SDP::Medium::Base & sdp )
 			: _medium( sdp )
@@ -104,7 +102,7 @@ namespace KGD
 				while( ! b.empty() && b.back().getTime() >= from )
 				{
 					Log::verbose("%s: removing frame at %lf", getLogName(), b.back().getTime() );
-					b.erase( b.rbegin().base() );
+					b.pop_back();
 				}
 			}
 
@@ -120,7 +118,7 @@ namespace KGD
 				if ( b.size() <= 0 )
 					return 0.0;
 				else
-					return fabs ( (b.back().getTime() - b.front().getTime()) * _scale );
+					return (b.back().getTime() - b.front().getTime()) * _scale;
 			}
 
 
@@ -148,11 +146,16 @@ namespace KGD
 				return rt;
 			}
 
-			double Base::isBufferLow() const
+			Base::Frame::Fetch Base::fetchNextFrame()
+			{
+				return ( _scale >= 0 ? _frame.idx->next() : _frame.idx->prev() );
+			}
+
+			bool Base::isBufferLow() const
 			{
 				return this->getOutBufferTimeSize() < SIZE_LOW;
 			}
-			double Base::isBufferFull() const
+			bool Base::isBufferFull() const
 			{
 				return this->getOutBufferTimeSize() >= SIZE_FULL;
 			}
@@ -162,34 +165,45 @@ namespace KGD
 			AVFrame::AVFrame()
 			: Buffer::Base( )
 			, _running( false )
-			, _eof( false )
 			{
 			}
 
 			AVFrame::AVFrame ( SDP::Medium::Base & sdp )
 			: Buffer::Base ( sdp )
 			, _running( false )
-			, _eof( false )
 			{
+			}
+
+			AVFrame::~AVFrame()
+			{
+				Log::debug("%s: shutting down", getLogName() );
+				this->stop();
+				Log::verbose("%s: destroyed", getLogName() );
 			}
 
 			void AVFrame::start()
 			{
 				_frame.lock();
-				_eof = false;
 
 				if ( _th )
 				{
-					_frame.buf.empty.notify_all();
-					_frame.unlock();
-				}
-				else
-				{
-					_running = true;
-					_frame.unlock();
-					_th.reset( new boost::thread( boost::bind ( &AVFrame::fetch, this ) ) );
+					if ( _running )
+					{
+						_frame.unlock();
+						_frame.buf.empty.notify_all();
+						return;
+					}
+					else
+					{
+						_frame.unlock();
+						_th.reset();
+						_frame.lock();
+					}
 				}
 
+				_running = true;
+				_frame.unlock();
+				_th.reset( new boost::thread( boost::bind ( &AVFrame::fetch, this ) ) );
 			}
 
 			void AVFrame::stop()
@@ -208,96 +222,65 @@ namespace KGD
 					_th.reset();
 				}
 			}
-
-			AVFrame::~AVFrame()
-			{
-				Log::debug("%s: shutting down", getLogName() );
-				this->stop();
-				Log::verbose("%s: destroyed", getLogName() );
-			}
-
+				
 			void AVFrame::fetch()
 			{
 				Log::debug("%s: thread started", getLogName() );
 
-				for(;;)
+				try
 				{
-					struct Full { const bool brk; Full( bool b ) : brk( b ) {} };
-					try
+					for(;;)
 					{
 						// lock zone
 						Frame::Lock lk( _frame );
 
-						// if at end of file
-						// or buffer "full"
-						// or unsupported scale
-						// then go pause
-						while ( _running && ( _eof
-									|| ( this->isBufferFull() )
-									|| ( _medium->getType() == SDP::MediaType::Audio && _scale > SCALE_LIMIT ) ) )
-						{
+						// if buffer "full"
+						// wait empty signal
+						while ( _running && this->isBufferFull() )
 							_frame.buf.empty.wait ( lk );
-						}
-							
-						
-						// if told to stop, break loop
+
 						if ( _running )
 						{
+							auto_ptr< RTP::Frame::Base > newFrame;
+							// seek lock / give way
+							_th.yield( lk );
 							// fetch
-							try
-							{
-								auto_ptr< RTP::Frame::Base > newFrame;
+							Frame::Fetch next = this->fetchNextFrame();
+							if ( next )
+								try
 								{
-									lk.unlock();
-									{
-										Lock lkSeek( _seekMux );
-										lk.lock();
-										// advance iterator
-										const SDP::Frame::Base & next = _frame.idx->next();
-										try
-										{
-											// seek lock
-											newFrame.reset( Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next.getPayloadType() ) );
-											newFrame->setFrame( next );
-										}
-										catch( const KGD::Exception::Generic & e )
-										{
-											Log::error( "%s: %s", getLogName(), e.what() );
-										}
-									}
+									newFrame.reset( Factory::ClassRegistry< RTP::Frame::Base >::newInstance( next->getPayloadType() ) );
+									newFrame->setFrame( *next );
+									_frame.buf.data.push_back ( newFrame );
 								}
-								_frame.buf.data.push_back ( newFrame );
-
-								if ( !this->isBufferLow() )
+								catch( const KGD::Exception::Generic & e )
 								{
-									throw Full( false );
-								}									
-							}
-							catch( const KGD::Exception::OutOfBounds & e )
+									Log::error( "%s: %s", getLogName(), e.what() );
+								}
+
+							// signal frames
+							if ( !this->isBufferLow() )
 							{
-								Log::warning( "%s: %s", getLogName(), e.what() );
-								_eof = true;
-								_running = false;
-								throw Full( true );
+								Frame::UnLock ulk( lk );
+								_frame.buf.full.notify_all();
 							}
 						}
 						else
-						{
-							throw Full( true );
-						}
+							throw RTP::Eof();
 					}
-					catch( Full f )
-					{
-// 						Log::verbose( "%s: full", getLogName() );
-						_frame.buf.full.notify_all();
-						if ( f.brk )
-							break;
-					}
-
-					_th->yield();
+				}
+				catch( const KGD::Exception::OutOfBounds & e )
+				{
+					Log::warning( "%s: %s", getLogName(), e.what() );
+					_running = false;
+				}
+				catch( RTP::Eof )
+				{
+					Log::warning( "%s: EOF", getLogName() );
 				}
 
 				Log::debug( "%s: thread term sync", getLogName() );
+				_frame.buf.full.notify_all();
 				_th.wait();
 			}
 
@@ -305,65 +288,131 @@ namespace KGD
 			{
 				Frame::Lock lk( _frame );
 
-				// let's wait some data
-				while ( this->isBufferLow() && _running && !_eof )
-					_frame.buf.full.wait ( lk );
-
-				if ( _frame.buf.data.empty() )
-					throw RTP::Eof();
-				else
+				try
 				{
-					Frame::List::auto_type result = _frame.buf.data.pop_front();
-					// if buffer size is low, fetch thread must be awakened
-					// but only if video, or audio at supported speed
-					SDP::MediaType::kind mType = _medium->getType();
-					if ( ! _eof
-							&& ( ( mType == SDP::MediaType::Video ) || ( ( mType == SDP::MediaType::Audio ) && ( _scale <= SCALE_LIMIT ) ) )
-							&& this->isBufferLow() )
+					// let's wait some data
+					while ( _running && this->isBufferLow() )
+						_frame.buf.full.wait ( lk );
+
+					if ( _frame.buf.data.empty() )
+						throw RTP::Eof();
+					else
 					{
-						Frame::UnLock ulk( lk );
-						_frame.buf.empty.notify_all();
+						Frame::List::auto_type result = _frame.buf.data.pop_front();
+						// if buffer size is low, fetch thread must be awakened
+						if ( _running && this->isBufferLow() )
+						{
+							Frame::UnLock ulk( lk );
+							_frame.buf.empty.notify_all();
+						}
+
+						return result.release()->asPtrUnsafe< RTP::Frame::AVMedia >();
 					}
-
-// 					Log::verbose("%s: giving out frame key: %d", getLogName(), result->isKey() );
-
-					return result.release()->asPtrUnsafe< RTP::Frame::AVMedia >();
+				}
+				catch( boost::thread_interrupted )
+				{
+					throw RTP::Eof();
 				}
 			}
-
-			void AVFrame::insertMedium( SDP::Medium::Base & m, double t ) throw( KGD::Exception::OutOfBounds )
-			{
-				Lock lkSeek( _seekMux );
-				Base::insertMedium( m, t );
-			}
-
-			void AVFrame::insertTime( double duration, double t ) throw( KGD::Exception::OutOfBounds )
-			{
-				Lock lkSeek( _seekMux );
-				Base::insertTime( duration, t );
-			}
-
-			double AVFrame::drySeek(double t, double s ) throw( KGD::Exception::OutOfBounds )
-			{
-				Lock lkSeek( _seekMux );
-				return Base::drySeek( t, s );
-			}
-
 
 			void AVFrame::seek ( double t, double scale ) throw( KGD::Exception::OutOfBounds )
 			{
 				{
-					Lock lkSeek( _seekMux );
 					Frame::Lock lk( _frame );
 
 					this->clear();
 
 					_frame.idx->seek( t );
-					_scale  = fabs ( scale );
+					_scale  = scale;
 
 					Log::debug("%s: seeked at %lf x %0.2lf", getLogName(), t, scale );
 				}
 				this->start();
+			}
+
+
+			// ***********************************************************************************************
+
+			namespace Audio
+			{
+				Base::Base()
+				: AVFrame::AVFrame( )
+				{
+				}
+
+				Base::Base ( SDP::Medium::Base & sdp )
+				: AVFrame::AVFrame ( sdp )
+				{
+				}
+
+				bool Base::isBufferLow() const
+				{
+					return ( _running && _scale < 0.0 )|| Buffer::Base::isBufferLow();
+				}
+				bool Base::isBufferFull() const
+				{
+					return ( _running && _scale < 0.0 ) || Buffer::Base::isBufferFull();
+				}
+
+				Base::Frame::Fetch Base::fetchNextFrame()
+				{
+					ref< const SDP::Frame::Base > rt;
+
+					if ( _scale > 0.0 )
+					{
+						size_t n = 0;
+						do
+							rt = Buffer::Base::fetchNextFrame();
+						while ( _scale > 2.0 && ++ n < _scale );
+					}
+
+					return rt;
+				}
+			}
+			
+			// ***********************************************************************************************
+
+			namespace Video
+			{
+				Base::Base()
+				: AVFrame::AVFrame( )
+				, _lastKeyTime( -1 )
+				{
+				}
+
+				Base::Base ( SDP::Medium::Base & sdp )
+				: AVFrame::AVFrame ( sdp )
+				, _lastKeyTime( -1 )
+				{
+				}
+
+				void Base::clear()
+				{
+					Buffer::Base::clear();
+					_lastKeyTime = -1;
+				}
+
+				Base::Frame::Fetch Base::fetchNextFrame()
+				{
+					ref< const SDP::Frame::MediaFile > rt;
+					size_t n = 0;
+					do
+						rt = Buffer::Base::fetchNextFrame()->as< SDP::Frame::MediaFile >();
+						// in speed (0,1] everything is fetched
+						// above or below, one every scale
+						// above or below, only distanced key frames
+					while ( !
+						(	( _scale > 0 && _scale <= 1.0 )
+						|| 	( rt->isKey() && ++ n < _scale )
+// 						|| 	( rt->isKey() && ( _lastKeyTime < 0 || ( rt->getTime() - _lastKeyTime ) / _scale >= 0.2 ) )
+						)
+					);
+					
+// 					if ( rt->isKey() )
+// 						_lastKeyTime = rt->getTime();
+
+					return rt;
+				}
 			}
 		}
 	}

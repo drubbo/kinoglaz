@@ -103,8 +103,6 @@ namespace KGD
 			_rtcp.start( *this );
 
 			this->seqRestart();
-
-			Log::debug( "%s: ssrc %lX", getLogName(), _ssrc );
 		}
 
 		Session::~Session()
@@ -222,104 +220,120 @@ namespace KGD
 				OwnThread::Lock lk( _th );
 				Log::debug( "%s: loop start, for %lf s", getLogName(), _timeEnd );
 
-				try
+				uint64_t slp = 0;
+				double now = 0, spd = 0;
+				double ft = this->fetchNextFrame( lk ) ;
+				_rtcp.sender->restart();
+				_rtcp.sender->wait();
+
+				// main loop
+				while (!_status.bag[ Status::STOPPED ])
 				{
-					uint64_t slp = 0;
-					double now = 0, spd = 0;
-					double ft = this->fetchNextFrame( lk ) ;
-
-	// 				Log::verbose("%s: loop got frame at %lf s", getLogName(), ft );
-
-					while (!_status.bag[ Status::STOPPED ])
+					Log::verbose("%s: main loop entered", getLogName() );
+					// pause
+					while( _status.bag[ Status::PAUSED ] )
 					{
-						Log::verbose("%s: main loop entered", getLogName() );
-						while( _status.bag[ Status::PAUSED ] )
+						Log::debug( "%s: go pause", getLogName() );
+						_frame.rate.stop();
+						_rtcp.sender->pause();
+						_rtcp.receiver->pause();
+						// signal "going to pause"
+						if ( _pause.sync )
 						{
-							Log::debug( "%s: go pause", getLogName() );
-							// signal "going to pause"
-							if ( _pause.sync )
-							{
-								OwnThread::UnLock ulk( lk );
-								Log::debug( "%s: pause sync", getLogName() );
-								_pause.asleep.wait();
-							}
-							// wait wakeup
-							_pause.wakeup.wait( lk );
-							Log::debug( "%s: wakeup from pause", getLogName() );
+							OwnThread::UnLock ulk( lk );
+							Log::debug( "%s: pause sync", getLogName() );
+							_pause.asleep.wait();
 						}
 
-						try
-						{
-							// exit loop if stopped, paused, or stream time has ended
-							do
-							{
-								// calc sleep while holding last fetched frame
-								{
-									// send frames while their time is before now
-									do
-									{
-										this->sendNextFrame( );
-										ft = this->fetchNextFrame( lk );
+						// wait wakeup
+						_pause.wakeup.wait( lk );
 
-										now = _frame.time->getPresentationTime();
-										spd = _frame.time->getSpeed();
-									}
-									while ( ( ft - now ) * sign( spd ) <= 0.0 );
-									// this will always be positive
-									slp = Clock::secToNano( ( ft - now ) / spd );
-								}
-								// don't sleep if nothing to wait for
-								if ( _frame.next )
+						Log::verbose( "%s: wakeup from pause", getLogName() );
+						if ( ! _status.bag[ Status::STOPPED ] )
+						{
+							Log::verbose( "%s: awaking RTCP receiver", getLogName() );
+							_rtcp.receiver->unpause();
+							_rtcp.sender->restart();
+							Log::verbose( "%s: waiting RTCP sender", getLogName() );
+							_rtcp.sender->wait();
+							_frame.rate.start();
+						}
+					}
+
+					try
+					{
+						// send loop
+						// exit if stopped, paused, or stream time has ended
+						do
+						{
+							// calc sleep while holding last fetched frame
+							{
+								// send frames while their time is before now
+								do
 								{
-									{
-										OwnThread::UnLock ulk( lk );
-										KGD::Clock::sleepNano( slp );
-									}
+									this->sendNextFrame( );
+									ft = this->fetchNextFrame( lk );
+
 									now = _frame.time->getPresentationTime();
 									spd = _frame.time->getSpeed();
 								}
+								while ( ( ft - now ) * sign( spd ) <= 0.0 );
+								// this will always be positive
+								slp = Clock::secToNano( ( ft - now ) / spd );
 							}
-							while( !( _status.bag[ Status::STOPPED ] || _status.bag[ Status::PAUSED ] || ( _timeEnd - now ) * sign( spd ) <= 0.0 ) );
-						}
-						catch ( KGD::Socket::Exception const & e )
-						{
-							Log::error( "%s: %s", getLogName(), e.what() );
-							throw;
-						}
-						catch ( RTP::Eof )
-						{
-							Log::message("%s: reached EOF", getLogName() );
-						}
-						catch ( KGD::Exception::Generic const & e)
-						{
-							Log::error( "%s: %s", getLogName(), e.what() );
-						}
-						// reached EOF or told to pause
-						if ( !_status.bag[ Status::STOPPED ] )
-						{
-							if ( !_status.bag[ Status::PAUSED ] )
+							// don't sleep if nothing to wait for
+							if ( _frame.next )
 							{
-								Log::message( "%s: self pausing", getLogName() );
-								_status.bag[ Status::PAUSED ] = true;
-								_pause.sync = false;
-								_frame.rate.stop();
-								_frame.time->pause( Clock::getSec() );
+								{
+									OwnThread::Interruptible intr( _th );
+									try
+									{
+// 										Log::verbose( "%s sleeping for %lf", getLogName(), Clock::nanoToSec(slp) );
+										_th.sleepNano( lk, slp );
+									}
+									catch( boost::thread_interrupted )
+									{
+										Log::debug("%s was awakened during inter-frame sleep", getLogName());
+									}
+								}
+								now = _frame.time->getPresentationTime();
+								spd = _frame.time->getSpeed();
 							}
+						}
+						while( !( _status.bag[ Status::STOPPED ] || _status.bag[ Status::PAUSED ] || ( _timeEnd - now ) * sign( spd ) <= 0.0 ) );
+					}
+					catch ( RTP::Eof )
+					{
+						Log::message("%s: reached EOF", getLogName() );
+						_rtcp.sender->stop();
+					}
+					catch ( KGD::Exception::Generic const & e)
+					{
+						Log::error( "%s: %s", getLogName(), e.what() );
+					}
+					// out of send loop, go pause
+					if ( !_status.bag[ Status::STOPPED ] )
+					{
+						if ( !_status.bag[ Status::PAUSED ] )
+						{
+							Log::message( "%s: self pausing", getLogName() );
+							_status.bag[ Status::PAUSED ] = true;
+							_pause.sync = false;
+							_frame.time->pause( Clock::getSec() );
 						}
 					}
 				}
-				catch ( const KGD::Exception::Generic & e)
-				{
-					Log::error( "%s: loop interrupted: %s", getLogName(), e.what() );
-				}
+
 				Log::verbose( "%s: main loop exited", getLogName() );
 
 				_status.bag[ Status::STOPPED ] = true;
 				_status.bag[ Status::PAUSED ]  = false;
 
-				Log::debug( "%s: stopping rtcp sender", getLogName() );
+				Log::verbose( "%s: stopping RTCP sender", getLogName() );
 				_rtcp.sender->stop();
-				Log::debug( "%s: stopping buffer", getLogName() );
+				Log::verbose( "%s: stopping RTCP Receiver", getLogName() );
+				_rtcp.receiver->stop();
+				Log::verbose( "%s: stopping buffer", getLogName() );
 				_frame.buf->stop();
 			}
 

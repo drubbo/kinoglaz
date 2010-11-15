@@ -60,6 +60,11 @@ extern "C"
 
 using namespace std;
 
+namespace cv
+{
+	class VideoCapture;
+}
+
 namespace KGD
 {
 	namespace SDP
@@ -75,6 +80,9 @@ namespace KGD
 		: public boost::noncopyable
 		{
 		protected:
+			typedef boost::ptr_map< uint8_t, Medium::Base > MediaMap;
+			typedef Safe::Thread< RMutex > OwnThread;
+
 			//! resource name
 			string _fileName;
 			//! resource description
@@ -84,22 +92,24 @@ namespace KGD
 			//! medium bit rate
 			int _bitRate;
 
-			typedef boost::ptr_map< uint8_t, Medium::Base > MediaMap;
 			//! medium list
 			MediaMap _media;
 
-			typedef Safe::Thread< RMutex > OwnThread;
 			//! load frame thread
 			OwnThread _th;
 			//! is load frame thread running ?
 			bool _running;
 
+			//! constantly fetches frames from video device
+			void loadLiveCast() throw( SDP::Exception::Generic );
+			//! live cast thread loop
+			void liveCastLoop( AVFormatContext*, AVCodecContext* );
 			//! loads a kinoglaz playlist
 			void loadPlayList() throw( SDP::Exception::Generic );
 			//! loads a media container
 			void loadMediaContainer() throw( SDP::Exception::Generic );
 			//! load index thread loop
-			void loadFrameIndex( AVFormatContext *fctx );
+			void mediaContainerLoop( AVFormatContext* );
 
 			//! log identifier
 			const string _logName;
@@ -121,8 +131,10 @@ namespace KGD
 			const char * getLogName() const throw();
 			//! returns unique identifier for this descriptor
 			const string & getUniqueIdentifier() const throw();
-			//! returns duration
+			//! returns duration - HUGE_VAL for livecasts
 			double getDuration() const;
+			//! tells if this description refers to a livecast
+			bool isLiveCast() const;
 			//! returns protocol reply using session ID as description
 			string getReply( const Url &, const RTSP::TSessionID & ) const throw();
 			//! returns protocol reply with a given description for the session; internal description is used if none given

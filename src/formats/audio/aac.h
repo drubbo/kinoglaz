@@ -48,15 +48,15 @@ namespace KGD
 			{
 				//! AAC audio medium descriptor
 				class AAC
-				: public Base
-				, public Factory::Multiton< Base, AAC, CODEC_ID_AAC >
+				: public Medium::Base
+				, public Factory::Multiton< Medium::Base, AAC, CODEC_ID_AAC >
 				{
 				protected:
 					int _nChannels;
 
 					AAC( );
 					AAC( const AAC & );
-					friend class Factory::Multi< Base, AAC >;
+					friend class Factory::Multi< Medium::Base, AAC >;
 				public:
 					//! clone informations
 					virtual AAC* getInfoClone() const throw();
@@ -76,13 +76,13 @@ namespace KGD
 			namespace Audio
 			{
 				class AAC
-				: public AVFrame
-				, public Factory::Multiton< Base, AAC, SDP::Payload::AudioAAC >
+				: public Audio::Base
+				, public Factory::Multiton< Buffer::Base, AAC, SDP::Payload::AudioAAC >
 				{
 				protected:
 					//! factory ctor
 					AAC();
-					friend class Factory::Multi< Base, AAC >;
+					friend class Factory::Multi< Buffer::Base, AAC >;
 				};
 			}
 		}
@@ -93,12 +93,12 @@ namespace KGD
 			{
 				//! AAC audio packetization
 				class AAC
-				: public AVMedia
-				, public Factory::Multiton< Base, AAC, SDP::Payload::AudioAAC >
+				: public Frame::AVMedia
+				, public Factory::Multiton< Frame::Base, AAC, SDP::Payload::AudioAAC >
 				{
 				protected:
 					AAC();
-					friend class Factory::Multi< Base, AAC >;
+					friend class Factory::Multi< Frame::Base, AAC >;
 				public:
 					//! AAC audio packetization
 					virtual auto_ptr< boost::ptr_list< Packet > > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );

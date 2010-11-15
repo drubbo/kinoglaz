@@ -83,9 +83,6 @@ namespace KGD
 			//! buffer of data to send
 			Buffer _buffer;
 
-			//! log identifier
-			const string _logName;
-
 			//! main loop
 			virtual void run();
 
@@ -106,10 +103,9 @@ namespace KGD
 			//! dtor
 			~Sender();
 
-			//! get log identifier
-			const char * getLogName() const throw();
-
-			//! restart the sender, so next delivery will be immediate
+			//! reset packet and octect count
+			void reset();
+			//! restart the sender requesting rtp sync
 			void restart();
 			//! calling thread (RTP session) will wait for sync on a 2-input barrier
 			void wait();

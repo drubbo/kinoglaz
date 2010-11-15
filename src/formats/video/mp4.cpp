@@ -44,12 +44,12 @@ namespace KGD
 			namespace Video
 			{
 				MP4::MP4( )
-				: Base( MediaType::Video, Payload::VideoMPEG4 )
+				: Medium::Base( MediaType::Video, Payload::VideoMPEG4 )
 				{
 				}
 
 				MP4::MP4( const MP4 & m )
-				: Base( m )
+				: Medium::Base( m )
 				{
 
 				}

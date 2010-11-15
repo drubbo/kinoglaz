@@ -53,16 +53,24 @@ namespace KGD
 
 		PlayRequest& PlayRequest::merge( const PlayRequest & rq )
 		{
-			if ( rq.hasRange )
-			{
-				hasRange = true;
-				from = min( from, rq.from );
-				to = min( to, rq.to );
-			}
 			if ( rq.hasScale )
 			{
 				speed = rq.speed;
 				hasScale = true;
+			}
+			if ( rq.hasRange )
+			{
+				hasRange = true;
+				if ( ! mediaType || *mediaType != SDP::MediaType::Video )
+				{
+					if ( rq.mediaType && *rq.mediaType == SDP::MediaType::Video )
+						from = rq.from;
+					else
+						from = signedMin( from, rq.from, sign( speed ) );
+					mediaType = rq.mediaType;
+				}
+				
+				to = signedMax( to, rq.to, sign( speed ) );
 			}
 
 			return *this;
@@ -77,10 +85,11 @@ namespace KGD
 
 		namespace UserAgent
 		{
-			string name[3] = {
+			string name[4] = {
 				"Generic",
 				"VLC 1.0.2",
-				"VLC 1.0.6"
+				"VLC 1.0.6",
+				"VLC 1.1.4"
 			};
 		}
 	}

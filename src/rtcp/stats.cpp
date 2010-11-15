@@ -35,6 +35,7 @@
 
 #include "rtcp/stats.h"
 #include "lib/log.h"
+#include "rtp/session.h"
 
 namespace KGD
 {
@@ -68,12 +69,18 @@ namespace KGD
 		}
 
 
-		Thread::Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock )
+		Thread::Thread( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & sock, const char * name )
 		: _rtp( s )
 		, _sock( sock )
+		, _logName( s.getLogName() + string(" RTCP ") + name )
 		{
 			_flags.bag[ Status::RUNNING ] = false;
 			_flags.bag[ Status::PAUSED ] = false;
+		}
+
+		const char * Thread::getLogName() const throw()
+		{
+			return _logName.c_str();
 		}
 
 		Thread::~Thread()
@@ -90,6 +97,7 @@ namespace KGD
 			if ( !_flags.bag[ Status::RUNNING ] )
 			{
 				_flags.bag[ Status::RUNNING ] = true;
+				_flags.bag[ Status::PAUSED ] = false;
 				_th.unlock();
 				_th.reset( new boost::thread(boost::bind(&Thread::run,this)) );
 			}
@@ -101,26 +109,44 @@ namespace KGD
 			}
 		}
 
+		void Thread::doPause( OwnThread::Lock &lk )
+		{
+			while( _flags.bag[ Status::PAUSED ] )
+				NO_INTERRUPT( _wakeup.wait( lk ) )
+		}
+
 		void Thread::pause()
 		{
-			OwnThread::Lock lk( _th );
-			_flags.bag[ Status::PAUSED ] = true;
+			_th.lock();
+			if ( _flags.bag[ Status::RUNNING ] && ! _flags.bag[ Status::PAUSED ] )
+			{
+				_flags.bag[ Status::PAUSED ] = true;
+				_th.unlock();
+				_th.interrupt();
+			}
+			else
+				_th.unlock();
 		}
 
 		void Thread::unpause()
 		{
 			_th.lock();
-			if ( _flags.bag[ Status::PAUSED ] )
+			if ( _flags.bag[ Status::RUNNING ] )
 			{
-				_flags.bag[ Status::PAUSED ] = false;
-				_th.unlock();
-				_wakeup.notify_all();
+				if ( _flags.bag[ Status::PAUSED ] )
+				{
+					_flags.bag[ Status::PAUSED ] = false;
+					_th.unlock();
+					_wakeup.notify_all();
+				}
+				else
+				{
+					_th.unlock();
+					_th.interrupt();
+				}
 			}
-			else if ( _flags.bag[ Status::RUNNING ] )
-			{
+			else
 				_th.unlock();
-				_th->interrupt();
-			}
 		}
 
 		void Thread::stop()
@@ -141,7 +167,7 @@ namespace KGD
 					else
 					{
 						_th.unlock();
-						_th->interrupt();
+						_th.interrupt();
 					}
 				}
 				else

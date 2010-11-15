@@ -37,7 +37,7 @@
 
 #include "lib/common.h"
 #include "lib/utils/singleton.hpp"
-#include "sdp/session.h"
+#include "sdp/container.h"
 
 #include <string>
 #include <map>

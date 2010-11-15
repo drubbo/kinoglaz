@@ -59,8 +59,7 @@ namespace KGD
 		}
 
 		Receiver::Receiver( RTP::Session & s, const boost::shared_ptr< Channel::Bi > & chan )
-		: Thread( s, chan )
-		, _logName( s.getLogName() + string(" RTCP Receiver") )
+		: Thread( s, chan, "Receiver" )
 		, _poll( POLL_INTERVAL )
 		{
 			
@@ -69,11 +68,6 @@ namespace KGD
 		Receiver::~Receiver()
 		{
 			Log::verbose( "%s: destroying", getLogName() );
-		}
-
-		const char * Receiver::getLogName() const throw()
-		{
-			return _logName.c_str();
 		}
 
 		void Receiver::updateStats( const ReceiverReport::Payload & pRR )
@@ -303,8 +297,18 @@ namespace KGD
 
 		void Receiver::waitMore() throw()
 		{
-			Log::warning( "%s: increment read timeout to %lf", getLogName(), _poll * 1.2 );
-			_poll *= 1.2;
+			if ( ! _flags.bag[ Status::PAUSED ] )
+			{
+				Log::warning( "%s: increment read timeout to %lf", getLogName(), _poll * 1.2 );
+				_poll *= 1.2;
+				_sock->setReadTimeout( _poll );
+			}
+		}
+
+		void Receiver::waitLess() throw()
+		{
+			Log::warning( "%s: decrement read timeout to %lf", getLogName(), _poll / 1.2 );
+			_poll /= 1.2;
 			_sock->setReadTimeout( _poll );
 		}
 
@@ -318,11 +322,7 @@ namespace KGD
 
 				while( _flags.bag[ Status::RUNNING ] )
 				{
-					while( _flags.bag[ Status::PAUSED ] )
-					{
-						Log::message( "%s: paused", getLogName() );
-						_wakeup.wait( lk );
-					}
+					this->doPause( lk );
 
 					if ( _flags.bag[ Status::RUNNING ] )
 					{
@@ -330,12 +330,13 @@ namespace KGD
 						{
 							ssize_t read = 0;
 							Log::verbose( "%s waiting message", getLogName() );
-							{
-								OwnThread::UnLock ulk( lk );
-								read = _sock->readSome( buffer ) ;
-							}
+							OwnThread::Interruptible intr( _th );
+							read = _sock->readSome( lk, buffer.get(), buffer.size() ) ;
 							if ( read > 0 )
+							{
 								this->push( buffer.get(), read );
+								this->waitLess();
+							}
 							else
 								Log::warning( "%s: no data read", getLogName() );
 							

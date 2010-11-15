@@ -39,6 +39,7 @@
 #include "lib/socket.h"
 #include "lib/common.h"
 #include "lib/log.h"
+#include "lib/utils/safe.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -56,6 +57,21 @@ extern "C" {
 
 namespace KGD
 {
+	namespace Channel
+	{
+		size_t In::readSome(Lock & lk, void * data, size_t sz) throw( KGD::Exception::Generic )
+		{
+			Safe::UnLock ulk( lk );
+			return this->readSome( data, sz );
+		}
+
+		size_t In::readSome(RLock & lk, void * data, size_t sz) throw( KGD::Exception::Generic )
+		{
+			Safe::UnRLock ulk( lk );
+			return this->readSome( data, sz );
+		}
+	}
+
 	namespace Socket
 	{
 		double READ_TIMEOUT = 0.1;

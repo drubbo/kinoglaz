@@ -197,8 +197,8 @@ namespace KGD
 			//! returns RTCP channel description
 			Channel::Description RTCPgetDescription() const throw();
 
-			//! returns the time after t when another medium can be inserted
-			double evalMediumInsertion( double t ) throw( KGD::Exception::OutOfBounds );
+			//! returns the time after t when another medium can be inserted; HUGE_VAL means ASAP
+			double evalMediumInsertion( double t = HUGE_VAL ) throw( KGD::Exception::OutOfBounds );
 			//! inserts a new medium into current, starting not before time t
 			void insertMedium( SDP::Medium::Base &, double t ) throw( KGD::Exception::OutOfBounds );
 			//! inserts a delay into current medium, starting not before time t

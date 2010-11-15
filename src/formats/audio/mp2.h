@@ -48,16 +48,16 @@ namespace KGD
 			{
 				//! Mpeg2 audio medium descriptor
 				class MP2
-				: public Base
-				, public Factory::Multiton< Base, MP2, CODEC_ID_MP2 >
+				: public Medium::Base
+				, public Factory::Multiton< Medium::Base, MP2, CODEC_ID_MP2 >
 #if !MP3_ADU
-				, public Factory::Multiton< Base, MP2, CODEC_ID_MP3 >
+				, public Factory::Multiton< Medium::Base, MP2, CODEC_ID_MP3 >
 #endif
 				{
 				protected:
 					MP2( );
 					MP2( const MP2 & );
-					friend class Factory::Multi< Base, MP2 >;
+					friend class Factory::Multi< Medium::Base, MP2 >;
 				public:
 					//! clone informations
 					virtual MP2* getInfoClone() const throw();
@@ -75,13 +75,13 @@ namespace KGD
 			namespace Audio
 			{
 				class MP2
-				: public AVFrame
-				, public Factory::Multiton< Base, MP2, SDP::Payload::AudioMPA >
+				: public Audio::Base
+				, public Factory::Multiton< Buffer::Base, MP2, SDP::Payload::AudioMPA >
 				{
 				protected:
 					//! factory ctor
 					MP2();
-					friend class Factory::Multi< Base, MP2 >;
+					friend class Factory::Multi< Buffer::Base, MP2 >;
 				};
 			}
 		}
@@ -93,11 +93,11 @@ namespace KGD
 				//! mpeg2 audio packetization
 				class MP2
 				: public AVMedia
-				, public Factory::Multiton< Base, MP2, SDP::Payload::AudioMPA >
+				, public Factory::Multiton< Frame::Base, MP2, SDP::Payload::AudioMPA >
 				{
 				protected:
 					MP2();
-					friend class Factory::Multi< Base, MP2 >;
+					friend class Factory::Multi< Frame::Base, MP2 >;
 				public:
 					//! mpeg2 audio packetization
 					virtual auto_ptr< Packet::List > getPackets( RTP::TTimestamp , TSSrc , TCseq & ) throw( Exception::OutOfBounds );

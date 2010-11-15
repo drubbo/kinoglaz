@@ -53,9 +53,6 @@ namespace KGD
 		const double NSEC_2_SEC = 0.000000001;
 		//! factor to get nano from seconds
 		const uint64_t SEC_2_NSEC = 1000000000u;
-
-		//! boost absolute time relative to current
-		boost::posix_time::ptime boostDeltaSec( double sec ) throw();
 		
 		//! returns current time in sec and fills given structure
 		double getSec( timespec *now ) throw();

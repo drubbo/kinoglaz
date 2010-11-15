@@ -102,18 +102,15 @@ namespace KGD
 		{
 			Log::debug("%s: stopping", getLogName() );
 
-			_recv.lock();
 			if ( _running )
 			{
 				Log::verbose( "%s: notify readers", getLogName() );
 				_running = false;
-				_recv.unlock();
 				_condNotEmpty.notify_all();
 			}
 			else
 			{
 				Log::verbose( "%s: channel already stopped", getLogName() );
-				_recv.unlock();
 			}
 		}
 
@@ -127,9 +124,9 @@ namespace KGD
 				.set( data, sz, 4 );
 
 			{
-				TcpTunnel::Lock lk( _sock );
 				if ( _running )
 				{
+					TcpTunnel::Lock lk( _sock );
 					// not counting header bytes
 					return (*_sock)->writeSome( envelope.get(), envelope.size() ) - 4;
 				}
@@ -140,9 +137,9 @@ namespace KGD
 
 		size_t Interleave::writeLast( void const * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			TcpTunnel::Lock lk( _sock );
 			if ( _running )
 			{
+				TcpTunnel::Lock lk( _sock );
 				(*_sock)->setLastPacket( true );
 				return this->writeSome( data, sz );
 			}
@@ -150,29 +147,16 @@ namespace KGD
 				throw KGD::Socket::Exception( "writeLast", "connection shut down" );
 		}
 
-		size_t Interleave::readSome( void * data, size_t sz ) throw( KGD::Socket::Exception )
+		template< class L >
+		size_t Interleave::readSome( L & lk, void * data, size_t sz ) throw( KGD::Socket::Exception )
 		{
-			InputBuffer::Lock lk( _recv );
+			Log::debug( "%s: locked readSome", getLogName() );
 			while( _running )
 			{
-				// have data
-				if ( ! (*_recv).empty() )
-				{
-					Log::verbose( "%s: socket has data", getLogName() );
-					ByteArray & buf = (*_recv).front();
-					size_t rt = buf.copyTo( data, sz );
-					if ( rt >= buf.size() )
-						(*_recv).pop_front();
-					else
-						buf.chopFront( rt );
-					return rt;
-				}
-				// read is not blocking
-				else if ( _rdTimeout == 0 )
-				{
-					Log::verbose( "%s: socket non blocking, no data", getLogName() );
-					return 0;
-				}
+				size_t readSz = this->readSome( data, sz );
+				// got data or read is not blocking
+				if ( readSz > 0 || _rdTimeout == 0 )
+					return readSz;
 				// read is blocking or timed blocking
 				else
 				{
@@ -185,7 +169,7 @@ namespace KGD
 						// timed, wait at most timeout
 						else
 						{
-							if ( _condNotEmpty.timed_wait( lk, Clock::boostDeltaSec( _rdTimeout ) ) )
+							if ( _condNotEmpty.timed_wait( lk, boost::get_system_time() + boost::posix_time::seconds( _rdTimeout ) ) )
 								Log::verbose( "%s: data arrived", getLogName(), _rdTimeout );
 							else
 							{
@@ -204,6 +188,43 @@ namespace KGD
 
 			Log::warning( "%s: socket has stopped", getLogName() );
 			throw KGD::Socket::Exception( "readSome", "connection shut down" );
+		}
+
+		size_t Interleave::readSome( Lock & lk, void * data, size_t sz ) throw( KGD::Socket::Exception )
+		{
+			return this->readSome< Lock >( lk, data, sz );
+		}
+
+		size_t Interleave::readSome( RLock & lk, void * data, size_t sz ) throw( KGD::Socket::Exception )
+		{
+			return this->readSome< RLock >( lk, data, sz );
+		}
+
+		size_t Interleave::readSome( void * data, size_t sz ) throw( KGD::Socket::Exception )
+		{
+			if( _running )
+			{
+				InputBuffer::Lock lk( _recv );
+				// have data
+				if ( (*_recv).empty() )
+					return 0;
+				else
+				{
+					Log::verbose( "%s: socket has data", getLogName() );
+					ByteArray & buf = (*_recv).front();
+					size_t rt = buf.copyTo( data, sz );
+					if ( rt >= buf.size() )
+						(*_recv).pop_front();
+					else
+						buf.chopFront( rt );
+					return rt;
+				}
+			}
+			else
+			{
+				Log::warning( "%s: socket has stopped", getLogName() );
+				throw KGD::Socket::Exception( "readSome", "connection shut down" );
+			}
 		}
 
 		bool Interleave::isWriteBlock( ) const throw()

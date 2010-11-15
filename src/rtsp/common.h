@@ -35,6 +35,7 @@
 #ifndef __KGD_RTSP_COMMON_H
 #define __KGD_RTSP_COMMON_H
 
+#include "sdp/common.h"
 #include "lib/common.h"
 #include <string>
 
@@ -66,6 +67,8 @@ namespace KGD
 			double to;
 			//! play speed
 			double speed;
+			//! origin media type during RTP session manip
+			boost::optional< SDP::MediaType::kind > mediaType;
 
 			//! construct with default and empty values
 			PlayRequest();
@@ -84,7 +87,8 @@ namespace KGD
 				Generic,
 				//! VLC GoldenEye
 				VLC_1_0_2,
-				VLC_1_0_6
+				VLC_1_0_6,
+				VLC_1_1_4
 			};
 
 			extern string name[];

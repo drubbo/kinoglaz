@@ -206,8 +206,10 @@ namespace KGD
 				// guess common parameters
 				PlayRequest rt( rq );
 				BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
+				{
 					rt.merge( sess->second->eval( rq ) );
-					
+					Log::debug("%s: merge: %s", getLogName(), rt.toString().c_str() );
+				}
 
 				Log::debug( "%s: play setup with %s", getLogName(), rt.toString().c_str() );
 				// set it up
@@ -272,6 +274,7 @@ namespace KGD
 			// insert mediums with correspondent payload type
 			// get media to insert
 			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
+			double otherDuration = other.getDuration();
 			// for every local medium
 			BOOST_FOREACH( SessionMap::iterator::reference sess, _sessions )
 			{
@@ -293,8 +296,8 @@ namespace KGD
 				// no correspondence found, add void
 				if ( !found )
 				{
-					Log::debug( "%s: media insert: add void to payload type %u", getLogName(), sessMed.getPayloadType() );
-					sess->second->insertTime( other.getDuration(), insertTime );
+					Log::debug( "%s: media insert: add %lf void to payload type %u", getLogName(), otherDuration, sessMed.getPayloadType() );
+					sess->second->insertTime( otherDuration, insertTime );
 				}
 			}
 

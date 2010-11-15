@@ -44,6 +44,7 @@
 #include "lib/urlencode.h"
 #include "lib/utils/factory.hpp"
 #include "lib/utils/safe.hpp"
+#include "lib/utils/ref.hpp"
 
 #include <boost/detail/atomic_count.hpp>
 #include <string>
@@ -79,6 +80,8 @@ namespace KGD
 				typedef boost::ptr_vector< boost::nullable< Frame::Base > > FrameList;
 				friend class SDP::Container;
 			protected:
+				//! ref to container
+				ref< SDP::Container > _container;
 				//! file name
 				string _fileName;
 				//! track name (file name with track index)
@@ -93,8 +96,6 @@ namespace KGD
 				uint8_t _index;
 				//! duration
 				double _duration;
-				//! time shift to add to new added frames if insertions were made
-				double _frameTimeShift;
 				//! frame time base
 				double _timeBase;
 				//! frame frequence base
@@ -114,6 +115,8 @@ namespace KGD
 					FrameList list;
 					//! condition for iterators to wait for more frames
 					mutable Condition available;
+					//! time shift to add to new added frames if insertions were made
+					double timeShift;
 				} _frame;
 
 				//! iterator stuff
@@ -150,14 +153,15 @@ namespace KGD
 
 				//!@{
 				//! set medium information - just the container can
-				void setPayloadType(Payload::type);
-				void setRate(int);
-				void setIndex(uint8_t);
-				void setType(MediaType::kind);
-				void setTimeBase(double);
-				void setDuration(double);
-				void setFileName(const string &);
-				void setExtraData( void const * const, size_t );
+				void setContainer(SDP::Container&) throw();
+				void setPayloadType(Payload::type) throw();
+				void setRate(int) throw();
+				void setIndex(uint8_t) throw();
+				void setType(MediaType::kind) throw();
+				void setTimeBase(double) throw();
+				void setDuration(double) throw();
+				void setFileName(const string &) throw();
+				void setExtraData( void const * const, size_t ) throw();
 				//!@}
 
 				//! util for extradata
@@ -175,16 +179,19 @@ namespace KGD
 
 				//!@{
 				//! retrieve medium information
-				Payload::type getPayloadType() const;
-				int getRate() const;
-				uint8_t getIndex() const;
-				MediaType::kind getType() const;
-				double getTimeBase() const;
-				double getDuration() const;
-				const ByteArray & getExtraData() const;
-				const string & getFileName() const;
-				const string & getTrackName() const;
+				Payload::type getPayloadType() const throw();
+				int getRate() const throw();
+				uint8_t getIndex() const throw();
+				MediaType::kind getType() const throw();
+				double getTimeBase() const throw();
+				double getDuration() const throw();
+				const ByteArray & getExtraData() const throw();
+				const string & getFileName() const throw();
+				const string & getTrackName() const throw();
 				//!@}
+
+				//! is this medium referred to a live cast ?
+				bool isLiveCast() const throw();
 
 				//! set a new iterator model
 				void setFrameIteratorModel( Iterator::Base * ) throw();
@@ -210,6 +217,8 @@ namespace KGD
 				void loop( uint8_t = 0 ) throw();
 
 			private:
+				//! internal insert utility
+				void insert( FrameList::iterator at, double offset, double shift, Iterator::Base & otherFrames );
 				//! release iterator
 				void releaseIterator() throw();
 				friend class Iterator::Default;

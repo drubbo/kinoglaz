@@ -53,10 +53,14 @@
 #include <iomanip>
 #include <iostream>
 
+#include <boost/foreach.hpp>
+
 extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavdevice/avdevice.h>
+#include <libswscale/swscale.h>
 #include <arpa/inet.h>
 }
 
@@ -81,6 +85,8 @@ namespace KGD
 
 			if ( _fileName.substr( _fileName.size() - 4) == ".kls" )
 				this->loadPlayList();
+			else if ( _fileName.substr(0,9) == "dev.video" )
+				this->loadLiveCast();
 			else
 				this->loadMediaContainer();
 
@@ -121,18 +127,17 @@ namespace KGD
 			try
 			{
 				PlayList pl( this->getFilePath() );
-
-				bool first = true;
-				BOOST_FOREACH( const string & row, pl.getMediaList() )
+				list< string > files = pl.getMediaList();
+				list< string >::const_iterator it = files.begin(), ed = files.end();
+				if ( it != ed )
 				{
-					Container c( row );
-					if ( first )
-					{
-						this->assign( c );
-						first = false;
-					}
-					else
-						this->append( c );
+					Container c( *it++ );
+					this->assign( c );
+				}
+				while( it != ed )
+				{
+					Container c( *it++ );
+					this->append( c );
 				}
 
 				this->loop( pl.getLoops() );
@@ -144,11 +149,216 @@ namespace KGD
 			}
 		}
 
-		void Container::loop( uint8_t times ) throw()
+		void Container::loadLiveCast() throw( SDP::Exception::Generic )
 		{
+			AVFormatContext *iFmtCtx = 0;
+			AVCodecContext *oCtx = 0;
+			AVInputFormat *iFmt = 0;
+			AVCodec *vEnc;
+			// ff start
+			avdevice_register_all();
+			avcodec_register_all();
+			av_register_all();
+
+			// open device
+			string device = "/" + _fileName;
+			std::replace( device.begin(), device.end(), '.', '/' );
+			Log::debug( "%s: opening device %s", getLogName(), device.c_str() );
+
+			if ( !(iFmt = av_find_input_format( "video4linux2" )) )
+				throw SDP::Exception::Generic( "unable to find video4linux2 input format" );
+
+			if ( av_open_input_file(&iFmtCtx, device.c_str(), iFmt, 0, 0) != 0 )
+				throw SDP::Exception::Generic( "unable to open " + _fileName + " in " + BASE_DIR );
+			// ff load stream info
+			if( av_find_stream_info(iFmtCtx) < 0 )
+				throw SDP::Exception::Generic( "unable to find streams in " + _fileName );
+
+			_bitRate = iFmtCtx->bit_rate;
+			_duration = HUGE_VAL;
+
+
+			BOOST_ASSERT( iFmtCtx->nb_streams == 1 );
+
+			AVStream *iStr = iFmtCtx->streams[0];
+			AVCodecContext *iCdcCtx = iStr->codec;
+			AVCodec *vDec = avcodec_find_decoder( CODEC_ID_RAWVIDEO );
+			if ( !vDec )
+				throw SDP::Exception::Generic( "unable to find RAW VIDEO decoder" );
+			if ( avcodec_open( iCdcCtx, vDec ) < 0 )
+				throw SDP::Exception::Generic( "unable to open decoder in context" );
+
+
 			
-			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
-				medium.second->loop( times );
+
+			// alloc encoder
+			Log::debug( "%s: opening encoder", getLogName() );
+			if ( !( oCtx = avcodec_alloc_context() ) )
+				throw SDP::Exception::Generic( "unable to alloc codec context" );
+
+			Log::debug( "%s: image size %dx%d", getLogName(), iCdcCtx->width, iCdcCtx->height );
+			oCtx->height = iCdcCtx->height;
+			oCtx->width = iCdcCtx->width;
+			oCtx->time_base.num = 1;
+			oCtx->time_base.den = 25;
+			oCtx->gop_size = 10;
+			oCtx->max_b_frames = 1;
+			oCtx->bit_rate = 400000;
+			oCtx->pix_fmt = PIX_FMT_YUV420P;
+
+			if ( ! (vEnc = avcodec_find_encoder( CODEC_ID_MPEG4 )) )
+				throw SDP::Exception::Generic( "unable to find MPEG4 encoder" );
+
+			if ( avcodec_open( oCtx, vEnc ) < 0 )
+				throw SDP::Exception::Generic( "unable to open encoder in context" );
+
+
+			auto_ptr< Medium::Base > m( Factory::ClassRegistry< Medium::Base >::newInstance( CODEC_ID_MPEG4 ) );
+			m->setContainer( *this );
+			m->setIndex( 0 );
+			// 0x00 0x00 0x01 0xB0 0x03 0x00 0x00 0x01 
+			// 0xB5 0x09 0x00 0x00 0x01 0x00 0x00 0x00 
+			// 0x01 0x20 0x00 0xBC 0x04 0x06 0xC4 0x00 
+			// 0x67 0x0C 0x50 0x10 0xF0 0x51 0x8F 0x00 
+			// 0x00 0x01 0xB2 0x58 0x76 0x69 0x44 0x30 
+			// 0x30 0x34 0x36
+			m->setExtraData( oCtx->extradata, oCtx->extradata_size );
+			m->setFileName( this->getFileName() );
+			m->setDuration( _duration );
+			m->setTimeBase( double(oCtx->time_base.num) / oCtx->time_base.den );
+
+			_media.insert( 0, m );
+			Log::debug( "%s: video stream: time base = %d / %d", getLogName(), iStr->time_base.num, iStr->time_base.den );
+
+			{
+				OwnThread::Lock lk( _th );
+				_running = true;
+				_th.reset( new boost::thread( boost::bind( &Container::liveCastLoop, this, iFmtCtx, oCtx ) ));
+			}
+		}
+// static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize, size_t n)
+// {
+// 	char filename[1024];
+// 	snprintf( filename, 1024, "/tmp/frame%u.pgm", n);
+//     FILE *f;
+//     int i;
+// 
+//     f=fopen(filename,"w");
+//     fprintf(f,"P5\n%d %d\n%d\n",xsize,ysize,255);
+//     for(i=0;i<ysize;i++)
+//         fwrite(buf + i * wrap,1,xsize,f);
+//     fclose(f);
+// }
+
+		void Container::liveCastLoop(AVFormatContext* iFmtCtx, AVCodecContext* oCtx)
+		{
+			AVStream *iStr = iFmtCtx->streams[0];
+			AVCodecContext *iCdcCtx = iStr->codec;
+			SwsContext *sws = sws_getContext(
+							iCdcCtx->width,
+							iCdcCtx->height,
+                            iCdcCtx->pix_fmt,
+                            oCtx->width,
+                            oCtx->height,
+                            oCtx->pix_fmt,
+                            SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+			AVFrame *picture = avcodec_alloc_frame();
+			AVFrame *planar = avcodec_alloc_frame();
+			int planarSz = avpicture_get_size(oCtx->pix_fmt, oCtx->width, oCtx->height);
+			ByteArray planarBuf( planarSz );
+
+			typedef map< int64_t, Frame::Base * > FrameCache;
+			FrameCache cache;
+			int gotPicture = 0;
+			int64_t prevPts = -1;
+
+			Medium::Base & medium = _media.at( 0 );
+			{
+				OwnThread::Lock lk( _th );
+// 				int64_t baseDTS = -1;
+				while( _running )
+				{
+					AVPacket pkt;
+					av_init_packet( &pkt );
+					int rdRes = 0;
+					// load frame
+					{
+						OwnThread::UnLock ulk( lk );
+						rdRes = av_read_frame( iFmtCtx, &pkt );
+					}
+					
+					// err
+					if ( rdRes < 0 )
+					{
+						// break cycle
+						if ( rdRes == AVERROR_EOF )
+							_running = false;
+						else
+							Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
+					}
+					else
+					{
+						if ( pkt.size > 0 )
+						{
+							// decode
+							iCdcCtx->reordered_opaque = pkt.pts;
+							int decodeRes = avcodec_decode_video2( iCdcCtx, picture, &gotPicture, &pkt );
+							if ( decodeRes < 0 )
+								Log::debug( "%s: decoding failed", getLogName() );
+							else if (!gotPicture )
+								Log::debug( "%s: no picture yet", getLogName() );
+							else
+							{
+								// change colorspace
+								avpicture_fill((AVPicture *)planar, planarBuf.get(), oCtx->pix_fmt, oCtx->width, oCtx->height);								
+								sws_scale(sws, picture->data, picture->linesize, 0, iCdcCtx->height, planar->data, planar->linesize);
+								// encode
+								ByteArray encBuf( 65536 );
+								int encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), planar );
+								if ( encSize <= 0 )
+									encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), 0 );
+
+								if ( encSize > 0 )
+								{
+									// create frame
+									auto_ptr< ByteArray > rawData( encBuf.popFront( encSize ) );
+									Frame::MediaFile * f = new Frame::MediaFile( *rawData, oCtx->coded_frame->pts * medium.getTimeBase() );
+									if ( oCtx->coded_frame->key_frame )
+										f->setKey();
+
+									// ordered push to medium
+									cache.insert( make_pair( oCtx->coded_frame->pts, f ) );
+									FrameCache::iterator itCache = cache.begin();
+									while( !cache.empty() && itCache->first == prevPts + 1 )
+									{
+										prevPts = itCache->first;
+										medium.addFrame( itCache->second );
+										cache.erase( itCache );
+										itCache = cache.begin();
+// 										Log::verbose("%s: %lld", getLogName(), prevPts );
+									}
+								}
+								else
+									Log::debug( "%s: encoding failed", getLogName() );									
+							}
+						}
+						else
+							Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
+					}
+					av_free_packet( &pkt );
+				}
+
+				// finalize sizes
+				BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+					medium->second->finalizeFrameCount();
+			}
+			
+			av_close_input_file( iFmtCtx );
+
+			// sync termination
+			Log::verbose( "%s: sync loop termination", getLogName() );
+			_th.wait();
 		}
 
 
@@ -174,19 +384,20 @@ namespace KGD
 			{
 				AVStream *str = fctx->streams[i];
 				AVCodecContext *cdc = str->codec;
-				AVRational ratBase = str->time_base;
+				AVRational tBase = str->time_base;
 				try
 				{
 					auto_ptr< Medium::Base > m( Factory::ClassRegistry< Medium::Base >::newInstance( cdc->codec_id ) );
+					m->setContainer( *this );
 					m->setIndex( i );
 					m->setExtraData( cdc->extradata, cdc->extradata_size );
 					m->setFileName( this->getFileName() );
 					m->setDuration( _duration );
-					m->setTimeBase( double(ratBase.num) / ratBase.den );
+					m->setTimeBase( double(tBase.num) / tBase.den );
 
 					// set specific data
-					Medium::Audio::AAC * ma = m->asPtrUnsafe< Medium::Audio::AAC >();
-					if ( ma )
+					
+					if ( Medium::Audio::AAC * ma = m->asPtrUnsafe< Medium::Audio::AAC >() )
 					{
 						ma->setRate( cdc->sample_rate );
 						ma->setChannels( cdc->channels );
@@ -206,20 +417,19 @@ namespace KGD
 			{
 				OwnThread::Lock lk( _th );
 				_running = true;
-				_th.reset( new boost::thread( boost::bind( &Container::loadFrameIndex, this, fctx ) ));
+				_th.reset( new boost::thread( boost::bind( &Container::mediaContainerLoop, this, fctx ) ));
 			}
-			_th->yield();
 		}
 
-		void Container::loadFrameIndex( AVFormatContext *fctx )
+		void Container::mediaContainerLoop( AVFormatContext *fctx )
 		{
 			{
 				OwnThread::Lock lk( _th );
 				while( _running )
 				{
-					// load frame
 					AVPacket pkt;
 					av_init_packet( &pkt );
+					// load frame
 					int rdRes = av_read_frame( fctx, &pkt );
 					// err
 					if ( rdRes < 0 )
@@ -243,20 +453,14 @@ namespace KGD
 							Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
 					}
 					av_free_packet( &pkt );
-
-					{
-						OwnThread::UnLock ulk( lk );
-						_th->yield();
-					}
-					
+					_th.yield( lk );
 				}
-
-				av_close_input_file( fctx );
 
 				// finalize sizes
 				BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
 					medium->second->finalizeFrameCount();
 			}
+			av_close_input_file( fctx );
 
 			// sync termination
 			Log::verbose( "%s: sync loop termination", getLogName() );
@@ -320,6 +524,12 @@ namespace KGD
 
 			return rt;
 		}
+		void Container::loop( uint8_t times ) throw()
+		{
+			BOOST_FOREACH( MediaMap::iterator::reference medium, _media )
+				medium.second->loop( times );
+		}
+
 
 		void Container::insert( SDP::Container & other, double insertTime ) throw( KGD::Exception::OutOfBounds )
 		{
@@ -362,7 +572,7 @@ namespace KGD
 			// get media to insert
 			ref_list< SDP::Medium::Base > otherMedia = other.getMedia();
 			// for every local medium
-			for( MediaMap::iterator localIt = _media.begin(); localIt != _media.end(); ++localIt )
+			BOOST_FOREACH( MediaMap::iterator::reference localIt, _media )
 			{
 				MediaMap::mapped_reference localMedium = *localIt->second;
 				Log::debug( "%s: media append: look for payload type %u", getLogName(), localMedium.getPayloadType() );
@@ -403,6 +613,13 @@ namespace KGD
 			_bitRate = other._bitRate;
 		}
 
+		bool Container::isLiveCast() const
+		{
+			// when seek support is not active, every description is live
+			// else lives are from video devices
+			return !RTSP::Method::SUPPORT_SEEK || _fileName.substr(0,9) == "dev.video";
+		}
+
 		double Container::getDuration() const
 		{
 			return _duration;
@@ -434,7 +651,7 @@ namespace KGD
 
 			// range
 			s << "a=range:npt=0-" ;
-			if ( RTSP::Method::SUPPORT_SEEK )
+			if ( ! this->isLiveCast() )
 				s << setprecision(3) << _duration << EOL;
 			else
 				s << EOL;

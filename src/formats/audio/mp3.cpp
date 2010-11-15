@@ -61,12 +61,12 @@ namespace KGD
 				}
 
 				MP3::MP3( )
-				: Base( MediaType::Audio, Payload::AudioMP3 )
+				: Medium::Base( MediaType::Audio, Payload::AudioMP3 )
 				{
 				}
 
 				MP3::MP3( const MP3 & m )
-				: Base( m )
+				: Medium::Base( m )
 				{
 
 				}

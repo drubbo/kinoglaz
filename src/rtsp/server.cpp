@@ -87,7 +87,7 @@ namespace KGD
 				Server::Lock lk( Server::mux() );
 				list.erase_if( ! boost::bind( &Connection::isActive, _1 ) );
 				Log::debug( "KGD: active connections %u", list.size() );
-				wakeup.timed_wait( lk, Clock::boostDeltaSec( 10 ) );
+				wakeup.timed_wait( lk, boost::get_system_time() + boost::posix_time::seconds( 10 ) );
 			}
 			th.wait();
 		}
@@ -109,7 +109,7 @@ namespace KGD
 		{
 			_conns.max = fromString< uint16_t >( params[ "limit" ] );
 			while( _conns.max != 0 && _conns.list.size() > _conns.max )
-				_conns.list.erase( _conns.list.rbegin().base() );
+				_conns.list.pop_back();
 
 			TPort newPort = fromString< TPort >( params( "port", "8554" ) );
 			string newIP = params( "ip", "*" );

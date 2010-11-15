@@ -53,12 +53,14 @@ namespace KGD
 			Base::Base( const AVPacket & pkt, double timebase )
 			: _time( pkt.dts * timebase )
 			, _displace( 0 )
+			, _released( 0 )
 			{
 			}
 				
 			Base::Base( double t )
 			: _time( t )
 			, _displace( 0 )
+			, _released( 0 )
 			{
 			}
 
@@ -67,7 +69,13 @@ namespace KGD
 			, _displace( 0 )
 			, _pt( b._pt )
 			, _mediumPos( b._mediumPos )
+			, _released( 0 )
 			{
+			}
+
+			size_t Base::release()
+			{
+				return ++ _released;
 			}
 
 			void Base::addTime( double delta )
@@ -151,6 +159,10 @@ namespace KGD
 			uint64_t MediaFile::getFilePos() const
 			{
 				return _pos;
+			}
+			void MediaFile::setKey( bool k )
+			{
+				_isKey = k;
 			}
 			bool MediaFile::isKey() const
 			{
