@@ -88,6 +88,7 @@
       max number of connections - 0 means no limit
   write-to=< double >
       sockets write timeout in seconds; default 0.1
+      negative values make writes blocking
   write-buf=< 0 - 65535 >
       sockets write buffer in bytes; default 1024
 

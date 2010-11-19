@@ -94,18 +94,6 @@ namespace KGD
 	//! common string -> string pair
 	typedef pair< string, string > KeyValuePair;
 
-	
-	//! search string begin operator
-	class BeginsWith :
-		public unary_function< string, bool >
-	{
-	protected:
-		string _bg;
-	public:
-		BeginsWith( const string & );
-		bool operator()( const string & ) const throw();
-	};
-
 	//! pid zero
 	const pid_t PID_Z = pid_t( 0 );
 	//! pid non-zero
