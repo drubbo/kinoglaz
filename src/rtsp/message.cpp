@@ -45,6 +45,7 @@
 #include <cstdio>
 
 #include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 
 
 using namespace std;
@@ -360,7 +361,8 @@ namespace KGD
 						}
 
 						// client ports
-						vector< string >::const_iterator cPorts = find_if( parts.begin(), parts.end(), BeginsWith( portParam ) );
+						vector< string >::const_iterator cPorts =
+							find_if( parts.begin(), parts.end(), boost::bind( &boost::starts_with< string, string >, _1, portParam ) );
 						if ( cPorts == parts.end() )
 						{
 							Log::warning("RTSP: no port/channel specification");
@@ -374,7 +376,8 @@ namespace KGD
 							rt.first.ports.first = fromString< TPort >( match.str(1) );
 							rt.first.ports.second = fromString< TPort >( match.str(2) );
 							// hint ssrc
-							vector< string >::const_iterator cSSRC = find_if( parts.begin(), parts.end(), BeginsWith( "ssrc=" ) );
+							vector< string >::const_iterator cSSRC =
+								find_if( parts.begin(), parts.end(), boost::bind( & boost::starts_with< string, string >, _1, "ssrc=" ) );
 							if ( cSSRC != parts.end() )
 								rt.second = fromString< TSSrc >(cSSRC->substr( 5 ));
 

@@ -60,11 +60,6 @@ extern "C"
 
 using namespace std;
 
-namespace cv
-{
-	class VideoCapture;
-}
-
 namespace KGD
 {
 	namespace SDP

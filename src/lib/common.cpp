@@ -48,15 +48,6 @@ extern "C"
 
 namespace KGD
 {
-	BeginsWith::BeginsWith( const string & bg)
-	: _bg( bg )
-	{
-	}
-	bool BeginsWith::operator()( const string & s ) const throw()
-	{
-		return (s.substr( 0, _bg.size() ) == _bg);
-	}
-
 	double signedMax( double a, double b, int sign )
 	{
 		if ( a < HUGE_VAL && b < HUGE_VAL )
