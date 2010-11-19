@@ -15,6 +15,10 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+namespace
+{
+	const uint8_t MP4_VOP[4] = {0x00, 0x00, 0x01, 0xB0};
+}
 
 namespace KGD
 {
@@ -36,10 +40,7 @@ namespace KGD
 				throw SDP::Exception::Generic( "unable to find video4linux2 input format" );
 
 			if ( av_open_input_file(&iFmtCtx, device.c_str(), iFmt, 0, 0) != 0 )
-			{
-				av_free( iFmt );
 				throw SDP::Exception::Generic( "unable to open " + _fileName + " in " + BASE_DIR );
-			}
 
 			// ff load stream info
 			if( av_find_stream_info(iFmtCtx) < 0 )
@@ -64,7 +65,6 @@ namespace KGD
 
 				if ( avcodec_open( iCdcCtx, vDec ) < 0 )
 				{
-					av_free( vDec );
 					av_close_input_file( iFmtCtx );
 					throw SDP::Exception::Generic( "unable to open decoder in context" );
 				}
@@ -81,13 +81,14 @@ namespace KGD
 			}
 
 			Log::debug( "%s: image size %dx%d", getLogName(), iCdcCtx->width, iCdcCtx->height );
-			oCtx->height = iCdcCtx->height / 2;
-			oCtx->width = iCdcCtx->width / 2;
+			oCtx->height = iCdcCtx->height/* / 2*/;
+			oCtx->width = iCdcCtx->width/* / 2*/;
+// 			oCtx->time_base = iCdcCtx->time_base;
 			oCtx->time_base.num = 1;
 			oCtx->time_base.den = 25;
 			oCtx->gop_size = 10;
 			oCtx->max_b_frames = 1;
-			oCtx->bit_rate = 400000;
+			oCtx->bit_rate = 384000;
 			oCtx->pix_fmt = PIX_FMT_YUV420P;
 
 			if ( ! (vEnc = avcodec_find_encoder( CODEC_ID_MPEG4 )) )
@@ -100,7 +101,6 @@ namespace KGD
 			if ( avcodec_open( oCtx, vEnc ) < 0 )
 			{
 				avcodec_close( oCtx );
-				av_free( vEnc );
 				av_close_input_file( iFmtCtx );
 				throw SDP::Exception::Generic( "unable to open encoder in context" );
 			}
@@ -109,13 +109,6 @@ namespace KGD
 			auto_ptr< Medium::Base > m( Factory::ClassRegistry< Medium::Base >::newInstance( CODEC_ID_MPEG4 ) );
 			m->setContainer( *this );
 			m->setIndex( 0 );
-			// 0x00 0x00 0x01 0xB0 0x03 0x00 0x00 0x01
-			// 0xB5 0x09 0x00 0x00 0x01 0x00 0x00 0x00
-			// 0x01 0x20 0x00 0xBC 0x04 0x06 0xC4 0x00
-			// 0x67 0x0C 0x50 0x10 0xF0 0x51 0x8F 0x00
-			// 0x00 0x01 0xB2 0x58 0x76 0x69 0x44 0x30
-			// 0x30 0x34 0x36
-
 			uint8_t extradata[43] =
 				{ 0x00, 0x00, 0x01, 0xB0, 0x03, 0x00, 0x00, 0x01
 				, 0xB5, 0x09, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00
@@ -166,13 +159,14 @@ namespace KGD
 			typedef map< int64_t, Frame::Base * > FrameCache;
 			FrameCache cache;
 			// prev pts to force pts order
-			int64_t prevPts = -1;
+			int64_t prevPts = -1, basePts = -1;
 
 			Medium::Base & medium = _media.at( 0 );
 			int gotPicture = 0;
+
 			{
 				OwnThread::Lock lk( _th );
-// 				int64_t baseDTS = -1;
+				
 				while( _running )
 				{
 					AVPacket pkt;
@@ -182,6 +176,7 @@ namespace KGD
 					{
 						OwnThread::UnLock ulk( lk );
 						rdRes = av_read_frame( iFmtCtx, &pkt );
+						Log::verbose( "%s: got packet %lld %lld %lf", getLogName(), pkt.pts, pkt.dts, double(pkt.pts) / iCdcCtx->time_base.den );
 					}
 
 					// err
@@ -204,25 +199,48 @@ namespace KGD
 							Log::debug( "%s: no picture yet", getLogName() );
 						else
 						{
+							if ( basePts == -1 )
+								basePts = picture->pts;
 							// change colorspace
 							avpicture_fill((AVPicture *)planar, planarBuf.get(), oCtx->pix_fmt, oCtx->width, oCtx->height);
 							sws_scale(sws, picture->data, picture->linesize, 0, iCdcCtx->height, planar->data, planar->linesize);
 							// encode
 							ByteArray encBuf( 65536 );
 							int encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), planar );
-							if ( encSize <= 0 )
+							while( encSize == 0 )
 								encSize = avcodec_encode_video( oCtx, encBuf.get(), encBuf.size(), 0 );
 
 							if ( encSize > 0 )
 							{
+
+// 								do
+// 								{
+// 									uint8_t *nextVOP = (uint8_t*)memmem( encBuf.get() + 1, encSize - 1, &MP4_VOP, 4);
+// 									size_t vopSize = ( nextVOP ? nextVOP - encBuf.get() : encSize );
+// 									Log::debug( "%s: VOP is %u out of %u", getLogName(), vopSize, encSize );
+// 									// create frame
+// 									auto_ptr< ByteArray > rawData( encBuf.popFront( vopSize ) );
+// 									encSize -= vopSize;
+// 									double fTime = oCtx->coded_frame->pts * medium.getTimeBase();
+// 									Frame::MediaFile * f = new Frame::MediaFile( *rawData, fTime );
+// 									if ( oCtx->coded_frame->key_frame )
+// 										f->setKey();
+// 
+// 									cache.insert( make_pair( oCtx->coded_frame->pts, f ) );
+// 								}
+// 								while( encSize );
+
 								// create frame
 								auto_ptr< ByteArray > rawData( encBuf.popFront( encSize ) );
-								Frame::MediaFile * f = new Frame::MediaFile( *rawData, oCtx->coded_frame->pts * medium.getTimeBase() );
+								double fTime = oCtx->coded_frame->pts * medium.getTimeBase();
+								Frame::MediaFile * f = new Frame::MediaFile( *rawData, fTime );
 								if ( oCtx->coded_frame->key_frame )
 									f->setKey();
 
-								// ordered push to medium
+								Log::debug( "%s: new frame %u, key %u", getLogName(), encSize, f->isKey() );
 								cache.insert( make_pair( oCtx->coded_frame->pts, f ) );
+
+								// ordered push to medium
 								FrameCache::iterator itCache = cache.begin();
 								while( !cache.empty() && itCache->first == prevPts + 1 )
 								{
@@ -230,8 +248,9 @@ namespace KGD
 									medium.addFrame( itCache->second );
 									cache.erase( itCache );
 									itCache = cache.begin();
-// 										Log::verbose("%s: %lld", getLogName(), prevPts );
 								}
+// 								_th.sleepSec( lk, 0.03 );
+// 								_th.yield( lk );
 							}
 							else
 								Log::debug( "%s: encoding failed", getLogName() );

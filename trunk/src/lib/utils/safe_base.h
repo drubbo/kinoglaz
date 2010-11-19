@@ -122,6 +122,8 @@ namespace KGD
 
 			void interrupt()							{ if ( _interruptible ) _th->interrupt(); }
 			template< class L >
+			void wait( L & lk )							{ Unlocker< L > ulk( lk ); _term.wait(); }
+			template< class L >
 			void yield( L & lk )						{ Unlocker< L > ulk( lk ); _th->yield(); }
 			template< class L >
 			void sleepSec( L & lk, double sec )			{ Unlocker< L > ulk( lk ); _th->sleep( boost::get_system_time() + boost::posix_time::seconds( sec ) ); }

@@ -288,7 +288,7 @@ namespace KGD
 									OwnThread::Interruptible intr( _th );
 									try
 									{
-// 										Log::verbose( "%s sleeping for %lf", getLogName(), Clock::nanoToSec(slp) );
+										Log::verbose( "%s sleeping for %lf", getLogName(), Clock::nanoToSec(slp) );
 										_th.sleepNano( lk, slp );
 									}
 									catch( boost::thread_interrupted )
@@ -341,10 +341,11 @@ namespace KGD
 			_th.wait();
 		}
 
-		void Session::sendNextFrame( ) throw( KGD::Socket::Exception )
+		void Session::sendNextFrame( ) throw( KGD::Socket::Exception, RTP::Eof )
 		{
 			if ( _frame.next )
 			{
+// 				Log::verbose( "%s: sending packet %lf", getLogName(), _frame.next->getTime() );
 				size_t sendingSz;
 				RTP::TTimestamp rtp = _frame.time->getRTPtime( _frame.next->getTime() );
 				auto_ptr< Packet::List > pkts = _frame.next->getPackets( rtp, _ssrc, _seqCur );
@@ -371,7 +372,7 @@ namespace KGD
 						else if ( Clock::getSec() - _frame.firstLost >= 5 )
 						{
 							Log::warning( "%s: 5s packet loss, stopping", getLogName(), e.what() );
-							throw;
+							throw RTP::Eof();
 						}
 					}
 					else
