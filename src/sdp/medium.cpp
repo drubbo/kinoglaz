@@ -264,16 +264,19 @@ namespace KGD
 				_frame.available.notify_all();
 			}
 
+			void Base::cacheFrame( Frame::Base * f ) throw()
+			{
+				FrameData::Lock lk( _frame );
+				f->setPayloadType( _pt );
+				f->addTime( _frame.timeShift );
+				f->setMediumPos( _frame.list.size() );
+				BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
+				_frame.list.push_back( f );
+			}
+
 			void Base::addFrame( Frame::Base * f ) throw()
 			{
-				{
-					FrameData::Lock lk( _frame );
-					f->setPayloadType( _pt );
-					f->addTime( _frame.timeShift );
-					f->setMediumPos( _frame.list.size() );
-					BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
-					_frame.list.push_back( f );
-				}
+				this->cacheFrame( f );
 				_frame.available.notify_all();
 			}
 

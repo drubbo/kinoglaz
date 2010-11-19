@@ -240,7 +240,13 @@ namespace KGD
 
 		void Reader::setReadTimeout( double sec ) throw( Socket::Exception )
 		{
-			Abstract::setTimeout(sec, SO_RCVTIMEO);
+			if ( sec <= 0 )
+			{
+				_rdBlock = true;
+				Abstract::setTimeout( 0, SO_SNDTIMEO );
+			}
+			else
+				Abstract::setTimeout( sec, SO_SNDTIMEO );
 		}
 
 		void Reader::setReadBlock( bool b )
@@ -350,7 +356,13 @@ namespace KGD
 
 		void Writer::setWriteTimeout( double sec ) throw( Socket::Exception )
 		{
-			Abstract::setTimeout( sec, SO_SNDTIMEO );
+			if ( sec <= 0 )
+			{
+				_wrBlock = true;
+				Abstract::setTimeout( 0, SO_SNDTIMEO );
+			}
+			else
+				Abstract::setTimeout( sec, SO_SNDTIMEO );
 		}
 
 		void Writer::connectTo( sockaddr_in const * addr ) throw( Socket::Exception )

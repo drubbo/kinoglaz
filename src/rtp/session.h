@@ -152,7 +152,7 @@ namespace KGD
 			double fetchNextFrame( OwnThread::Lock & ) throw( RTP::Eof );
 
 			//! packetized and sends a frame on the RTP socket, marking the frame with the specified time on media timeline
-			void sendNextFrame( ) throw( KGD::Socket::Exception );
+			void sendNextFrame( ) throw( KGD::Socket::Exception, RTP::Eof );
 
 			//! logs some informations
 			void logTimes() const throw();

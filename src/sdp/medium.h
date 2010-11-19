@@ -146,6 +146,8 @@ namespace KGD
 				//! set frame count to determined, actual, effective value
 				virtual void finalizeFrameCount( ) throw();
 				//! adds a frame
+				virtual void cacheFrame( Frame::Base * ) throw();
+				//! adds a frame and notifies waiting threads
 				virtual void addFrame( Frame::Base * ) throw();
 				//! retrieves a frame at a given position
 				const Frame::Base & getFrame( size_t ) const throw( KGD::Exception::OutOfBounds, KGD::Exception::NullPointer );
