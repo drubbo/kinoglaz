@@ -99,7 +99,7 @@ namespace KGD
 				//! force different RTP payload type
 				void setPayloadType( Payload::type );
 
-				//! release and return count
+				//! release and return release count
 				size_t release();
 				//! get fresh copy
 				virtual Base* getClone() const;

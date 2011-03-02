@@ -62,11 +62,19 @@ namespace KGD
 
 		string Container::BASE_DIR = "./";
 		bool Container::AGGREGATE_CONTROL = true;
+		double Container::SIZE_FULL = 10.0;
+		double Container::SIZE_LOW = 5.0;
 
+		Container::OwnThread::OwnThread()
+		: running( false )
+		{
+			
+		}
+
+		
 		Container::Container( const string & fileName ) throw( SDP::Exception::Generic )
 		: _fileName( fileName )
 		, _description( fileName )
-		, _running( false )
 		, _logName( "SDP " + fileName )
 		, _uuid( KGD::newUUID() )
 		{
@@ -91,12 +99,13 @@ namespace KGD
 		void Container::stop()
 		{
 			OwnThread::Lock lk( _th );
-			_running = false;
+			_th.running = false;
 			if ( _th )
 			{
 				Log::verbose( "%s: waiting loop termination", getLogName() );
 
 				lk.unlock();
+				_th.requestMore.notify_all();
 				_th.reset();
 			}
 		}

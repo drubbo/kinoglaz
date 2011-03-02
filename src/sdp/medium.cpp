@@ -66,6 +66,8 @@ namespace KGD
 			Base::FrameData::FrameData( int64_t n )
 			: count( n )
 			, timeShift( 0 )
+			, timeFirst( 0 )
+			, timeLast( 0 )
 			{}
 			
 			Base::It::It( )
@@ -271,6 +273,12 @@ namespace KGD
 				f->addTime( _frame.timeShift );
 				f->setMediumPos( _frame.list.size() );
 				BOOST_ASSERT( _frame.list.empty() || f->getTime() > _frame.list.back().getTime() );
+
+				if (_frame.list.empty() )
+					_frame.timeFirst = f->getTime();
+				else
+					_frame.timeLast = f->getTime();
+
 				_frame.list.push_back( f );
 			}
 
@@ -287,6 +295,13 @@ namespace KGD
 					_frame.available.wait( lk );
 
 				return _frame.count;
+			}
+
+			double Base::getStoredDuration( ) const throw( )
+			{
+				FrameData::Lock lk( _frame );
+
+				return _frame.timeLast - _frame.timeFirst;
 			}
 
 			Base::FrameList Base::getFrames( double from, double to ) const throw( )
@@ -343,14 +358,33 @@ namespace KGD
 				It::Lock ilk( _it );
 				// we won't release frames on non-live casts
 				// since we may want to seek back
+				size_t frameListSz = _frame.list.size();
 				if ( _container->isLiveCast()
-					&& pos < _frame.list.size()
+					&& pos < frameListSz
 					&& ! _frame.list.is_null( pos )
 					&& ! _it.model->hasType< Medium::Iterator::Loop >() )
 				{
 					// effectively release when every iterator has released the frame
 					if ( _frame.list[ pos ].release() >= _it.instances.size() )
+					{
 						_frame.list.replace( pos, 0 );
+						// update time of first frame
+						if ( ++ pos >= frameListSz )
+							_frame.timeFirst = _frame.timeLast;
+						else
+						{
+							for( ; pos < frameListSz; ++ pos )
+								if ( ! _frame.list.is_null( pos ) )
+								{
+									_frame.timeFirst = _frame.list[ pos ].getTime();
+									break;
+								}
+						}
+						// request more if buffer is low
+						if ( this->getStoredDuration() <= Container::SIZE_LOW )
+							_container->requestMoreFrames();
+					}
+						
 /*					{
 						_frame.list.erase( _frame.list.begin() + pos );
 						for_each( _it.instances.begin(), _it.instances.end(), boost::bind( &Iterator::Base::frameRemoved, _1, pos ) );

@@ -127,7 +127,7 @@ namespace KGD
 			// start fetch thread
 			{
 				OwnThread::Lock lk( _th );
-				_running = true;
+				_th.running = true;
 				_th.reset( new boost::thread( boost::bind( &Container::liveCastLoop, this, iFmtCtx, oCtx ) ));
 			}
 		}
@@ -167,7 +167,7 @@ namespace KGD
 			{
 				OwnThread::Lock lk( _th );
 				
-				while( _running )
+				while( _th.running )
 				{
 					AVPacket pkt;
 					av_init_packet( &pkt );
@@ -184,7 +184,7 @@ namespace KGD
 					{
 						// break cycle
 						if ( rdRes == AVERROR_EOF )
-							_running = false;
+							_th.running = false;
 						else
 							Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
 					}

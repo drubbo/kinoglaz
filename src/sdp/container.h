@@ -76,7 +76,6 @@ namespace KGD
 		{
 		protected:
 			typedef boost::ptr_map< uint8_t, Medium::Base > MediaMap;
-			typedef Safe::Thread< RMutex > OwnThread;
 
 			//! resource name
 			string _fileName;
@@ -91,9 +90,16 @@ namespace KGD
 			MediaMap _media;
 
 			//! load frame thread
-			OwnThread _th;
-			//! is load frame thread running ?
-			bool _running;
+			class OwnThread
+			: public Safe::Thread< RMutex >
+			{
+			public:
+				OwnThread();
+				//! is load frame thread running ?
+				bool running;
+				//! condition to request more frames
+				Condition requestMore;
+			} _th;
 
 			//! constantly fetches frames from video device
 			void loadLiveCast() throw( SDP::Exception::Generic );
@@ -145,6 +151,9 @@ namespace KGD
 			ref_list< Medium::Base > getMedia() throw();
 			//!@}
 
+			//! request more frames, i.e. wakes up the loading thread
+			void requestMoreFrames() throw();
+			
 			//! get full path of source media container
 			string getFilePath() const throw();
 			//! get base name of source media container
@@ -167,6 +176,10 @@ namespace KGD
 			static string BASE_DIR;
 			//! global parameter: when true, aggregate track control is announced
 			static bool AGGREGATE_CONTROL;
+			//! global parameter: pre-fetch queue maximum extension in seconds; set to double than RTP buffer maximum extension
+			static double SIZE_FULL;
+			//! global parameter: pre-fetch queue minimum extension in seconds; set to RTP buffer maximum extension
+			static double SIZE_LOW;
 		};
 	}
 }
