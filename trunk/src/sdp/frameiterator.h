@@ -45,6 +45,7 @@ namespace KGD
 	{
 		namespace Medium
 		{
+			//! iterators over medium descriptors
 			namespace Iterator
 			{
 				class Base;

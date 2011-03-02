@@ -161,7 +161,7 @@ namespace KGD
 
 		}
 
-
+		//! BYE message declarations
 		namespace Bye
 		{
 			//! Bye header
