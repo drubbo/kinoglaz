@@ -44,16 +44,18 @@ namespace KGD
 	//! Thread-safe utilities
 	namespace Safe
 	{
-		//! Lockable flag set
+		//! Lockable flag set; lock must be acquired before using subscript operators
 		template< size_t N, class M = RMutex >
 		class FlagSet
 		: public LockableBase< M >
 		{
 		private:
+			//! inner bitset
 			bitset< N > _bits;
 		public:
-
+			//! const subscript operator
 			bool operator[]( size_t pos ) const							{ return _bits[pos]; }
+			//! subscript operator
 			typename bitset< N >::reference operator[]( size_t pos )	{ return _bits[pos]; }
 		};
 
@@ -63,12 +65,14 @@ namespace KGD
 		: private LockableBase< M >
 		{
 		private:
+			//! inner flag
 			bool _bit;
 		public:
-
+			//! build with an explicit starting value
 			Flag( bool b );
-
+			//! thread-safe cast to bool
 			operator bool() const;
+			//! thread-safe assignment
 			Flag& operator=( bool b );
 		};
 

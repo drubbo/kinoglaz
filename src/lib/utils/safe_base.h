@@ -42,7 +42,7 @@ namespace KGD
 	//! Thread-safe utilities
 	namespace Safe
 	{
-		//! thread-safe reverse scope
+		//! thread-safe reverse lock scope
 		template< class boost_lock >
 		class Unlocker
 		: public boost::noncopyable
@@ -53,12 +53,13 @@ namespace KGD
 			~Unlocker() 								{ _lk.lock(); }
 		};
 
-		//! base lockable class
+		//! base class for lockable classes
 		template< class M = RMutex >
 		class LockableBase
 		: public boost::noncopyable
 		{
 		private:
+			//! inner mutex
 			mutable M _mux;
 		public:
 			typedef M Mutex;
@@ -66,22 +67,29 @@ namespace KGD
 			typedef typename M::scoped_try_lock TryLock;
 			typedef Unlocker< typename M::scoped_lock > UnLock;
 
+			//! locks the object
 			void lock() const							{ _mux.lock(); }
+			//! unlocks the object
 			void unlock() const							{ _mux.unlock(); }
 
+			//! returns inner mutex
 			M & mux() const								{ return _mux; }
+			//! casts the object to its inner mutex type
 			operator M &() const						{ return _mux; }
 		};
 
-		//! Generic lockable
+		//! Typed wrapper for lockable classes
 		template< class T, class M = RMutex >
 		class Lockable
 		: public LockableBase< M >
 		{
 		protected:
+			//! inner object
 			T _obj;
-		public:			
+		public:
+			//! dereference to the inner object
 			T& operator*()								{ return _obj; }
+			//! const dereference to the inner object
 			T const & operator*() const					{ return _obj; }
 		};
 
@@ -89,11 +97,15 @@ namespace KGD
 		class ThreadBarrier
 		{
 		private:
+			//! tells if this thread is currently interruptible
 			bool _interruptible;
 		protected:
+			//! thread instance
 			KGD::Thread _th;
+			//! barrier instance
 			KGD::Barrier _term;
 		public:
+			//! represents a scope inside whom a ThreadBarrier is interruptible
 			class Interruptible
 			{
 				ThreadBarrier & _th;
@@ -103,13 +115,15 @@ namespace KGD
 			};
 			friend class Interruptible;
 
+			//! build with a barrier count
 			ThreadBarrier( unsigned int count = 2 ) 	: _term( count ) { }
-
+			//! wait at the barrier
 			void wait() 								{ _term.wait(); }
-
+			//! tells if the thread has been instantiated or not
 			operator bool() const 						{ return bool( _th ); }
-
+			//! sets inner thread to some loop function
 			void reset( boost::thread * t ) 			{ BOOST_ASSERT( !_th ); _th.reset( t ); }
+			//! safely terminates and destroys the thread
 			void reset()
 			{
 				if ( _th )
@@ -119,14 +133,18 @@ namespace KGD
 					_th.reset();
 				}
 			}
-
+			//! interrupts the thread if it is in an Interruptible scope
 			void interrupt()							{ if ( _interruptible ) _th->interrupt(); }
+			//! unlocks the lock and waits at the barrier, relocking after wait has complete
 			template< class L >
 			void wait( L & lk )							{ Unlocker< L > ulk( lk ); _term.wait(); }
+			//! unlocks the lock and yields the thread, relocking after yield has complete
 			template< class L >
 			void yield( L & lk )						{ Unlocker< L > ulk( lk ); _th->yield(); }
+			//! unlocks the lock and sleeps, relocking at wakeup
 			template< class L >
 			void sleepSec( L & lk, double sec )			{ Unlocker< L > ulk( lk ); _th->sleep( boost::get_system_time() + boost::posix_time::seconds( sec ) ); }
+			//! unlocks the lock and sleeps, relocking at wakeup
 			template< class L >
 			void sleepNano( L & lk, uint64_t nano )		{ Unlocker< L > ulk( lk ); _th->sleep( boost::get_system_time() + boost::posix_time::microseconds( nano / 1000 ) ); }
 		};

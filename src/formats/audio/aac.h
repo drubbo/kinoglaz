@@ -73,6 +73,7 @@ namespace KGD
 	{
 		namespace Buffer
 		{
+			//! AAC RTP audio buffer
 			namespace Audio
 			{
 				class AAC

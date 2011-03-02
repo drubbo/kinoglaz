@@ -55,6 +55,7 @@ namespace KGD
 	//! Media container descriptors
 	namespace SDP
 	{
+		//! SDP specific exceptions
 		namespace Exception
 		{
 			//! SDP generic exception

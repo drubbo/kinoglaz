@@ -77,6 +77,7 @@ namespace KGD
 				//! medium descriptor
 				ref< SDP::Medium::Base > _medium;
 
+				//! frame buffer stuff
 				class Frame
 				: public Safe::LockableBase< RMutex >
 				{
@@ -89,8 +90,11 @@ namespace KGD
 					//! out frame buffer
 					struct Buffer
 					{
+						//! fetched frames
 						List data;
+						//! frame buffer full condition, notified when frames are available
 						Condition full;
+						//! frame buffer empty condition, notified when frames are scarce
 						Condition empty;
 					} buf;
 				} _frame;
@@ -144,7 +148,9 @@ namespace KGD
 				//! get time of first frame
 				virtual double getFirstFrameTime() const throw( KGD::Exception::OutOfBounds );
 
+				//! start frame fetch
 				virtual void start() = 0;
+				//! stop frame fetch
 				virtual void stop() = 0;
 			};
 
