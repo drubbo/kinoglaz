@@ -99,6 +99,8 @@ namespace KGD
 
 		SDP::Container::BASE_DIR = (*_ini)( "SDP", "base-dir");
 		SDP::Container::AGGREGATE_CONTROL = ( "1" == (*_ini)( "SDP", "aggregate", "1") );
+		SDP::Container::SIZE_LOW = RTP::Buffer::Base::SIZE_FULL;
+		SDP::Container::SIZE_FULL = 2 * RTP::Buffer::Base::SIZE_FULL;
 
 		RTSP::Connection::SHARE_DESCRIPTORS = ( "1" == (*_ini)( "SDP", "share-descriptors", "0" ) );
 

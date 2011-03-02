@@ -118,6 +118,10 @@ namespace KGD
 					mutable Condition available;
 					//! time shift to add to new added frames if insertions were made
 					double timeShift;
+					//! time of first valid frame
+					double timeFirst;
+					//! time of last valid frame
+					double timeLast;
 				} _frame;
 
 				//! iterator stuff
@@ -205,6 +209,8 @@ namespace KGD
 				void releaseIterator( Iterator::Base & ) throw();
 				//! returns the duration of this medium wrt its iterator model - HUGE_VAL is fine
 				double getIterationDuration() const throw();
+				//! returns the number of seconds between the first and the last valid frames currently stored
+				double getStoredDuration( ) const throw();
 				//! returns effective frame count, waiting until one has been determined
 				size_t getFrameCount( ) const throw( );
 				//! returns a cloned portion of all frames based on time; limits are cropped if out of bounds

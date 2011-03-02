@@ -73,16 +73,25 @@ namespace KGD
 
 			{
 				OwnThread::Lock lk( _th );
-				_running = true;
+				_th.running = true;
 				_th.reset( new boost::thread( boost::bind( &Container::mediaContainerLoop, this, fctx ) ));
 			}
+		}
+
+		void Container::requestMoreFrames() throw()
+		{
+			_th.requestMore.notify_all();
 		}
 
 		void Container::mediaContainerLoop( AVFormatContext *fctx )
 		{
 			{
 				OwnThread::Lock lk( _th );
-				while( _running )
+
+				double storedFramesDuration = 0;
+				bool live = this->isLiveCast();
+				
+				while( _th.running )
 				{
 					AVPacket pkt;
 					av_init_packet( &pkt );
@@ -93,7 +102,7 @@ namespace KGD
 					{
 						// break cycle
 						if ( rdRes == AVERROR_EOF )
-							_running = false;
+							_th.running = false;
 						else
 							Log::warning( "%s: av_read_frame error %d", getLogName(), rdRes );
 					}
@@ -105,12 +114,22 @@ namespace KGD
 							Medium::Base & m = *medium->second;
 							Frame::MediaFile * f = new Frame::MediaFile( pkt, m.getTimeBase() );
 							m.addFrame( f );
+
+							if (live)
+								storedFramesDuration = m.getStoredDuration();
 						}
 						else
 							Log::warning( "%s: skipping frame stream %d sz %d", getLogName(), pkt.stream_index, pkt.size );
 					}
 					av_free_packet( &pkt );
-					_th.yield( lk );
+					// suspend
+					if (storedFramesDuration > Container::SIZE_FULL)
+					{
+						_th.requestMore.wait( lk );
+						Log::debug("%s: more frames requested", getLogName());
+					}
+					else
+						_th.yield( lk );
 				}
 
 				// finalize sizes
