@@ -46,6 +46,7 @@ namespace KGD
 {
 	namespace RTSP
 	{
+		//! RTSP specific exceptions
 		namespace Exception
 		{
 			//! Generic RTSP exception

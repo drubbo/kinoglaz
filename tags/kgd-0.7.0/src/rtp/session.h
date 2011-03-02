@@ -74,17 +74,18 @@ namespace KGD
 			//! RTP socket
 			boost::shared_ptr< Channel::Out > _sock;
 
-			//! RTCP stuffs
+			//! RTCP stuff in RTP Session
 			struct Rtcp
 			{
 				//! RTCP socket
 				boost::shared_ptr< Channel::Bi > sock;
-				//! RTCP receiver for this session
+				//! RTCP receiver for this RTP session
 				boost::scoped_ptr< RTCP::Receiver > receiver;
-				//! RTCP sender for this session
+				//! RTCP sender for this RTP session
 				boost::scoped_ptr< RTCP::Sender > sender;
-
+				//! ctor, acquires a shared copy of a bidirectional channel
 				Rtcp( const boost::shared_ptr< Channel::Bi > s );
+				//! starts sender and receiver for this RTP session
 				void start( Session & s );
 			} _rtcp;
 
@@ -100,16 +101,20 @@ namespace KGD
 				bitset< 4 > bag;
 			} _status;
 
-			//! pause stuffs
+			//! pause stuff in RTP Session
 			struct Pause
 			{
+				//! condition to wait to wakeup
 				Condition wakeup;
+				//! barrier to synchronize pause request and pause completion
 				Barrier asleep;
+				//! flag that indicates asleep barrier must be used during pause performance
 				bool sync;
+				//! ctor
 				Pause();
 			} _pause;
 
-			//! frame stuffs
+			//! frame stuff in RTP Session
 			struct Frame
 			{
 				//! frame rate evaluator
@@ -133,9 +138,6 @@ namespace KGD
 			TCseq _seqCur;
 			//! random ssrc
 			TSSrc _ssrc;
-
-
-			Thread _thRemove;
 			
 			//! log identifier
 			const string _logName;

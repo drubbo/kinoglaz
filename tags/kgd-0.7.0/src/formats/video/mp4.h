@@ -70,6 +70,7 @@ namespace KGD
 
 		namespace Buffer
 		{
+			//! Mpeg4 RTP video buffer
 			namespace Video
 			{
 				class MP4
@@ -86,10 +87,9 @@ namespace KGD
 		
 		namespace Frame
 		{
-			//! mpeg4 video packetization
 			namespace Video
 			{
-				//! mpeg4 video
+				//! mpeg4 video packetization
 				class MP4
 				: public AVMedia
 				, public Factory::Multiton< Frame::Base, MP4, SDP::Payload::VideoMPEG4 >
