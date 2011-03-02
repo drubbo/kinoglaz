@@ -1,0 +1,183 @@
+                                 K G D
+
+                        Kinoglaz Streaming Server
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1     DEPENDENCIES
+
+1.1   boost
+
+- Download boost libraries ( http://www.boost.org ) version 1.41.0 or later
+
+- Unpack the tarball
+
+- build and install the jam tool
+
+  cd boost_1_41_0/tools/jam/
+  ./build_dist.sh
+  cd stage/bin.<architecture>/
+  sudo cp bjam /usr/local/bin/
+
+- build and install the libraries
+
+  cd ~/boost_1_41_0
+  sudo bjam --prefix=/usr/local --with-regex --with-thread install
+
+1.2   ffmpeg
+
+- Install development packages for your linux distribution
+
+  ubuntu example:
+
+  sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev \
+                       libavfilter-dev libavutil-dev libswscale-dev
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+2     BUILDING
+
+- check out sources from svn:
+
+  cd
+  svn checkout https://kinoglaz.svn.sourceforge.net/svnroot/kinoglaz/trunk \
+      kinoglaz
+
+- build and install
+
+  cd ~/kinoglaz/linux/
+  # you can change the log level here by
+  # export LOG_LEV=n
+  bash bootstrap
+  make
+  sudo make install
+
+  When upgrading from a previous kinoglaz version, perform a make uninstall
+  before building.
+
+- bootstrap will enable debug symbols and set log level to 4 (debug); change
+  this with appropriate configure switches:
+
+  --with-log-level
+  --enable-debug
+  --enable-mp3-adu
+
+  more info with
+
+  ./configure --help
+
+- generate reference in ~/kinoglaz/reference
+
+  cd ~/kinoglaz/src/
+  doxygen doxyfile
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+3     RUNTIME CONFIGURATION
+
+- create a file with common "ini" structure like following,
+  where bool params are 0 (false) or 1 (true)
+
+  [DAEMON]
+  pidfile=< string >
+      path to a file where to store current pid
+
+  [SERVER]
+  ip=< * | address >
+      bind address, * = any/every
+  port=< 0 - 65535 >
+      listening port: 554, 8554, ...
+  limit=< 0 - 65535 >
+      max number of connections - 0 means no limit
+  write-to=< double >
+      sockets write timeout in seconds; default 0.1
+      negative values make writes blocking
+  write-buf=< 0 - 65535 >
+      sockets write buffer in bytes; default 1024
+
+  [RTSP]
+  supp-seek=< bool >
+      if 0 all plays will be announced as live streams; default to 1
+
+  [RTCP]
+  send-every=< double >
+      send a report every those seconds
+  poll-every=< double >
+      wait for a report every those seconds; this time will increase
+      to adapt to sender rate
+
+  [RTP]
+  buf-full=< double >
+      number of max buffered seconds
+  buf-empty=< double >
+      number of min buffered seconds
+  net-mtu=< size_t >
+      maximum transfer unit
+  udp-first=< 0 - 65535 >
+      udp port range lower bound; default to 30000
+  udp-last=< 0 - 65535 >
+      udp port range upper bound; default to 40000
+
+  [SDP]
+  base-dir=< string >
+      base path for media files. MUST include trailing slash.
+  share-descriptors=< bool >
+      if 1 concurrent request to same media containers will share index and
+      frames; default to 0
+  aggregate=< bool >
+      announces aggregate (one command for all tracks) control if 1, or
+      per-track if 0; clients usually don't care and perform aggregate
+      control regardless of the announcement; default to 1
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+4     RUNTIME CONTROL
+
+- executable name is kgd
+
+- kill with TERM signal
+
+- force reload of config file with HUP signal
+
+- use pid file to help guessing daemon pid:
+  kill -HUP `cat pidfile`
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+5     LAUNCHING
+
+- run the kgd executable from shell using following parameters:
+
+  -d                       starts as a daemon
+
+  -c < config file >       specifies config file
+
+  -v
+  --version                prints software version
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+6     PLAYLISTS
+
+- create a text file with extension .kls containing the play list; first line
+  indicates the number of loops:
+
+- example 1: infinite loop of two files
+
+  loop
+  file1.avi
+  file2.avi
+
+- example 2: infinite loop of two files, equivalent to example one:
+
+  file1.avi
+  file2.avi
+
+- example 3: repeat a single file three times:
+
+  loop 3
+  file1.avi
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+7     CLIENT COMPATIBILITY
+
+  VLC 1.0.x GoldenEye:  PLAY, PAUSE, SEEK, SCALE fwd/bwd      RFC non compliant
+  VLC 1.1.4             PLAY, PAUSE, SEEK, SCALE fwd/bwd      RFC non compliant
+  TOTEM 2.28.2:         PLAY, PAUSE                           RFC compliant
+  TOTEM 2.32.0:         PLAY, PAUSE, SEEK                     RFC compliant
+  QuickTime 7.6.6:      PLAY, PAUSE, SEEK, SCALE fwd          RFC compliant
+  MPlayer:              PLAY                                  ???
