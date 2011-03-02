@@ -46,7 +46,7 @@ namespace KGD
 		{
 			namespace Audio
 			{
-				//! Mpeg2 audio medium descriptor
+				//! mpeg2 audio medium descriptor
 				class MP2
 				: public Medium::Base
 				, public Factory::Multiton< Medium::Base, MP2, CODEC_ID_MP2 >
@@ -72,6 +72,7 @@ namespace KGD
 	{
 		namespace Buffer
 		{
+			//! mpeg2 RTP audio buffer
 			namespace Audio
 			{
 				class MP2

@@ -92,6 +92,7 @@ namespace KGD
 	{
 		namespace Buffer
 		{
+			//! mpeg2 layer III RTP audio buffer
 			namespace Audio
 			{
 				class MP3

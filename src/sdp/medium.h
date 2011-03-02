@@ -105,7 +105,7 @@ namespace KGD
 				//! extra informations
 				ByteArray _extraData;
 
-				//! frame stuff
+				//! frame stuff in medium descriptor
 				struct FrameData
 				: public Safe::LockableBase< RMutex >
 				{
@@ -124,7 +124,7 @@ namespace KGD
 					double timeLast;
 				} _frame;
 
-				//! iterator stuff
+				//! iterator stuff in medium descriptor
 				struct It
 				: public Safe::LockableBase< RMutex >
 				{
